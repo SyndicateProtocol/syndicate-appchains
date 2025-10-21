@@ -59,6 +59,7 @@ pub mod IBridge {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl BatchDataLocation {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -180,7 +181,6 @@ struct TimeBounds { uint64 minTimestamp; uint64 maxTimestamp; uint64 minBlockNum
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<64>,
             alloy::sol_types::sol_data::Uint<64>,
@@ -441,11 +441,8 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        __provider: P,
-    ) -> IBridgeInstance<P, N> {
-        IBridgeInstance::<P, N>::new(address, __provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> IBridgeInstance<P, N> {
+        IBridgeInstance::<P, N>::new(address, provider)
     }
     /**A [`IBridge`](self) instance.
 
@@ -472,6 +469,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -482,11 +480,11 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -523,6 +521,7 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -539,6 +538,7 @@ See the [wrapper's documentation](`IBridgeInstance`) for more details.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -1235,7 +1235,6 @@ error DataTooLarge(uint256 dataLength, uint256 maxDataLength);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -1887,7 +1886,6 @@ constructor(uint256 chainId, string chainConfig, address owner_);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::String,
@@ -1989,7 +1987,6 @@ function INITIALIZATION_MSG_TYPE() external view returns (uint8);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2023,7 +2020,6 @@ function INITIALIZATION_MSG_TYPE() external view returns (uint8);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -2138,7 +2134,6 @@ function L1MessageType_ethDeposit() external view returns (uint8);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2172,7 +2167,6 @@ function L1MessageType_ethDeposit() external view returns (uint8);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u8,);
@@ -2287,7 +2281,6 @@ function batchCount() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2319,7 +2312,6 @@ function batchCount() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -2434,7 +2426,6 @@ function delayBlocks() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2466,7 +2457,6 @@ function delayBlocks() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2579,7 +2569,6 @@ function delaySeconds() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2611,7 +2600,6 @@ function delaySeconds() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2726,7 +2714,6 @@ function delayedInboxAccs(uint256) external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -2762,7 +2749,6 @@ function delayedInboxAccs(uint256) external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -2881,7 +2867,6 @@ function delayedMessageCount() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2915,7 +2900,6 @@ function delayedMessageCount() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3034,7 +3018,6 @@ function deliverMessage(uint8 kind, address sender, bytes memory messageData) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::Address,
@@ -3078,7 +3061,6 @@ function deliverMessage(uint8 kind, address sender, bytes memory messageData) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3206,7 +3188,6 @@ function depositEth(address src, address dest, uint256 value) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -3250,7 +3231,6 @@ function depositEth(address src, address dest, uint256 value) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3374,7 +3354,6 @@ function futureBlocks() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3406,7 +3385,6 @@ function futureBlocks() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3519,7 +3497,6 @@ function futureSeconds() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3551,7 +3528,6 @@ function futureSeconds() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3670,7 +3646,6 @@ function getSourceChainsProcessedBlocks() external view returns (uint64 _seqBloc
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3704,7 +3679,6 @@ function getSourceChainsProcessedBlocks() external view returns (uint64 _seqBloc
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<64>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -3859,7 +3833,6 @@ function inboxAccs(uint256 index) external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3893,7 +3866,6 @@ function inboxAccs(uint256 index) external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -4010,7 +3982,6 @@ function maxDataSize() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4042,7 +4013,6 @@ function maxDataSize() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4155,7 +4125,6 @@ function owner() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4187,7 +4156,6 @@ function owner() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -4306,7 +4274,6 @@ function postBatch(bytes memory data, uint64 _seqBlockNumber, uint256 _seqBlockH
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -4362,7 +4329,6 @@ function postBatch(bytes memory data, uint64 _seqBlockNumber, uint256 _seqBlockH
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4494,7 +4460,6 @@ function seqBlockHash() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4526,7 +4491,6 @@ function seqBlockHash() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -4641,7 +4605,6 @@ function seqBlockNumber() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4673,7 +4636,6 @@ function seqBlockNumber() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4790,7 +4752,6 @@ function sequencerInboxAccs(uint256) external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -4826,7 +4787,6 @@ function sequencerInboxAccs(uint256) external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -4945,7 +4905,6 @@ function sequencerMessageCount() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4979,7 +4938,6 @@ function sequencerMessageCount() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -5096,7 +5054,6 @@ function setBlockHash() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5128,7 +5085,6 @@ function setBlockHash() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -5243,7 +5199,6 @@ function setBlockNumber() external view returns (uint64);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5275,7 +5230,6 @@ function setBlockNumber() external view returns (uint64);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -5390,7 +5344,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5424,7 +5377,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -5514,7 +5466,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
         }
     };
     ///Container for all the [`Rollup`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum RollupCalls {
@@ -5565,6 +5516,7 @@ function totalDelayedMessagesRead() external view returns (uint256);
         #[allow(missing_docs)]
         totalDelayedMessagesRead(totalDelayedMessagesReadCall),
     }
+    #[automatically_derived]
     impl RollupCalls {
         /// All the selectors of this enum.
         ///
@@ -5597,78 +5549,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
             [236u8, 160u8, 103u8, 173u8],
             [251u8, 246u8, 234u8, 165u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(sequencerMessageCount),
-            ::core::stringify!(setBlockHash),
-            ::core::stringify!(seqBlockNumber),
-            ::core::stringify!(postBatch),
-            ::core::stringify!(batchCount),
-            ::core::stringify!(sequencerInboxAccs),
-            ::core::stringify!(seqBlockHash),
-            ::core::stringify!(futureSeconds),
-            ::core::stringify!(L1MessageType_ethDeposit),
-            ::core::stringify!(futureBlocks),
-            ::core::stringify!(totalDelayedMessagesRead),
-            ::core::stringify!(owner),
-            ::core::stringify!(deliverMessage),
-            ::core::stringify!(delayBlocks),
-            ::core::stringify!(INITIALIZATION_MSG_TYPE),
-            ::core::stringify!(delaySeconds),
-            ::core::stringify!(delayedInboxAccs),
-            ::core::stringify!(getSourceChainsProcessedBlocks),
-            ::core::stringify!(inboxAccs),
-            ::core::stringify!(depositEth),
-            ::core::stringify!(maxDataSize),
-            ::core::stringify!(delayedMessageCount),
-            ::core::stringify!(setBlockNumber),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <sequencerMessageCountCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <setBlockHashCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <seqBlockNumberCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <postBatchCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <batchCountCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sequencerInboxAccsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <seqBlockHashCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <futureSecondsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <L1MessageType_ethDepositCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <futureBlocksCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <totalDelayedMessagesReadCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <ownerCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <deliverMessageCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <delayBlocksCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <INITIALIZATION_MSG_TYPECall as alloy_sol_types::SolCall>::SIGNATURE,
-            <delaySecondsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <delayedInboxAccsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getSourceChainsProcessedBlocksCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <inboxAccsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <depositEthCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <maxDataSizeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <delayedMessageCountCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <setBlockNumberCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for RollupCalls {
@@ -6517,13 +6397,13 @@ function totalDelayedMessagesRead() external view returns (uint256);
         }
     }
     ///Container for all the [`Rollup`](self) custom errors.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum RollupErrors {
         #[allow(missing_docs)]
         DataTooLarge(DataTooLarge),
     }
+    #[automatically_derived]
     impl RollupErrors {
         /// All the selectors of this enum.
         ///
@@ -6532,34 +6412,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[[70u8, 52u8, 105u8, 27u8]];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(DataTooLarge),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <DataTooLarge as alloy_sol_types::SolError>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for RollupErrors {
@@ -6661,7 +6513,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
         }
     }
     ///Container for all the [`Rollup`](self) events.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum RollupEvents {
@@ -6674,6 +6525,7 @@ function totalDelayedMessagesRead() external view returns (uint256);
         #[allow(missing_docs)]
         SequencerBatchDelivered(SequencerBatchDelivered),
     }
+    #[automatically_derived]
     impl RollupEvents {
         /// All the selectors of this enum.
         ///
@@ -6703,40 +6555,6 @@ function totalDelayedMessagesRead() external view returns (uint256);
                 30u8, 3u8, 47u8, 72u8, 200u8, 17u8, 35u8, 235u8, 82u8, 214u8, 11u8,
             ],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(MessageDelivered),
-            ::core::stringify!(SequencerBatchDelivered),
-            ::core::stringify!(SequencerBatchData),
-            ::core::stringify!(InboxMessageDelivered),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <MessageDelivered as alloy_sol_types::SolEvent>::SIGNATURE,
-            <SequencerBatchDelivered as alloy_sol_types::SolEvent>::SIGNATURE,
-            <SequencerBatchData as alloy_sol_types::SolEvent>::SIGNATURE,
-            <InboxMessageDelivered as alloy_sol_types::SolEvent>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for RollupEvents {
@@ -6838,11 +6656,8 @@ See the [wrapper's documentation](`RollupInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        __provider: P,
-    ) -> RollupInstance<P, N> {
-        RollupInstance::<P, N>::new(address, __provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> RollupInstance<P, N> {
+        RollupInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -6854,14 +6669,14 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         chainId: alloy::sol_types::private::primitives::aliases::U256,
         chainConfig: alloy::sol_types::private::String,
         owner_: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<RollupInstance<P, N>>,
     > {
-        RollupInstance::<P, N>::deploy(__provider, chainId, chainConfig, owner_)
+        RollupInstance::<P, N>::deploy(provider, chainId, chainConfig, owner_)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -6873,12 +6688,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         chainId: alloy::sol_types::private::primitives::aliases::U256,
         chainConfig: alloy::sol_types::private::String,
         owner_: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
-        RollupInstance::<P, N>::deploy_builder(__provider, chainId, chainConfig, owner_)
+        RollupInstance::<P, N>::deploy_builder(provider, chainId, chainConfig, owner_)
     }
     /**A [`Rollup`](self) instance.
 
@@ -6905,6 +6720,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -6915,11 +6731,11 @@ See the [wrapper's documentation](`RollupInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -6930,13 +6746,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             chainId: alloy::sol_types::private::primitives::aliases::U256,
             chainConfig: alloy::sol_types::private::String,
             owner_: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<RollupInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                __provider,
+                provider,
                 chainId,
                 chainConfig,
                 owner_,
@@ -6951,13 +6767,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             chainId: alloy::sol_types::private::primitives::aliases::U256,
             chainConfig: alloy::sol_types::private::String,
             owner_: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -7005,6 +6821,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -7185,6 +7002,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

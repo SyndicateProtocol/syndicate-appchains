@@ -60,6 +60,7 @@ pub mod ChallengeLib {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl ChallengeMode {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -187,7 +188,6 @@ struct Challenge { Participant current; Participant next; uint256 lastMoveTimest
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             Participant,
             Participant,
@@ -532,7 +532,6 @@ struct Participant { address addr; uint256 timeLeft; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Uint<256>,
@@ -745,9 +744,9 @@ See the [wrapper's documentation](`ChallengeLibInstance`) for more details.*/
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> ChallengeLibInstance<P, N> {
-        ChallengeLibInstance::<P, N>::new(address, __provider)
+        ChallengeLibInstance::<P, N>::new(address, provider)
     }
     /**A [`ChallengeLib`](self) instance.
 
@@ -774,6 +773,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -784,11 +784,11 @@ See the [wrapper's documentation](`ChallengeLibInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -825,6 +825,7 @@ See the [wrapper's documentation](`ChallengeLibInstance`) for more details.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -841,6 +842,7 @@ See the [wrapper's documentation](`ChallengeLibInstance`) for more details.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -1411,6 +1413,7 @@ pub mod IChallengeManager {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl ChallengeTerminationType {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -1548,6 +1551,7 @@ pub mod IChallengeManager {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl MachineStatus {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -1665,7 +1669,6 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedArray<
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -2529,7 +2532,6 @@ function challengeInfo(uint64 challengeIndex_) external view returns (ChallengeL
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2561,7 +2563,6 @@ function challengeInfo(uint64 challengeIndex_) external view returns (ChallengeL
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (ChallengeLib::Challenge,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -2674,7 +2675,6 @@ function clearChallenge(uint64 challengeIndex_) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2706,7 +2706,6 @@ function clearChallenge(uint64 challengeIndex_) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2839,7 +2838,6 @@ function createChallenge(bytes32 wasmModuleRoot_, MachineStatus[2] memory startA
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedArray<MachineStatus, 2usize>,
@@ -2907,7 +2905,6 @@ function createChallenge(bytes32 wasmModuleRoot_, MachineStatus[2] memory startA
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3065,7 +3062,6 @@ function currentResponder(uint64 challengeIndex) external view returns (address)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3099,7 +3095,6 @@ function currentResponder(uint64 challengeIndex) external view returns (address)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -3221,7 +3216,6 @@ function getOsp(bytes32 wasmModuleRoot) external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -3253,7 +3247,6 @@ function getOsp(bytes32 wasmModuleRoot) external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -3374,7 +3367,6 @@ function initialize(address resultReceiver_, address sequencerInbox_, address br
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -3426,7 +3418,6 @@ function initialize(address resultReceiver_, address sequencerInbox_, address br
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3557,7 +3548,6 @@ function isTimedOut(uint64 challengeIndex) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3589,7 +3579,6 @@ function isTimedOut(uint64 challengeIndex) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -3706,7 +3695,6 @@ function osp() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3738,7 +3726,6 @@ function osp() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -3853,7 +3840,6 @@ function postUpgradeInit(address osp_, bytes32 condRoot, address condOsp) extern
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -3897,7 +3883,6 @@ function postUpgradeInit(address osp_, bytes32 condRoot, address condOsp) extern
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4021,7 +4006,6 @@ function timeout(uint64 challengeIndex_) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4053,7 +4037,6 @@ function timeout(uint64 challengeIndex_) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4140,7 +4123,6 @@ function timeout(uint64 challengeIndex_) external;
         }
     };
     ///Container for all the [`IChallengeManager`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum IChallengeManagerCalls {
@@ -4165,6 +4147,7 @@ function timeout(uint64 challengeIndex_) external;
         #[allow(missing_docs)]
         timeout(timeoutCall),
     }
+    #[automatically_derived]
     impl IChallengeManagerCalls {
         /// All the selectors of this enum.
         ///
@@ -4184,52 +4167,6 @@ function timeout(uint64 challengeIndex_) external;
             [242u8, 106u8, 98u8, 198u8],
             [248u8, 200u8, 118u8, 94u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(createChallenge),
-            ::core::stringify!(timeout),
-            ::core::stringify!(currentResponder),
-            ::core::stringify!(getOsp),
-            ::core::stringify!(postUpgradeInit),
-            ::core::stringify!(clearChallenge),
-            ::core::stringify!(challengeInfo),
-            ::core::stringify!(isTimedOut),
-            ::core::stringify!(osp),
-            ::core::stringify!(initialize),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <createChallengeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <timeoutCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <currentResponderCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getOspCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <postUpgradeInitCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <clearChallengeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <challengeInfoCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <isTimedOutCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <ospCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <initializeCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for IChallengeManagerCalls {
@@ -4630,7 +4567,6 @@ function timeout(uint64 challengeIndex_) external;
         }
     }
     ///Container for all the [`IChallengeManager`](self) events.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IChallengeManagerEvents {
@@ -4645,6 +4581,7 @@ function timeout(uint64 challengeIndex_) external;
         #[allow(missing_docs)]
         OneStepProofCompleted(OneStepProofCompleted),
     }
+    #[automatically_derived]
     impl IChallengeManagerEvents {
         /// All the selectors of this enum.
         ///
@@ -4679,42 +4616,6 @@ function timeout(uint64 challengeIndex_) external;
                 160u8, 142u8, 1u8, 159u8, 223u8, 155u8, 45u8, 116u8, 127u8, 64u8,
             ],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(ExecutionChallengeBegun),
-            ::core::stringify!(InitiatedChallenge),
-            ::core::stringify!(Bisected),
-            ::core::stringify!(OneStepProofCompleted),
-            ::core::stringify!(ChallengeEnded),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <ExecutionChallengeBegun as alloy_sol_types::SolEvent>::SIGNATURE,
-            <InitiatedChallenge as alloy_sol_types::SolEvent>::SIGNATURE,
-            <Bisected as alloy_sol_types::SolEvent>::SIGNATURE,
-            <OneStepProofCompleted as alloy_sol_types::SolEvent>::SIGNATURE,
-            <ChallengeEnded as alloy_sol_types::SolEvent>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for IChallengeManagerEvents {
@@ -4828,9 +4729,9 @@ See the [wrapper's documentation](`IChallengeManagerInstance`) for more details.
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> IChallengeManagerInstance<P, N> {
-        IChallengeManagerInstance::<P, N>::new(address, __provider)
+        IChallengeManagerInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -4842,11 +4743,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<IChallengeManagerInstance<P, N>>,
     > {
-        IChallengeManagerInstance::<P, N>::deploy(__provider)
+        IChallengeManagerInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -4857,8 +4758,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        IChallengeManagerInstance::<P, N>::deploy_builder(__provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        IChallengeManagerInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`IChallengeManager`](self) instance.
 
@@ -4885,6 +4786,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4895,11 +4797,11 @@ See the [wrapper's documentation](`IChallengeManagerInstance`) for more details.
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -4910,9 +4812,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
         ) -> alloy_contract::Result<IChallengeManagerInstance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider);
+            let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -4922,9 +4824,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
@@ -4961,6 +4863,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -5092,6 +4995,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

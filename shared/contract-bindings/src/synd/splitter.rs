@@ -226,7 +226,6 @@ error InvalidAddress();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -300,7 +299,6 @@ error NoValueSent();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -506,7 +504,6 @@ constructor(address _basePool, address _performancePool, address _appchainPool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -608,7 +605,6 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -642,7 +638,6 @@ function APPCHAIN_POOL_SPLIT() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -759,7 +754,6 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -793,7 +787,6 @@ function PERCENTAGE_DENOMINATOR() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -910,7 +903,6 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -944,7 +936,6 @@ function PERFORMANCE_POOL_SPLIT() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1061,7 +1052,6 @@ function appchainPool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1093,7 +1083,6 @@ function appchainPool() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1206,7 +1195,6 @@ function basePool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1238,7 +1226,6 @@ function basePool() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1349,7 +1336,6 @@ function deposit(uint256 epochIndex) external payable;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1383,7 +1369,6 @@ function deposit(uint256 epochIndex) external payable;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1497,7 +1482,6 @@ function performancePool() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1529,7 +1513,6 @@ function performancePool() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1617,7 +1600,6 @@ function performancePool() external view returns (address);
         }
     };
     ///Container for all the [`Splitter`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum SplitterCalls {
@@ -1636,6 +1618,7 @@ function performancePool() external view returns (address);
         #[allow(missing_docs)]
         performancePool(performancePoolCall),
     }
+    #[automatically_derived]
     impl SplitterCalls {
         /// All the selectors of this enum.
         ///
@@ -1652,46 +1635,6 @@ function performancePool() external view returns (address);
             [197u8, 49u8, 226u8, 79u8],
             [228u8, 230u8, 116u8, 13u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(PERFORMANCE_POOL_SPLIT),
-            ::core::stringify!(performancePool),
-            ::core::stringify!(appchainPool),
-            ::core::stringify!(PERCENTAGE_DENOMINATOR),
-            ::core::stringify!(deposit),
-            ::core::stringify!(basePool),
-            ::core::stringify!(APPCHAIN_POOL_SPLIT),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <PERFORMANCE_POOL_SPLITCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <performancePoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <appchainPoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <PERCENTAGE_DENOMINATORCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <depositCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <basePoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <APPCHAIN_POOL_SPLITCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SplitterCalls {
@@ -1992,7 +1935,6 @@ function performancePool() external view returns (address);
         }
     }
     ///Container for all the [`Splitter`](self) custom errors.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SplitterErrors {
@@ -2001,6 +1943,7 @@ function performancePool() external view returns (address);
         #[allow(missing_docs)]
         NoValueSent(NoValueSent),
     }
+    #[automatically_derived]
     impl SplitterErrors {
         /// All the selectors of this enum.
         ///
@@ -2012,36 +1955,6 @@ function performancePool() external view returns (address);
             [157u8, 206u8, 43u8, 60u8],
             [230u8, 196u8, 36u8, 123u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(NoValueSent),
-            ::core::stringify!(InvalidAddress),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <NoValueSent as alloy_sol_types::SolError>::SIGNATURE,
-            <InvalidAddress as alloy_sol_types::SolError>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SplitterErrors {
@@ -2181,13 +2094,13 @@ function performancePool() external view returns (address);
         }
     }
     ///Container for all the [`Splitter`](self) events.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SplitterEvents {
         #[allow(missing_docs)]
         Split(Split),
     }
+    #[automatically_derived]
     impl SplitterEvents {
         /// All the selectors of this enum.
         ///
@@ -2202,32 +2115,6 @@ function performancePool() external view returns (address);
                 20u8, 177u8, 4u8, 237u8, 207u8, 172u8, 124u8, 169u8, 143u8, 153u8,
             ],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[::core::stringify!(Split)];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <Split as alloy_sol_types::SolEvent>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for SplitterEvents {
@@ -2283,9 +2170,9 @@ See the [wrapper's documentation](`SplitterInstance`) for more details.*/
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> SplitterInstance<P, N> {
-        SplitterInstance::<P, N>::new(address, __provider)
+        SplitterInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -2297,7 +2184,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _basePool: alloy::sol_types::private::Address,
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
@@ -2307,7 +2194,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         SplitterInstance::<
             P,
             N,
-        >::deploy(__provider, _basePool, _performancePool, _appchainPool)
+        >::deploy(provider, _basePool, _performancePool, _appchainPool)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -2319,7 +2206,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _basePool: alloy::sol_types::private::Address,
         _performancePool: alloy::sol_types::private::Address,
         _appchainPool: alloy::sol_types::private::Address,
@@ -2327,7 +2214,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         SplitterInstance::<
             P,
             N,
-        >::deploy_builder(__provider, _basePool, _performancePool, _appchainPool)
+        >::deploy_builder(provider, _basePool, _performancePool, _appchainPool)
     }
     /**A [`Splitter`](self) instance.
 
@@ -2354,6 +2241,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -2364,11 +2252,11 @@ See the [wrapper's documentation](`SplitterInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -2379,13 +2267,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<SplitterInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                __provider,
+                provider,
                 _basePool,
                 _performancePool,
                 _appchainPool,
@@ -2400,13 +2288,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             _basePool: alloy::sol_types::private::Address,
             _performancePool: alloy::sol_types::private::Address,
             _appchainPool: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -2454,6 +2342,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -2511,6 +2400,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

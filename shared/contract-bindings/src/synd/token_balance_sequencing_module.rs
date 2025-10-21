@@ -133,7 +133,6 @@ constructor(address _tokenAddress, uint256 _minimumBalance);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -235,7 +234,6 @@ function isAllowed(address proposer, address, bytes memory) external view return
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -279,7 +277,6 @@ function isAllowed(address proposer, address, bytes memory) external view return
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -406,7 +403,6 @@ function minimumBalance() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -438,7 +434,6 @@ function minimumBalance() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -555,7 +550,6 @@ function tokenAddress() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -587,7 +581,6 @@ function tokenAddress() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -673,7 +666,6 @@ function tokenAddress() external view returns (address);
         }
     };
     ///Container for all the [`TokenBalanceSequencingModule`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum TokenBalanceSequencingModuleCalls {
@@ -684,6 +676,7 @@ function tokenAddress() external view returns (address);
         #[allow(missing_docs)]
         tokenAddress(tokenAddressCall),
     }
+    #[automatically_derived]
     impl TokenBalanceSequencingModuleCalls {
         /// All the selectors of this enum.
         ///
@@ -696,38 +689,6 @@ function tokenAddress() external view returns (address);
             [157u8, 118u8, 234u8, 88u8],
             [185u8, 209u8, 212u8, 155u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(isAllowed),
-            ::core::stringify!(tokenAddress),
-            ::core::stringify!(minimumBalance),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <isAllowedCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <tokenAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <minimumBalanceCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for TokenBalanceSequencingModuleCalls {
@@ -912,9 +873,9 @@ See the [wrapper's documentation](`TokenBalanceSequencingModuleInstance`) for mo
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> TokenBalanceSequencingModuleInstance<P, N> {
-        TokenBalanceSequencingModuleInstance::<P, N>::new(address, __provider)
+        TokenBalanceSequencingModuleInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -926,7 +887,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _tokenAddress: alloy::sol_types::private::Address,
         _minimumBalance: alloy::sol_types::private::primitives::aliases::U256,
     ) -> impl ::core::future::Future<
@@ -935,7 +896,7 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         TokenBalanceSequencingModuleInstance::<
             P,
             N,
-        >::deploy(__provider, _tokenAddress, _minimumBalance)
+        >::deploy(provider, _tokenAddress, _minimumBalance)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -947,14 +908,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _tokenAddress: alloy::sol_types::private::Address,
         _minimumBalance: alloy::sol_types::private::primitives::aliases::U256,
     ) -> alloy_contract::RawCallBuilder<P, N> {
         TokenBalanceSequencingModuleInstance::<
             P,
             N,
-        >::deploy_builder(__provider, _tokenAddress, _minimumBalance)
+        >::deploy_builder(provider, _tokenAddress, _minimumBalance)
     }
     /**A [`TokenBalanceSequencingModule`](self) instance.
 
@@ -986,6 +947,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -996,11 +958,11 @@ See the [wrapper's documentation](`TokenBalanceSequencingModuleInstance`) for mo
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -1011,12 +973,12 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             _tokenAddress: alloy::sol_types::private::Address,
             _minimumBalance: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::Result<TokenBalanceSequencingModuleInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                __provider,
+                provider,
                 _tokenAddress,
                 _minimumBalance,
             );
@@ -1030,12 +992,12 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             _tokenAddress: alloy::sol_types::private::Address,
             _minimumBalance: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -1082,6 +1044,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -1119,6 +1082,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

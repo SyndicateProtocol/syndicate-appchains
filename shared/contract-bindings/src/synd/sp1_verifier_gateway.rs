@@ -316,7 +316,6 @@ error OwnableInvalidOwner(address owner);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -397,7 +396,6 @@ error OwnableUnauthorizedAccount(address account);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -480,7 +478,6 @@ error RouteAlreadyExists(address verifier);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -561,7 +558,6 @@ error RouteIsFrozen(bytes4 selector);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -642,7 +638,6 @@ error RouteNotFound(bytes4 selector);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -720,7 +715,6 @@ error SelectorCannotBeZero();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -1142,7 +1136,6 @@ constructor(address initialOwner);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1220,7 +1213,6 @@ function addRoute(address verifier) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1252,7 +1244,6 @@ function addRoute(address verifier) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1364,7 +1355,6 @@ function freezeRoute(bytes4 selector) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -1396,7 +1386,6 @@ function freezeRoute(bytes4 selector) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1510,7 +1499,6 @@ function owner() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1542,7 +1530,6 @@ function owner() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1650,7 +1637,6 @@ function renounceOwnership() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1684,7 +1670,6 @@ function renounceOwnership() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1798,7 +1783,6 @@ function routes(bytes4) external view returns (address verifier, bool frozen);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -1830,7 +1814,6 @@ function routes(bytes4) external view returns (address verifier, bool frozen);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -1958,7 +1941,6 @@ function transferOwnership(address newOwner) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1992,7 +1974,6 @@ function transferOwnership(address newOwner) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2110,7 +2091,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Bytes,
@@ -2154,7 +2134,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2251,7 +2230,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     };
     ///Container for all the [`SP1VerifierGateway`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum SP1VerifierGatewayCalls {
@@ -2270,6 +2248,7 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         #[allow(missing_docs)]
         verifyProof(verifyProofCall),
     }
+    #[automatically_derived]
     impl SP1VerifierGatewayCalls {
         /// All the selectors of this enum.
         ///
@@ -2286,46 +2265,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
             [141u8, 165u8, 203u8, 91u8],
             [242u8, 253u8, 227u8, 139u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(verifyProof),
-            ::core::stringify!(routes),
-            ::core::stringify!(renounceOwnership),
-            ::core::stringify!(freezeRoute),
-            ::core::stringify!(addRoute),
-            ::core::stringify!(owner),
-            ::core::stringify!(transferOwnership),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <verifyProofCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <routesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <renounceOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <freezeRouteCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <addRouteCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <ownerCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <transferOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SP1VerifierGatewayCalls {
@@ -2625,7 +2564,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`SP1VerifierGateway`](self) custom errors.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SP1VerifierGatewayErrors {
@@ -2642,6 +2580,7 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         #[allow(missing_docs)]
         SelectorCannotBeZero(SelectorCannotBeZero),
     }
+    #[automatically_derived]
     impl SP1VerifierGatewayErrors {
         /// All the selectors of this enum.
         ///
@@ -2657,44 +2596,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
             [235u8, 241u8, 8u8, 35u8],
             [242u8, 8u8, 119u8, 126u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(OwnableUnauthorizedAccount),
-            ::core::stringify!(OwnableInvalidOwner),
-            ::core::stringify!(SelectorCannotBeZero),
-            ::core::stringify!(RouteAlreadyExists),
-            ::core::stringify!(RouteIsFrozen),
-            ::core::stringify!(RouteNotFound),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
-            <OwnableInvalidOwner as alloy_sol_types::SolError>::SIGNATURE,
-            <SelectorCannotBeZero as alloy_sol_types::SolError>::SIGNATURE,
-            <RouteAlreadyExists as alloy_sol_types::SolError>::SIGNATURE,
-            <RouteIsFrozen as alloy_sol_types::SolError>::SIGNATURE,
-            <RouteNotFound as alloy_sol_types::SolError>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SP1VerifierGatewayErrors {
@@ -2978,7 +2879,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         }
     }
     ///Container for all the [`SP1VerifierGateway`](self) events.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SP1VerifierGatewayEvents {
@@ -2989,6 +2889,7 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
         #[allow(missing_docs)]
         RouteFrozen(RouteFrozen),
     }
+    #[automatically_derived]
     impl SP1VerifierGatewayEvents {
         /// All the selectors of this enum.
         ///
@@ -3013,38 +2914,6 @@ function verifyProof(bytes32 programVKey, bytes memory publicValues, bytes memor
                 44u8, 79u8, 85u8, 218u8, 114u8, 61u8, 46u8, 184u8, 238u8, 230u8,
             ],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(RouteFrozen),
-            ::core::stringify!(OwnershipTransferred),
-            ::core::stringify!(RouteAdded),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <RouteFrozen as alloy_sol_types::SolEvent>::SIGNATURE,
-            <OwnershipTransferred as alloy_sol_types::SolEvent>::SIGNATURE,
-            <RouteAdded as alloy_sol_types::SolEvent>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for SP1VerifierGatewayEvents {
@@ -3131,9 +3000,9 @@ See the [wrapper's documentation](`SP1VerifierGatewayInstance`) for more details
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> SP1VerifierGatewayInstance<P, N> {
-        SP1VerifierGatewayInstance::<P, N>::new(address, __provider)
+        SP1VerifierGatewayInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -3145,12 +3014,12 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         initialOwner: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<SP1VerifierGatewayInstance<P, N>>,
     > {
-        SP1VerifierGatewayInstance::<P, N>::deploy(__provider, initialOwner)
+        SP1VerifierGatewayInstance::<P, N>::deploy(provider, initialOwner)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -3162,10 +3031,10 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         initialOwner: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
-        SP1VerifierGatewayInstance::<P, N>::deploy_builder(__provider, initialOwner)
+        SP1VerifierGatewayInstance::<P, N>::deploy_builder(provider, initialOwner)
     }
     /**A [`SP1VerifierGateway`](self) instance.
 
@@ -3192,6 +3061,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -3202,11 +3072,11 @@ See the [wrapper's documentation](`SP1VerifierGatewayInstance`) for more details
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -3217,10 +3087,10 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             initialOwner: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<SP1VerifierGatewayInstance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider, initialOwner);
+            let call_builder = Self::deploy_builder(provider, initialOwner);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -3231,11 +3101,11 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             initialOwner: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -3279,6 +3149,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -3348,6 +3219,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

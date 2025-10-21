@@ -445,7 +445,6 @@ error AccessControlBadConfirmation();
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = ();
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = ();
@@ -526,7 +525,6 @@ error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -1122,7 +1120,6 @@ constructor(address admin, address manager, uint256 appchainId_);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -1224,7 +1221,6 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1258,7 +1254,6 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1373,7 +1368,6 @@ function MANAGER_ROLE() external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1405,7 +1399,6 @@ function MANAGER_ROLE() external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1518,7 +1511,6 @@ function appchainId() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1550,7 +1542,6 @@ function appchainId() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1668,7 +1659,6 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1700,7 +1690,6 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -1817,7 +1806,6 @@ function grantRole(bytes32 role, address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Address,
@@ -1858,7 +1846,6 @@ function grantRole(bytes32 role, address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1983,7 +1970,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Address,
@@ -2024,7 +2010,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -2147,7 +2132,6 @@ function indexFromBlock() external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2179,7 +2163,6 @@ function indexFromBlock() external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -2296,7 +2279,6 @@ function renounceRole(bytes32 role, address callerConfirmation) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Address,
@@ -2337,7 +2319,6 @@ function renounceRole(bytes32 role, address callerConfirmation) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2457,7 +2438,6 @@ function revokeRole(bytes32 role, address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Address,
@@ -2498,7 +2478,6 @@ function revokeRole(bytes32 role, address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2620,7 +2599,6 @@ function save(uint256 epochNumber, bytes32, bytes memory) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -2664,7 +2642,6 @@ function save(uint256 epochNumber, bytes32, bytes memory) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2794,7 +2771,6 @@ function saveForMany(uint256[] memory epochNumbers, bytes32[] memory epochHashes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<
@@ -2844,7 +2820,6 @@ function saveForMany(uint256[] memory epochNumbers, bytes32[] memory epochHashes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2968,7 +2943,6 @@ function setIndexFromBlock(uint256 blockNumber) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3004,7 +2978,6 @@ function setIndexFromBlock(uint256 blockNumber) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3123,7 +3096,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -3157,7 +3129,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -3249,7 +3220,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     };
     ///Container for all the [`SyndicateStorage`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum SyndicateStorageCalls {
@@ -3280,6 +3250,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
     }
+    #[automatically_derived]
     impl SyndicateStorageCalls {
         /// All the selectors of this enum.
         ///
@@ -3302,58 +3273,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [216u8, 120u8, 19u8, 66u8],
             [236u8, 135u8, 98u8, 28u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(supportsInterface),
-            ::core::stringify!(saveForMany),
-            ::core::stringify!(setIndexFromBlock),
-            ::core::stringify!(getRoleAdmin),
-            ::core::stringify!(grantRole),
-            ::core::stringify!(renounceRole),
-            ::core::stringify!(hasRole),
-            ::core::stringify!(DEFAULT_ADMIN_ROLE),
-            ::core::stringify!(save),
-            ::core::stringify!(indexFromBlock),
-            ::core::stringify!(revokeRole),
-            ::core::stringify!(appchainId),
-            ::core::stringify!(MANAGER_ROLE),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <saveForManyCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <setIndexFromBlockCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <renounceRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <hasRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <DEFAULT_ADMIN_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
-            <saveCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <indexFromBlockCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <appchainIdCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <MANAGER_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SyndicateStorageCalls {
@@ -3867,7 +3786,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     }
     ///Container for all the [`SyndicateStorage`](self) custom errors.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SyndicateStorageErrors {
@@ -3876,6 +3794,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         AccessControlUnauthorizedAccount(AccessControlUnauthorizedAccount),
     }
+    #[automatically_derived]
     impl SyndicateStorageErrors {
         /// All the selectors of this enum.
         ///
@@ -3887,36 +3806,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [102u8, 151u8, 178u8, 50u8],
             [226u8, 81u8, 125u8, 63u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(AccessControlBadConfirmation),
-            ::core::stringify!(AccessControlUnauthorizedAccount),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
-            <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for SyndicateStorageErrors {
@@ -4064,7 +3953,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     }
     ///Container for all the [`SyndicateStorage`](self) events.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SyndicateStorageEvents {
@@ -4077,6 +3965,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         RoleRevoked(RoleRevoked),
     }
+    #[automatically_derived]
     impl SyndicateStorageEvents {
         /// All the selectors of this enum.
         ///
@@ -4106,40 +3995,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 35u8, 136u8, 74u8, 124u8, 219u8, 83u8, 29u8, 131u8, 182u8, 243u8,
             ],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(RoleGranted),
-            ::core::stringify!(RoleAdminChanged),
-            ::core::stringify!(RoleRevoked),
-            ::core::stringify!(EpochRangeProcessed),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
-            <RoleAdminChanged as alloy_sol_types::SolEvent>::SIGNATURE,
-            <RoleRevoked as alloy_sol_types::SolEvent>::SIGNATURE,
-            <EpochRangeProcessed as alloy_sol_types::SolEvent>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 32usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for SyndicateStorageEvents {
@@ -4239,9 +4094,9 @@ See the [wrapper's documentation](`SyndicateStorageInstance`) for more details.*
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> SyndicateStorageInstance<P, N> {
-        SyndicateStorageInstance::<P, N>::new(address, __provider)
+        SyndicateStorageInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -4253,14 +4108,14 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         admin: alloy::sol_types::private::Address,
         manager: alloy::sol_types::private::Address,
         appchainId_: alloy::sol_types::private::primitives::aliases::U256,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<SyndicateStorageInstance<P, N>>,
     > {
-        SyndicateStorageInstance::<P, N>::deploy(__provider, admin, manager, appchainId_)
+        SyndicateStorageInstance::<P, N>::deploy(provider, admin, manager, appchainId_)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -4272,7 +4127,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         admin: alloy::sol_types::private::Address,
         manager: alloy::sol_types::private::Address,
         appchainId_: alloy::sol_types::private::primitives::aliases::U256,
@@ -4280,7 +4135,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         SyndicateStorageInstance::<
             P,
             N,
-        >::deploy_builder(__provider, admin, manager, appchainId_)
+        >::deploy_builder(provider, admin, manager, appchainId_)
     }
     /**A [`SyndicateStorage`](self) instance.
 
@@ -4307,6 +4162,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4317,11 +4173,11 @@ See the [wrapper's documentation](`SyndicateStorageInstance`) for more details.*
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -4332,13 +4188,13 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             admin: alloy::sol_types::private::Address,
             manager: alloy::sol_types::private::Address,
             appchainId_: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::Result<SyndicateStorageInstance<P, N>> {
             let call_builder = Self::deploy_builder(
-                __provider,
+                provider,
                 admin,
                 manager,
                 appchainId_,
@@ -4353,13 +4209,13 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             admin: alloy::sol_types::private::Address,
             manager: alloy::sol_types::private::Address,
             appchainId_: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -4407,6 +4263,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4541,6 +4398,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

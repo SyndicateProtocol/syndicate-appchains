@@ -75,6 +75,7 @@ pub mod VmSafe {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl AccountAccessKind {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -212,6 +213,7 @@ pub mod VmSafe {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl BroadcastTxType {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -349,6 +351,7 @@ pub mod VmSafe {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl CallerMode {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -486,6 +489,7 @@ pub mod VmSafe {
                 > as alloy_sol_types::SolType>::abi_encoded_size(self)
             }
         }
+        #[automatically_derived]
         impl ForgeContext {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!(@ name);
@@ -627,7 +631,6 @@ struct AccountAccess { ChainInfo chainInfo; AccountAccessKind kind; address acco
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             ChainInfo,
             AccountAccessKind,
@@ -1084,7 +1087,6 @@ struct BroadcastTxSummary { bytes32 txHash; BroadcastTxType txType; address cont
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::FixedBytes<32>,
             BroadcastTxType,
@@ -1370,7 +1372,6 @@ struct ChainInfo { uint256 forkId; uint256 chainId; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -1609,7 +1610,6 @@ struct DebugStep { uint256[] stack; bytes memoryInput; uint8 opcode; uint64 dept
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             alloy::sol_types::sol_data::Bytes,
@@ -1921,7 +1921,6 @@ struct DirEntry { string errorMessage; string path; uint64 depth; bool isDir; bo
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::String,
             alloy::sol_types::sol_data::String,
@@ -2217,7 +2216,6 @@ struct EthGetLogs { address emitter; bytes32[] topics; bytes data; bytes32 block
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Array<
@@ -2599,7 +2597,6 @@ struct FfiResult { int32 exitCode; bytes stdout; bytes stderr; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Int<32>,
             alloy::sol_types::sol_data::Bytes,
@@ -2851,7 +2848,6 @@ struct FsMetadata { bool isDir; bool isSymlink; uint256 length; bool readOnly; u
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Bool,
             alloy::sol_types::sol_data::Bool,
@@ -3187,7 +3183,6 @@ struct Gas { uint64 gasLimit; uint64 gasTotalUsed; uint64 gasMemoryUsed; int64 g
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<64>,
             alloy::sol_types::sol_data::Uint<64>,
@@ -3483,7 +3478,6 @@ struct Log { bytes32[] topics; bytes data; address emitter; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Array<
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -3727,7 +3721,6 @@ struct Rpc { string key; string url; }
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::String,
             alloy::sol_types::sol_data::String,
@@ -3949,7 +3942,6 @@ struct SignedDelegation { uint8 v; bytes32 r; bytes32 s; uint64 nonce; address i
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<8>,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -4228,7 +4220,6 @@ struct StorageAccess { address account; bytes32 slot; bool isWrite; bytes32 prev
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::FixedBytes<32>,
@@ -4538,7 +4529,6 @@ struct Wallet { address addr; uint256 publicKeyX; uint256 publicKeyY; uint256 pr
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Address,
             alloy::sol_types::sol_data::Uint<256>,
@@ -4791,11 +4781,8 @@ See the [wrapper's documentation](`VmSafeInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(
-        address: alloy_sol_types::private::Address,
-        __provider: P,
-    ) -> VmSafeInstance<P, N> {
-        VmSafeInstance::<P, N>::new(address, __provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> VmSafeInstance<P, N> {
+        VmSafeInstance::<P, N>::new(address, provider)
     }
     /**A [`VmSafe`](self) instance.
 
@@ -4822,6 +4809,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4832,11 +4820,11 @@ See the [wrapper's documentation](`VmSafeInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -4873,6 +4861,7 @@ See the [wrapper's documentation](`VmSafeInstance`) for more details.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -4889,6 +4878,7 @@ See the [wrapper's documentation](`VmSafeInstance`) for more details.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -16387,7 +16377,6 @@ function accesses(address target) external returns (bytes32[] memory readSlots, 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -16419,7 +16408,6 @@ function accesses(address target) external returns (bytes32[] memory readSlots, 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -16562,7 +16550,6 @@ function activeFork() external view returns (uint256 forkId);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -16594,7 +16581,6 @@ function activeFork() external view returns (uint256 forkId);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -16712,7 +16698,6 @@ function addr(uint256 privateKey) external pure returns (address keyAddr);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -16746,7 +16731,6 @@ function addr(uint256 privateKey) external pure returns (address keyAddr);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -16861,7 +16845,6 @@ function allowCheatcodes(address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -16893,7 +16876,6 @@ function allowCheatcodes(address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17011,7 +16993,6 @@ function assertApproxEqAbs(uint256 left, uint256 right, uint256 maxDelta) extern
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -17057,7 +17038,6 @@ function assertApproxEqAbs(uint256 left, uint256 right, uint256 maxDelta) extern
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17185,7 +17165,6 @@ function assertApproxEqAbs(int256 left, int256 right, uint256 maxDelta) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -17231,7 +17210,6 @@ function assertApproxEqAbs(int256 left, int256 right, uint256 maxDelta) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17361,7 +17339,6 @@ function assertApproxEqAbs(int256 left, int256 right, uint256 maxDelta, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -17410,7 +17387,6 @@ function assertApproxEqAbs(int256 left, int256 right, uint256 maxDelta, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17544,7 +17520,6 @@ function assertApproxEqAbs(uint256 left, uint256 right, uint256 maxDelta, string
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -17593,7 +17568,6 @@ function assertApproxEqAbs(uint256 left, uint256 right, uint256 maxDelta, string
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17727,7 +17701,6 @@ function assertApproxEqAbsDecimal(uint256 left, uint256 right, uint256 maxDelta,
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -17776,7 +17749,6 @@ function assertApproxEqAbsDecimal(uint256 left, uint256 right, uint256 maxDelta,
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -17912,7 +17884,6 @@ function assertApproxEqAbsDecimal(int256 left, int256 right, uint256 maxDelta, u
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -17961,7 +17932,6 @@ function assertApproxEqAbsDecimal(int256 left, int256 right, uint256 maxDelta, u
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -18099,7 +18069,6 @@ function assertApproxEqAbsDecimal(uint256 left, uint256 right, uint256 maxDelta,
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -18157,7 +18126,6 @@ function assertApproxEqAbsDecimal(uint256 left, uint256 right, uint256 maxDelta,
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -18299,7 +18267,6 @@ function assertApproxEqAbsDecimal(int256 left, int256 right, uint256 maxDelta, u
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -18357,7 +18324,6 @@ function assertApproxEqAbsDecimal(int256 left, int256 right, uint256 maxDelta, u
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -18497,7 +18463,6 @@ function assertApproxEqRel(uint256 left, uint256 right, uint256 maxPercentDelta,
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -18546,7 +18511,6 @@ function assertApproxEqRel(uint256 left, uint256 right, uint256 maxPercentDelta,
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -18678,7 +18642,6 @@ function assertApproxEqRel(uint256 left, uint256 right, uint256 maxPercentDelta)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -18724,7 +18687,6 @@ function assertApproxEqRel(uint256 left, uint256 right, uint256 maxPercentDelta)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -18854,7 +18816,6 @@ function assertApproxEqRel(int256 left, int256 right, uint256 maxPercentDelta, s
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -18903,7 +18864,6 @@ function assertApproxEqRel(int256 left, int256 right, uint256 maxPercentDelta, s
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19035,7 +18995,6 @@ function assertApproxEqRel(int256 left, int256 right, uint256 maxPercentDelta) e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -19081,7 +19040,6 @@ function assertApproxEqRel(int256 left, int256 right, uint256 maxPercentDelta) e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19211,7 +19169,6 @@ function assertApproxEqRelDecimal(uint256 left, uint256 right, uint256 maxPercen
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -19260,7 +19217,6 @@ function assertApproxEqRelDecimal(uint256 left, uint256 right, uint256 maxPercen
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19398,7 +19354,6 @@ function assertApproxEqRelDecimal(uint256 left, uint256 right, uint256 maxPercen
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -19456,7 +19411,6 @@ function assertApproxEqRelDecimal(uint256 left, uint256 right, uint256 maxPercen
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19596,7 +19550,6 @@ function assertApproxEqRelDecimal(int256 left, int256 right, uint256 maxPercentD
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -19645,7 +19598,6 @@ function assertApproxEqRelDecimal(int256 left, int256 right, uint256 maxPercentD
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19783,7 +19735,6 @@ function assertApproxEqRelDecimal(int256 left, int256 right, uint256 maxPercentD
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -19841,7 +19792,6 @@ function assertApproxEqRelDecimal(int256 left, int256 right, uint256 maxPercentD
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -19981,7 +19931,6 @@ function assertEq(bytes32[] memory left, bytes32[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -20028,7 +19977,6 @@ function assertEq(bytes32[] memory left, bytes32[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -20158,7 +20106,6 @@ function assertEq(int256[] memory left, int256[] memory right, string memory err
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
@@ -20206,7 +20153,6 @@ function assertEq(int256[] memory left, int256[] memory right, string memory err
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -20332,7 +20278,6 @@ function assertEq(address left, address right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -20376,7 +20321,6 @@ function assertEq(address left, address right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -20502,7 +20446,6 @@ function assertEq(string memory left, string memory right, string memory error) 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -20546,7 +20489,6 @@ function assertEq(string memory left, string memory right, string memory error) 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -20670,7 +20612,6 @@ function assertEq(address[] memory left, address[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
@@ -20711,7 +20652,6 @@ function assertEq(address[] memory left, address[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -20833,7 +20773,6 @@ function assertEq(address[] memory left, address[] memory right, string memory e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
@@ -20877,7 +20816,6 @@ function assertEq(address[] memory left, address[] memory right, string memory e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21003,7 +20941,6 @@ function assertEq(bool left, bool right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -21047,7 +20984,6 @@ function assertEq(bool left, bool right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21171,7 +21107,6 @@ function assertEq(address left, address right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -21212,7 +21147,6 @@ function assertEq(address left, address right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21338,7 +21272,6 @@ function assertEq(uint256[] memory left, uint256[] memory right, string memory e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
@@ -21386,7 +21319,6 @@ function assertEq(uint256[] memory left, uint256[] memory right, string memory e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21510,7 +21442,6 @@ function assertEq(bool[] memory left, bool[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
@@ -21551,7 +21482,6 @@ function assertEq(bool[] memory left, bool[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21675,7 +21605,6 @@ function assertEq(int256[] memory left, int256[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
@@ -21720,7 +21649,6 @@ function assertEq(int256[] memory left, int256[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -21842,7 +21770,6 @@ function assertEq(int256 left, int256 right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -21886,7 +21813,6 @@ function assertEq(int256 left, int256 right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22010,7 +21936,6 @@ function assertEq(bytes32 left, bytes32 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -22051,7 +21976,6 @@ function assertEq(bytes32 left, bytes32 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22173,7 +22097,6 @@ function assertEq(uint256 left, uint256 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -22217,7 +22140,6 @@ function assertEq(uint256 left, uint256 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22345,7 +22267,6 @@ function assertEq(uint256[] memory left, uint256[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
@@ -22390,7 +22311,6 @@ function assertEq(uint256[] memory left, uint256[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22510,7 +22430,6 @@ function assertEq(bytes memory left, bytes memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -22551,7 +22470,6 @@ function assertEq(bytes memory left, bytes memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22671,7 +22589,6 @@ function assertEq(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -22712,7 +22629,6 @@ function assertEq(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -22834,7 +22750,6 @@ function assertEq(bytes32 left, bytes32 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -22878,7 +22793,6 @@ function assertEq(bytes32 left, bytes32 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23002,7 +22916,6 @@ function assertEq(string[] memory left, string[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
@@ -23043,7 +22956,6 @@ function assertEq(string[] memory left, string[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23169,7 +23081,6 @@ function assertEq(bytes32[] memory left, bytes32[] memory right, string memory e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -23221,7 +23132,6 @@ function assertEq(bytes32[] memory left, bytes32[] memory right, string memory e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23351,7 +23261,6 @@ function assertEq(bytes memory left, bytes memory right, string memory error) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -23395,7 +23304,6 @@ function assertEq(bytes memory left, bytes memory right, string memory error) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23521,7 +23429,6 @@ function assertEq(bool[] memory left, bool[] memory right, string memory error) 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
@@ -23565,7 +23472,6 @@ function assertEq(bool[] memory left, bool[] memory right, string memory error) 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23689,7 +23595,6 @@ function assertEq(bytes[] memory left, bytes[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
@@ -23730,7 +23635,6 @@ function assertEq(bytes[] memory left, bytes[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -23852,7 +23756,6 @@ function assertEq(string[] memory left, string[] memory right, string memory err
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
@@ -23896,7 +23799,6 @@ function assertEq(string[] memory left, string[] memory right, string memory err
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24020,7 +23922,6 @@ function assertEq(string memory left, string memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -24061,7 +23962,6 @@ function assertEq(string memory left, string memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24183,7 +24083,6 @@ function assertEq(bytes[] memory left, bytes[] memory right, string memory error
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
@@ -24227,7 +24126,6 @@ function assertEq(bytes[] memory left, bytes[] memory right, string memory error
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24351,7 +24249,6 @@ function assertEq(bool left, bool right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -24389,7 +24286,6 @@ function assertEq(bool left, bool right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24509,7 +24405,6 @@ function assertEq(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -24550,7 +24445,6 @@ function assertEq(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24672,7 +24566,6 @@ function assertEqDecimal(uint256 left, uint256 right, uint256 decimals) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -24718,7 +24611,6 @@ function assertEqDecimal(uint256 left, uint256 right, uint256 decimals) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -24846,7 +24738,6 @@ function assertEqDecimal(int256 left, int256 right, uint256 decimals) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -24892,7 +24783,6 @@ function assertEqDecimal(int256 left, int256 right, uint256 decimals) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25022,7 +24912,6 @@ function assertEqDecimal(int256 left, int256 right, uint256 decimals, string mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -25071,7 +24960,6 @@ function assertEqDecimal(int256 left, int256 right, uint256 decimals, string mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25205,7 +25093,6 @@ function assertEqDecimal(uint256 left, uint256 right, uint256 decimals, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -25254,7 +25141,6 @@ function assertEqDecimal(uint256 left, uint256 right, uint256 decimals, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25384,7 +25270,6 @@ function assertFalse(bool condition, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::String,
@@ -25422,7 +25307,6 @@ function assertFalse(bool condition, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25540,7 +25424,6 @@ function assertFalse(bool condition) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -25572,7 +25455,6 @@ function assertFalse(bool condition) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25686,7 +25568,6 @@ function assertGe(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -25727,7 +25608,6 @@ function assertGe(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -25849,7 +25729,6 @@ function assertGe(int256 left, int256 right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -25893,7 +25772,6 @@ function assertGe(int256 left, int256 right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26017,7 +25895,6 @@ function assertGe(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -26058,7 +25935,6 @@ function assertGe(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26180,7 +26056,6 @@ function assertGe(uint256 left, uint256 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -26224,7 +26099,6 @@ function assertGe(uint256 left, uint256 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26350,7 +26224,6 @@ function assertGeDecimal(uint256 left, uint256 right, uint256 decimals) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -26396,7 +26269,6 @@ function assertGeDecimal(uint256 left, uint256 right, uint256 decimals) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26526,7 +26398,6 @@ function assertGeDecimal(int256 left, int256 right, uint256 decimals, string mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -26575,7 +26446,6 @@ function assertGeDecimal(int256 left, int256 right, uint256 decimals, string mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26709,7 +26579,6 @@ function assertGeDecimal(uint256 left, uint256 right, uint256 decimals, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -26758,7 +26627,6 @@ function assertGeDecimal(uint256 left, uint256 right, uint256 decimals, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -26890,7 +26758,6 @@ function assertGeDecimal(int256 left, int256 right, uint256 decimals) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -26936,7 +26803,6 @@ function assertGeDecimal(int256 left, int256 right, uint256 decimals) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27062,7 +26928,6 @@ function assertGt(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -27103,7 +26968,6 @@ function assertGt(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27225,7 +27089,6 @@ function assertGt(uint256 left, uint256 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -27269,7 +27132,6 @@ function assertGt(uint256 left, uint256 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27393,7 +27255,6 @@ function assertGt(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -27434,7 +27295,6 @@ function assertGt(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27556,7 +27416,6 @@ function assertGt(int256 left, int256 right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -27600,7 +27459,6 @@ function assertGt(int256 left, int256 right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27728,7 +27586,6 @@ function assertGtDecimal(int256 left, int256 right, uint256 decimals, string mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -27777,7 +27634,6 @@ function assertGtDecimal(int256 left, int256 right, uint256 decimals, string mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -27911,7 +27767,6 @@ function assertGtDecimal(uint256 left, uint256 right, uint256 decimals, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -27960,7 +27815,6 @@ function assertGtDecimal(uint256 left, uint256 right, uint256 decimals, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28092,7 +27946,6 @@ function assertGtDecimal(int256 left, int256 right, uint256 decimals) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -28138,7 +27991,6 @@ function assertGtDecimal(int256 left, int256 right, uint256 decimals) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28266,7 +28118,6 @@ function assertGtDecimal(uint256 left, uint256 right, uint256 decimals) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -28312,7 +28163,6 @@ function assertGtDecimal(uint256 left, uint256 right, uint256 decimals) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28440,7 +28290,6 @@ function assertLe(int256 left, int256 right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -28484,7 +28333,6 @@ function assertLe(int256 left, int256 right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28608,7 +28456,6 @@ function assertLe(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -28649,7 +28496,6 @@ function assertLe(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28769,7 +28615,6 @@ function assertLe(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -28810,7 +28655,6 @@ function assertLe(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -28932,7 +28776,6 @@ function assertLe(uint256 left, uint256 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -28976,7 +28819,6 @@ function assertLe(uint256 left, uint256 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29102,7 +28944,6 @@ function assertLeDecimal(int256 left, int256 right, uint256 decimals) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -29148,7 +28989,6 @@ function assertLeDecimal(int256 left, int256 right, uint256 decimals) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29278,7 +29118,6 @@ function assertLeDecimal(uint256 left, uint256 right, uint256 decimals, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -29327,7 +29166,6 @@ function assertLeDecimal(uint256 left, uint256 right, uint256 decimals, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29461,7 +29299,6 @@ function assertLeDecimal(int256 left, int256 right, uint256 decimals, string mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -29510,7 +29347,6 @@ function assertLeDecimal(int256 left, int256 right, uint256 decimals, string mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29642,7 +29478,6 @@ function assertLeDecimal(uint256 left, uint256 right, uint256 decimals) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -29688,7 +29523,6 @@ function assertLeDecimal(uint256 left, uint256 right, uint256 decimals) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29814,7 +29648,6 @@ function assertLt(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -29855,7 +29688,6 @@ function assertLt(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -29977,7 +29809,6 @@ function assertLt(uint256 left, uint256 right, string memory error) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -30021,7 +29852,6 @@ function assertLt(uint256 left, uint256 right, string memory error) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -30147,7 +29977,6 @@ function assertLt(int256 left, int256 right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -30191,7 +30020,6 @@ function assertLt(int256 left, int256 right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -30315,7 +30143,6 @@ function assertLt(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -30356,7 +30183,6 @@ function assertLt(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -30478,7 +30304,6 @@ function assertLtDecimal(uint256 left, uint256 right, uint256 decimals) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -30524,7 +30349,6 @@ function assertLtDecimal(uint256 left, uint256 right, uint256 decimals) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -30654,7 +30478,6 @@ function assertLtDecimal(int256 left, int256 right, uint256 decimals, string mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -30703,7 +30526,6 @@ function assertLtDecimal(int256 left, int256 right, uint256 decimals, string mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -30837,7 +30659,6 @@ function assertLtDecimal(uint256 left, uint256 right, uint256 decimals, string m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -30886,7 +30707,6 @@ function assertLtDecimal(uint256 left, uint256 right, uint256 decimals, string m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31018,7 +30838,6 @@ function assertLtDecimal(int256 left, int256 right, uint256 decimals) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -31064,7 +30883,6 @@ function assertLtDecimal(int256 left, int256 right, uint256 decimals) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31194,7 +31012,6 @@ function assertNotEq(bytes32[] memory left, bytes32[] memory right) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -31241,7 +31058,6 @@ function assertNotEq(bytes32[] memory left, bytes32[] memory right) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31369,7 +31185,6 @@ function assertNotEq(int256[] memory left, int256[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
@@ -31414,7 +31229,6 @@ function assertNotEq(int256[] memory left, int256[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31536,7 +31350,6 @@ function assertNotEq(bool left, bool right, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -31580,7 +31393,6 @@ function assertNotEq(bool left, bool right, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31706,7 +31518,6 @@ function assertNotEq(bytes[] memory left, bytes[] memory right, string memory er
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
@@ -31750,7 +31561,6 @@ function assertNotEq(bytes[] memory left, bytes[] memory right, string memory er
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -31874,7 +31684,6 @@ function assertNotEq(bool left, bool right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -31912,7 +31721,6 @@ function assertNotEq(bool left, bool right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32032,7 +31840,6 @@ function assertNotEq(bool[] memory left, bool[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
@@ -32073,7 +31880,6 @@ function assertNotEq(bool[] memory left, bool[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32193,7 +31999,6 @@ function assertNotEq(bytes memory left, bytes memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -32234,7 +32039,6 @@ function assertNotEq(bytes memory left, bytes memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32354,7 +32158,6 @@ function assertNotEq(address[] memory left, address[] memory right) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
@@ -32395,7 +32198,6 @@ function assertNotEq(address[] memory left, address[] memory right) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32517,7 +32319,6 @@ function assertNotEq(int256 left, int256 right, string memory error) external pu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -32561,7 +32362,6 @@ function assertNotEq(int256 left, int256 right, string memory error) external pu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32689,7 +32489,6 @@ function assertNotEq(uint256[] memory left, uint256[] memory right) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
@@ -32734,7 +32533,6 @@ function assertNotEq(uint256[] memory left, uint256[] memory right) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -32856,7 +32654,6 @@ function assertNotEq(bool[] memory left, bool[] memory right, string memory erro
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
@@ -32900,7 +32697,6 @@ function assertNotEq(bool[] memory left, bool[] memory right, string memory erro
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33026,7 +32822,6 @@ function assertNotEq(string memory left, string memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -33067,7 +32862,6 @@ function assertNotEq(string memory left, string memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33191,7 +32985,6 @@ function assertNotEq(address[] memory left, address[] memory right, string memor
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
@@ -33235,7 +33028,6 @@ function assertNotEq(address[] memory left, address[] memory right, string memor
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33363,7 +33155,6 @@ function assertNotEq(string memory left, string memory right, string memory erro
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -33407,7 +33198,6 @@ function assertNotEq(string memory left, string memory right, string memory erro
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33535,7 +33325,6 @@ function assertNotEq(address left, address right, string memory error) external 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -33579,7 +33368,6 @@ function assertNotEq(address left, address right, string memory error) external 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33705,7 +33493,6 @@ function assertNotEq(bytes32 left, bytes32 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -33746,7 +33533,6 @@ function assertNotEq(bytes32 left, bytes32 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -33870,7 +33656,6 @@ function assertNotEq(bytes memory left, bytes memory right, string memory error)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Bytes,
@@ -33914,7 +33699,6 @@ function assertNotEq(bytes memory left, bytes memory right, string memory error)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34042,7 +33826,6 @@ function assertNotEq(uint256 left, uint256 right, string memory error) external 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -34086,7 +33869,6 @@ function assertNotEq(uint256 left, uint256 right, string memory error) external 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34218,7 +34000,6 @@ function assertNotEq(uint256[] memory left, uint256[] memory right, string memor
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
@@ -34266,7 +34047,6 @@ function assertNotEq(uint256[] memory left, uint256[] memory right, string memor
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34392,7 +34172,6 @@ function assertNotEq(address left, address right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -34433,7 +34212,6 @@ function assertNotEq(address left, address right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34557,7 +34335,6 @@ function assertNotEq(bytes32 left, bytes32 right, string memory error) external 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -34601,7 +34378,6 @@ function assertNotEq(bytes32 left, bytes32 right, string memory error) external 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34729,7 +34505,6 @@ function assertNotEq(string[] memory left, string[] memory right, string memory 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
@@ -34773,7 +34548,6 @@ function assertNotEq(string[] memory left, string[] memory right, string memory 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -34899,7 +34673,6 @@ function assertNotEq(uint256 left, uint256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -34940,7 +34713,6 @@ function assertNotEq(uint256 left, uint256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35068,7 +34840,6 @@ function assertNotEq(bytes32[] memory left, bytes32[] memory right, string memor
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -35120,7 +34891,6 @@ function assertNotEq(bytes32[] memory left, bytes32[] memory right, string memor
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35250,7 +35020,6 @@ function assertNotEq(string[] memory left, string[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
@@ -35291,7 +35060,6 @@ function assertNotEq(string[] memory left, string[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35419,7 +35187,6 @@ function assertNotEq(int256[] memory left, int256[] memory right, string memory 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
@@ -35467,7 +35234,6 @@ function assertNotEq(int256[] memory left, int256[] memory right, string memory 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35593,7 +35359,6 @@ function assertNotEq(bytes[] memory left, bytes[] memory right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
@@ -35634,7 +35399,6 @@ function assertNotEq(bytes[] memory left, bytes[] memory right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35756,7 +35520,6 @@ function assertNotEq(int256 left, int256 right) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -35797,7 +35560,6 @@ function assertNotEq(int256 left, int256 right) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -35921,7 +35683,6 @@ function assertNotEqDecimal(int256 left, int256 right, uint256 decimals) externa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -35967,7 +35728,6 @@ function assertNotEqDecimal(int256 left, int256 right, uint256 decimals) externa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36099,7 +35859,6 @@ function assertNotEqDecimal(int256 left, int256 right, uint256 decimals, string 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Int<256>,
                 alloy::sol_types::sol_data::Int<256>,
@@ -36148,7 +35907,6 @@ function assertNotEqDecimal(int256 left, int256 right, uint256 decimals, string 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36282,7 +36040,6 @@ function assertNotEqDecimal(uint256 left, uint256 right, uint256 decimals) exter
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -36328,7 +36085,6 @@ function assertNotEqDecimal(uint256 left, uint256 right, uint256 decimals) exter
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36460,7 +36216,6 @@ function assertNotEqDecimal(uint256 left, uint256 right, uint256 decimals, strin
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -36509,7 +36264,6 @@ function assertNotEqDecimal(uint256 left, uint256 right, uint256 decimals, strin
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36639,7 +36393,6 @@ function assertTrue(bool condition) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -36671,7 +36424,6 @@ function assertTrue(bool condition) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36785,7 +36537,6 @@ function assertTrue(bool condition, string memory error) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::String,
@@ -36823,7 +36574,6 @@ function assertTrue(bool condition, string memory error) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -36941,7 +36691,6 @@ function assume(bool condition) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -36973,7 +36722,6 @@ function assume(bool condition) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37082,7 +36830,6 @@ function assumeNoRevert() external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37114,7 +36861,6 @@ function assumeNoRevert() external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37224,7 +36970,6 @@ function attachDelegation(VmSafe.SignedDelegation memory signedDelegation) exter
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::SignedDelegation,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -37260,7 +37005,6 @@ function attachDelegation(VmSafe.SignedDelegation memory signedDelegation) exter
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37374,7 +37118,6 @@ function blobBaseFee(uint256 newBlobBaseFee) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -37408,7 +37151,6 @@ function blobBaseFee(uint256 newBlobBaseFee) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37522,7 +37264,6 @@ function blobhashes(bytes32[] memory hashes) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -37562,7 +37303,6 @@ function blobhashes(bytes32[] memory hashes) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37678,7 +37418,6 @@ function breakpoint(string memory char) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -37710,7 +37449,6 @@ function breakpoint(string memory char) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37824,7 +37562,6 @@ function breakpoint(string memory char, bool value) external pure;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bool,
@@ -37862,7 +37599,6 @@ function breakpoint(string memory char, bool value) external pure;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -37977,7 +37713,6 @@ function broadcast() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38009,7 +37744,6 @@ function broadcast() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38117,7 +37851,6 @@ function broadcast(address signer) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -38149,7 +37882,6 @@ function broadcast(address signer) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38261,7 +37993,6 @@ function broadcast(uint256 privateKey) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -38295,7 +38026,6 @@ function broadcast(uint256 privateKey) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38407,7 +38137,6 @@ function broadcastRawTransaction(bytes memory data) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -38441,7 +38170,6 @@ function broadcastRawTransaction(bytes memory data) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38557,7 +38285,6 @@ function chainId(uint256 newChainId) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -38591,7 +38318,6 @@ function chainId(uint256 newChainId) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38700,7 +38426,6 @@ function clearMockedCalls() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38734,7 +38459,6 @@ function clearMockedCalls() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -38846,7 +38570,6 @@ function cloneAccount(address source, address target) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -38887,7 +38610,6 @@ function cloneAccount(address source, address target) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -39005,7 +38727,6 @@ function closeFile(string memory path) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -39037,7 +38758,6 @@ function closeFile(string memory path) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -39149,7 +38869,6 @@ function coinbase(address newCoinbase) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -39181,7 +38900,6 @@ function coinbase(address newCoinbase) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -39300,7 +39018,6 @@ function computeCreate2Address(bytes32 salt, bytes32 initCodeHash) external pure
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -39343,7 +39060,6 @@ function computeCreate2Address(bytes32 salt, bytes32 initCodeHash) external pure
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -39475,7 +39191,6 @@ function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deplo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -39521,7 +39236,6 @@ function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deplo
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -39655,7 +39369,6 @@ function computeCreateAddress(address deployer, uint256 nonce) external pure ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -39698,7 +39411,6 @@ function computeCreateAddress(address deployer, uint256 nonce) external pure ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -39828,7 +39540,6 @@ function contains(string memory subject, string memory search) external returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -39869,7 +39580,6 @@ function contains(string memory subject, string memory search) external returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -39997,7 +39707,6 @@ function copyFile(string memory from, string memory to) external returns (uint64
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -40035,7 +39744,6 @@ function copyFile(string memory from, string memory to) external returns (uint64
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -40158,7 +39866,6 @@ function copyStorage(address from, address to) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -40196,7 +39903,6 @@ function copyStorage(address from, address to) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -40316,7 +40022,6 @@ function createDir(string memory path, bool recursive) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bool,
@@ -40354,7 +40059,6 @@ function createDir(string memory path, bool recursive) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -40477,7 +40181,6 @@ function createFork(string memory urlOrAlias) external returns (uint256 forkId);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -40509,7 +40212,6 @@ function createFork(string memory urlOrAlias) external returns (uint256 forkId);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -40633,7 +40335,6 @@ function createFork(string memory urlOrAlias, uint256 blockNumber) external retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -40674,7 +40375,6 @@ function createFork(string memory urlOrAlias, uint256 blockNumber) external retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -40804,7 +40504,6 @@ function createFork(string memory urlOrAlias, bytes32 txHash) external returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -40845,7 +40544,6 @@ function createFork(string memory urlOrAlias, bytes32 txHash) external returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -40975,7 +40673,6 @@ function createSelectFork(string memory urlOrAlias, uint256 blockNumber) externa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -41018,7 +40715,6 @@ function createSelectFork(string memory urlOrAlias, uint256 blockNumber) externa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41150,7 +40846,6 @@ function createSelectFork(string memory urlOrAlias, bytes32 txHash) external ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -41193,7 +40888,6 @@ function createSelectFork(string memory urlOrAlias, bytes32 txHash) external ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41323,7 +41017,6 @@ function createSelectFork(string memory urlOrAlias) external returns (uint256 fo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -41357,7 +41050,6 @@ function createSelectFork(string memory urlOrAlias) external returns (uint256 fo
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41481,7 +41173,6 @@ function createWallet(string memory walletLabel) external returns (VmSafe.Wallet
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -41513,7 +41204,6 @@ function createWallet(string memory walletLabel) external returns (VmSafe.Wallet
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::Wallet,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41633,7 +41323,6 @@ function createWallet(uint256 privateKey) external returns (VmSafe.Wallet memory
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41667,7 +41356,6 @@ function createWallet(uint256 privateKey) external returns (VmSafe.Wallet memory
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::Wallet,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41789,7 +41477,6 @@ function createWallet(uint256 privateKey, string memory walletLabel) external re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::String,
@@ -41830,7 +41517,6 @@ function createWallet(uint256 privateKey, string memory walletLabel) external re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::Wallet,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -41953,7 +41639,6 @@ function deal(address account, uint256 newBalance) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -41994,7 +41679,6 @@ function deal(address account, uint256 newBalance) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -42117,7 +41801,6 @@ function deleteSnapshot(uint256 snapshotId) external returns (bool success);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -42151,7 +41834,6 @@ function deleteSnapshot(uint256 snapshotId) external returns (bool success);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -42265,7 +41947,6 @@ function deleteSnapshots() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -42297,7 +41978,6 @@ function deleteSnapshots() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -42412,7 +42092,6 @@ function deleteStateSnapshot(uint256 snapshotId) external returns (bool success)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -42448,7 +42127,6 @@ function deleteStateSnapshot(uint256 snapshotId) external returns (bool success)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -42562,7 +42240,6 @@ function deleteStateSnapshots() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -42596,7 +42273,6 @@ function deleteStateSnapshots() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -42715,7 +42391,6 @@ function deployCode(string memory artifactPath, bytes memory constructorArgs) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bytes,
@@ -42756,7 +42431,6 @@ function deployCode(string memory artifactPath, bytes memory constructorArgs) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -42882,7 +42556,6 @@ function deployCode(string memory artifactPath) external returns (address deploy
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -42914,7 +42587,6 @@ function deployCode(string memory artifactPath) external returns (address deploy
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -43040,7 +42712,6 @@ function deriveKey(string memory mnemonic, string memory derivationPath, uint32 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -43087,7 +42758,6 @@ function deriveKey(string memory mnemonic, string memory derivationPath, uint32 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -43227,7 +42897,6 @@ function deriveKey(string memory mnemonic, uint32 index, string memory language)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<32>,
@@ -43271,7 +42940,6 @@ function deriveKey(string memory mnemonic, uint32 index, string memory language)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -43405,7 +43073,6 @@ function deriveKey(string memory mnemonic, uint32 index) external pure returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<32>,
@@ -43443,7 +43110,6 @@ function deriveKey(string memory mnemonic, uint32 index) external pure returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -43575,7 +43241,6 @@ function deriveKey(string memory mnemonic, string memory derivationPath, uint32 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -43619,7 +43284,6 @@ function deriveKey(string memory mnemonic, string memory derivationPath, uint32 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -43746,7 +43410,6 @@ function difficulty(uint256 newDifficulty) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -43780,7 +43443,6 @@ function difficulty(uint256 newDifficulty) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -43892,7 +43554,6 @@ function dumpState(string memory pathToStateJson) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -43924,7 +43585,6 @@ function dumpState(string memory pathToStateJson) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -44041,7 +43701,6 @@ function ensNamehash(string memory name) external pure returns (bytes32);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -44073,7 +43732,6 @@ function ensNamehash(string memory name) external pure returns (bytes32);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -44193,7 +43851,6 @@ function envAddress(string memory name) external view returns (address value);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -44225,7 +43882,6 @@ function envAddress(string memory name) external view returns (address value);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -44347,7 +44003,6 @@ function envAddress(string memory name, string memory delim) external view retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -44388,7 +44043,6 @@ function envAddress(string memory name, string memory delim) external view retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -44522,7 +44176,6 @@ function envBool(string memory name) external view returns (bool value);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -44554,7 +44207,6 @@ function envBool(string memory name) external view returns (bool value);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -44676,7 +44328,6 @@ function envBool(string memory name, string memory delim) external view returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -44717,7 +44368,6 @@ function envBool(string memory name, string memory delim) external view returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
             );
@@ -44847,7 +44497,6 @@ function envBytes(string memory name) external view returns (bytes memory value)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -44879,7 +44528,6 @@ function envBytes(string memory name) external view returns (bytes memory value)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -45001,7 +44649,6 @@ function envBytes(string memory name, string memory delim) external view returns
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -45042,7 +44689,6 @@ function envBytes(string memory name, string memory delim) external view returns
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
             );
@@ -45180,7 +44826,6 @@ function envBytes32(string memory name, string memory delim) external view retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -45221,7 +44866,6 @@ function envBytes32(string memory name, string memory delim) external view retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -45361,7 +45005,6 @@ function envBytes32(string memory name) external view returns (bytes32 value);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -45393,7 +45036,6 @@ function envBytes32(string memory name) external view returns (bytes32 value);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -45513,7 +45155,6 @@ function envExists(string memory name) external view returns (bool result);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -45545,7 +45186,6 @@ function envExists(string memory name) external view returns (bool result);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -45669,7 +45309,6 @@ function envInt(string memory name, string memory delim) external view returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -45710,7 +45349,6 @@ function envInt(string memory name, string memory delim) external view returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
             );
@@ -45846,7 +45484,6 @@ function envInt(string memory name) external view returns (int256 value);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -45878,7 +45515,6 @@ function envInt(string memory name) external view returns (int256 value);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -46008,7 +45644,6 @@ function envOr(string memory name, string memory delim, bytes32[] memory default
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -46054,7 +45689,6 @@ function envOr(string memory name, string memory delim, bytes32[] memory default
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -46208,7 +45842,6 @@ function envOr(string memory name, string memory delim, int256[] memory defaultV
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -46254,7 +45887,6 @@ function envOr(string memory name, string memory delim, int256[] memory defaultV
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
             );
@@ -46396,7 +46028,6 @@ function envOr(string memory name, bool defaultValue) external view returns (boo
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bool,
@@ -46434,7 +46065,6 @@ function envOr(string memory name, bool defaultValue) external view returns (boo
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -46562,7 +46192,6 @@ function envOr(string memory name, address defaultValue) external view returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Address,
@@ -46603,7 +46232,6 @@ function envOr(string memory name, address defaultValue) external view returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -46731,7 +46359,6 @@ function envOr(string memory name, uint256 defaultValue) external view returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -46772,7 +46399,6 @@ function envOr(string memory name, uint256 defaultValue) external view returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -46906,7 +46532,6 @@ function envOr(string memory name, string memory delim, bytes[] memory defaultVa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -46950,7 +46575,6 @@ function envOr(string memory name, string memory delim, bytes[] memory defaultVa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
             );
@@ -47096,7 +46720,6 @@ function envOr(string memory name, string memory delim, uint256[] memory default
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -47142,7 +46765,6 @@ function envOr(string memory name, string memory delim, uint256[] memory default
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
@@ -47288,7 +46910,6 @@ function envOr(string memory name, string memory delim, string[] memory defaultV
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -47332,7 +46953,6 @@ function envOr(string memory name, string memory delim, string[] memory defaultV
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -47472,7 +47092,6 @@ function envOr(string memory name, bytes memory defaultValue) external view retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bytes,
@@ -47513,7 +47132,6 @@ function envOr(string memory name, bytes memory defaultValue) external view retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -47641,7 +47259,6 @@ function envOr(string memory name, bytes32 defaultValue) external view returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -47682,7 +47299,6 @@ function envOr(string memory name, bytes32 defaultValue) external view returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -47810,7 +47426,6 @@ function envOr(string memory name, int256 defaultValue) external view returns (i
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Int<256>,
@@ -47851,7 +47466,6 @@ function envOr(string memory name, int256 defaultValue) external view returns (i
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -47985,7 +47599,6 @@ function envOr(string memory name, string memory delim, address[] memory default
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -48029,7 +47642,6 @@ function envOr(string memory name, string memory delim, address[] memory default
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -48169,7 +47781,6 @@ function envOr(string memory name, string memory defaultValue) external view ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -48210,7 +47821,6 @@ function envOr(string memory name, string memory defaultValue) external view ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -48340,7 +47950,6 @@ function envOr(string memory name, string memory delim, bool[] memory defaultVal
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -48384,7 +47993,6 @@ function envOr(string memory name, string memory delim, bool[] memory defaultVal
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
             );
@@ -48520,7 +48128,6 @@ function envString(string memory name, string memory delim) external view return
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -48561,7 +48168,6 @@ function envString(string memory name, string memory delim) external view return
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -48695,7 +48301,6 @@ function envString(string memory name) external view returns (string memory valu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -48727,7 +48332,6 @@ function envString(string memory name) external view returns (string memory valu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -48847,7 +48451,6 @@ function envUint(string memory name) external view returns (uint256 value);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -48879,7 +48482,6 @@ function envUint(string memory name) external view returns (uint256 value);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -49005,7 +48607,6 @@ function envUint(string memory name, string memory delim) external view returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -49046,7 +48647,6 @@ function envUint(string memory name, string memory delim) external view returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
@@ -49179,7 +48779,6 @@ function etch(address target, bytes memory newRuntimeBytecode) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -49220,7 +48819,6 @@ function etch(address target, bytes memory newRuntimeBytecode) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -49353,7 +48951,6 @@ function eth_getLogs(uint256 fromBlock, uint256 toBlock, address target, bytes32
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -49402,7 +48999,6 @@ function eth_getLogs(uint256 fromBlock, uint256 toBlock, address target, bytes32
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::EthGetLogs>,
             );
@@ -49548,7 +49144,6 @@ function exists(string memory path) external view returns (bool result);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -49580,7 +49175,6 @@ function exists(string memory path) external view returns (bool result);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -49701,7 +49295,6 @@ function expectCall(address callee, uint256 msgValue, uint64 gas, bytes memory d
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -49748,7 +49341,6 @@ function expectCall(address callee, uint256 msgValue, uint64 gas, bytes memory d
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -49882,7 +49474,6 @@ function expectCall(address callee, uint256 msgValue, uint64 gas, bytes memory d
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -49932,7 +49523,6 @@ function expectCall(address callee, uint256 msgValue, uint64 gas, bytes memory d
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50068,7 +49658,6 @@ function expectCall(address callee, uint256 msgValue, bytes memory data, uint64 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -50115,7 +49704,6 @@ function expectCall(address callee, uint256 msgValue, bytes memory data, uint64 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50243,7 +49831,6 @@ function expectCall(address callee, bytes memory data) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -50284,7 +49871,6 @@ function expectCall(address callee, bytes memory data) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50406,7 +49992,6 @@ function expectCall(address callee, bytes memory data, uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -50450,7 +50035,6 @@ function expectCall(address callee, bytes memory data, uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50576,7 +50160,6 @@ function expectCall(address callee, uint256 msgValue, bytes memory data) externa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -50620,7 +50203,6 @@ function expectCall(address callee, uint256 msgValue, bytes memory data) externa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50748,7 +50330,6 @@ function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -50797,7 +50378,6 @@ function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -50933,7 +50513,6 @@ function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -50985,7 +50564,6 @@ function expectCallMinGas(address callee, uint256 msgValue, uint64 minGas, bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51114,7 +50692,6 @@ function expectEmit() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51146,7 +50723,6 @@ function expectEmit() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51260,7 +50836,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -51307,7 +50882,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51433,7 +51007,6 @@ function expectEmit(uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -51465,7 +51038,6 @@ function expectEmit(uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51585,7 +51157,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -51635,7 +51206,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51773,7 +51343,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -51829,7 +51398,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -51959,7 +51527,6 @@ function expectEmit(address emitter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -51991,7 +51558,6 @@ function expectEmit(address emitter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52105,7 +51671,6 @@ function expectEmit(address emitter, uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -52143,7 +51708,6 @@ function expectEmit(address emitter, uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52271,7 +51835,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -52331,7 +51894,6 @@ function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool c
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52462,7 +52024,6 @@ function expectEmitAnonymous() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52496,7 +52057,6 @@ function expectEmitAnonymous() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52608,7 +52168,6 @@ function expectEmitAnonymous(address emitter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -52642,7 +52201,6 @@ function expectEmitAnonymous(address emitter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52768,7 +52326,6 @@ function expectEmitAnonymous(bool checkTopic0, bool checkTopic1, bool checkTopic
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -52830,7 +52387,6 @@ function expectEmitAnonymous(bool checkTopic0, bool checkTopic1, bool checkTopic
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -52976,7 +52532,6 @@ function expectEmitAnonymous(bool checkTopic0, bool checkTopic1, bool checkTopic
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::Bool,
@@ -53028,7 +52583,6 @@ function expectEmitAnonymous(bool checkTopic0, bool checkTopic1, bool checkTopic
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53162,7 +52716,6 @@ function expectPartialRevert(bytes4 revertData) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -53196,7 +52749,6 @@ function expectPartialRevert(bytes4 revertData) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53314,7 +52866,6 @@ function expectPartialRevert(bytes4 revertData, address reverter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<4>,
                 alloy::sol_types::sol_data::Address,
@@ -53357,7 +52908,6 @@ function expectPartialRevert(bytes4 revertData, address reverter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53481,7 +53031,6 @@ function expectRevert(address reverter, uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -53519,7 +53068,6 @@ function expectRevert(address reverter, uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53641,7 +53189,6 @@ function expectRevert(bytes4 revertData, address reverter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<4>,
                 alloy::sol_types::sol_data::Address,
@@ -53682,7 +53229,6 @@ function expectRevert(bytes4 revertData, address reverter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53804,7 +53350,6 @@ function expectRevert(bytes memory revertData, uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -53842,7 +53387,6 @@ function expectRevert(bytes memory revertData, uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -53962,7 +53506,6 @@ function expectRevert(uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -53994,7 +53537,6 @@ function expectRevert(uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54110,7 +53652,6 @@ function expectRevert(bytes memory revertData, address reverter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Address,
@@ -54151,7 +53692,6 @@ function expectRevert(bytes memory revertData, address reverter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54275,7 +53815,6 @@ function expectRevert(bytes4 revertData, address reverter, uint64 count) externa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<4>,
                 alloy::sol_types::sol_data::Address,
@@ -54319,7 +53858,6 @@ function expectRevert(bytes4 revertData, address reverter, uint64 count) externa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54443,7 +53981,6 @@ function expectRevert(bytes4 revertData) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -54475,7 +54012,6 @@ function expectRevert(bytes4 revertData) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54593,7 +54129,6 @@ function expectRevert(bytes memory revertData, address reverter, uint64 count) e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Address,
@@ -54637,7 +54172,6 @@ function expectRevert(bytes memory revertData, address reverter, uint64 count) e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54761,7 +54295,6 @@ function expectRevert(address reverter) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -54793,7 +54326,6 @@ function expectRevert(address reverter) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -54909,7 +54441,6 @@ function expectRevert(bytes4 revertData, uint64 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<4>,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -54950,7 +54481,6 @@ function expectRevert(bytes4 revertData, uint64 count) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55070,7 +54600,6 @@ function expectRevert(bytes memory revertData) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -55102,7 +54631,6 @@ function expectRevert(bytes memory revertData) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55213,7 +54741,6 @@ function expectRevert() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55245,7 +54772,6 @@ function expectRevert() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55357,7 +54883,6 @@ function expectSafeMemory(uint64 min, uint64 max) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<64>,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -55394,7 +54919,6 @@ function expectSafeMemory(uint64 min, uint64 max) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55516,7 +55040,6 @@ function expectSafeMemoryCall(uint64 min, uint64 max) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<64>,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -55553,7 +55076,6 @@ function expectSafeMemoryCall(uint64 min, uint64 max) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55675,7 +55197,6 @@ function fee(uint256 newBasefee) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -55709,7 +55230,6 @@ function fee(uint256 newBasefee) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -55828,7 +55348,6 @@ function ffi(string[] memory commandInput) external returns (bytes memory result
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -55864,7 +55383,6 @@ function ffi(string[] memory commandInput) external returns (bytes memory result
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -55986,7 +55504,6 @@ function fsMetadata(string memory path) external view returns (VmSafe.FsMetadata
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -56018,7 +55535,6 @@ function fsMetadata(string memory path) external view returns (VmSafe.FsMetadata
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::FsMetadata,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -56136,7 +55652,6 @@ function getArtifactPathByCode(bytes memory code) external view returns (string 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -56170,7 +55685,6 @@ function getArtifactPathByCode(bytes memory code) external view returns (string 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -56292,7 +55806,6 @@ function getArtifactPathByDeployedCode(bytes memory deployedCode) external view 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -56326,7 +55839,6 @@ function getArtifactPathByDeployedCode(bytes memory deployedCode) external view 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -56445,7 +55957,6 @@ function getBlobBaseFee() external view returns (uint256 blobBaseFee);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -56477,7 +55988,6 @@ function getBlobBaseFee() external view returns (uint256 blobBaseFee);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -56596,7 +56106,6 @@ function getBlobhashes() external view returns (bytes32[] memory hashes);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -56628,7 +56137,6 @@ function getBlobhashes() external view returns (bytes32[] memory hashes);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -56755,7 +56263,6 @@ function getBlockNumber() external view returns (uint256 height);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -56787,7 +56294,6 @@ function getBlockNumber() external view returns (uint256 height);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -56904,7 +56410,6 @@ function getBlockTimestamp() external view returns (uint256 timestamp);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -56938,7 +56443,6 @@ function getBlockTimestamp() external view returns (uint256 timestamp);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -57062,7 +56566,6 @@ function getBroadcast(string memory contractName, uint64 chainId, VmSafe.Broadca
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -57106,7 +56609,6 @@ function getBroadcast(string memory contractName, uint64 chainId, VmSafe.Broadca
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::BroadcastTxSummary,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -57242,7 +56744,6 @@ function getBroadcasts(string memory contractName, uint64 chainId) external view
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -57280,7 +56781,6 @@ function getBroadcasts(string memory contractName, uint64 chainId) external view
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::BroadcastTxSummary>,
             );
@@ -57424,7 +56924,6 @@ function getBroadcasts(string memory contractName, uint64 chainId, VmSafe.Broadc
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -57468,7 +56967,6 @@ function getBroadcasts(string memory contractName, uint64 chainId, VmSafe.Broadc
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::BroadcastTxSummary>,
             );
@@ -57610,7 +57108,6 @@ function getCode(string memory artifactPath) external view returns (bytes memory
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -57642,7 +57139,6 @@ function getCode(string memory artifactPath) external view returns (bytes memory
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -57762,7 +57258,6 @@ function getDeployedCode(string memory artifactPath) external view returns (byte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -57794,7 +57289,6 @@ function getDeployedCode(string memory artifactPath) external view returns (byte
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -57918,7 +57412,6 @@ function getDeployment(string memory contractName, uint64 chainId) external view
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -57956,7 +57449,6 @@ function getDeployment(string memory contractName, uint64 chainId) external view
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -58084,7 +57576,6 @@ function getDeployment(string memory contractName) external view returns (addres
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -58116,7 +57607,6 @@ function getDeployment(string memory contractName) external view returns (addres
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -58242,7 +57732,6 @@ function getDeployments(string memory contractName, uint64 chainId) external vie
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -58280,7 +57769,6 @@ function getDeployments(string memory contractName, uint64 chainId) external vie
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -58413,7 +57901,6 @@ function getFoundryVersion() external view returns (string memory version);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -58447,7 +57934,6 @@ function getFoundryVersion() external view returns (string memory version);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -58565,7 +58051,6 @@ function getLabel(address account) external view returns (string memory currentL
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -58597,7 +58082,6 @@ function getLabel(address account) external view returns (string memory currentL
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -58723,7 +58207,6 @@ function getMappingKeyAndParentOf(address target, bytes32 elementSlot) external 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -58766,7 +58249,6 @@ function getMappingKeyAndParentOf(address target, bytes32 elementSlot) external 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -58921,7 +58403,6 @@ function getMappingLength(address target, bytes32 mappingSlot) external returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -58964,7 +58445,6 @@ function getMappingLength(address target, bytes32 mappingSlot) external returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -59098,7 +58578,6 @@ function getMappingSlotAt(address target, bytes32 mappingSlot, uint256 idx) exte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -59144,7 +58623,6 @@ function getMappingSlotAt(address target, bytes32 mappingSlot, uint256 idx) exte
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -59276,7 +58754,6 @@ function getNonce(address account) external view returns (uint64 nonce);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -59308,7 +58785,6 @@ function getNonce(address account) external view returns (uint64 nonce);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -59428,7 +58904,6 @@ function getNonce(VmSafe.Wallet memory wallet) external returns (uint64 nonce);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::Wallet,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -59462,7 +58937,6 @@ function getNonce(VmSafe.Wallet memory wallet) external returns (uint64 nonce);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -59577,7 +59051,6 @@ function getRecordedLogs() external returns (VmSafe.Log[] memory logs);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -59609,7 +59082,6 @@ function getRecordedLogs() external returns (VmSafe.Log[] memory logs);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::Log>,
             );
@@ -59732,7 +59204,6 @@ function getStateDiff() external view returns (string memory diff);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -59764,7 +59235,6 @@ function getStateDiff() external view returns (string memory diff);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -59877,7 +59347,6 @@ function getStateDiffJson() external view returns (string memory diff);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -59911,7 +59380,6 @@ function getStateDiffJson() external view returns (string memory diff);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -60026,7 +59494,6 @@ function getWallets() external returns (address[] memory wallets);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -60058,7 +59525,6 @@ function getWallets() external returns (address[] memory wallets);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -60184,7 +59650,6 @@ function indexOf(string memory input, string memory key) external pure returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -60225,7 +59690,6 @@ function indexOf(string memory input, string memory key) external pure returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -60353,7 +59817,6 @@ function isContext(VmSafe.ForgeContext context) external view returns (bool resu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::ForgeContext,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -60387,7 +59850,6 @@ function isContext(VmSafe.ForgeContext context) external view returns (bool resu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -60507,7 +59969,6 @@ function isDir(string memory path) external view returns (bool result);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -60539,7 +60000,6 @@ function isDir(string memory path) external view returns (bool result);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -60659,7 +60119,6 @@ function isFile(string memory path) external view returns (bool result);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -60691,7 +60150,6 @@ function isFile(string memory path) external view returns (bool result);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -60811,7 +60269,6 @@ function isPersistent(address account) external view returns (bool persistent);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -60843,7 +60300,6 @@ function isPersistent(address account) external view returns (bool persistent);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -60965,7 +60421,6 @@ function keyExists(string memory json, string memory key) external view returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -61006,7 +60461,6 @@ function keyExists(string memory json, string memory key) external view returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -61134,7 +60588,6 @@ function keyExistsJson(string memory json, string memory key) external view retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -61175,7 +60628,6 @@ function keyExistsJson(string memory json, string memory key) external view retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -61303,7 +60755,6 @@ function keyExistsToml(string memory toml, string memory key) external view retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -61344,7 +60795,6 @@ function keyExistsToml(string memory toml, string memory key) external view retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -61467,7 +60917,6 @@ function label(address account, string memory newLabel) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::String,
@@ -61508,7 +60957,6 @@ function label(address account, string memory newLabel) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -61628,7 +61076,6 @@ function lastCallGas() external view returns (VmSafe.Gas memory gas);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -61660,7 +61107,6 @@ function lastCallGas() external view returns (VmSafe.Gas memory gas);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::Gas,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -61776,7 +61222,6 @@ function load(address target, bytes32 slot) external view returns (bytes32 data)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -61817,7 +61262,6 @@ function load(address target, bytes32 slot) external view returns (bytes32 data)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -61938,7 +61382,6 @@ function loadAllocs(string memory pathToAllocsJson) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -61970,7 +61413,6 @@ function loadAllocs(string memory pathToAllocsJson) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62082,7 +61524,6 @@ function makePersistent(address[] memory accounts) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -62120,7 +61561,6 @@ function makePersistent(address[] memory accounts) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62238,7 +61678,6 @@ function makePersistent(address account0, address account1) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -62281,7 +61720,6 @@ function makePersistent(address account0, address account1) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62401,7 +61839,6 @@ function makePersistent(address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -62435,7 +61872,6 @@ function makePersistent(address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62553,7 +61989,6 @@ function makePersistent(address account0, address account1, address account2) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -62599,7 +62034,6 @@ function makePersistent(address account0, address account1, address account2) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62727,7 +62161,6 @@ function mockCall(address callee, bytes4 data, bytes memory returnData) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<4>,
@@ -62771,7 +62204,6 @@ function mockCall(address callee, bytes4 data, bytes memory returnData) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -62899,7 +62331,6 @@ function mockCall(address callee, uint256 msgValue, bytes memory data, bytes mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -62946,7 +62377,6 @@ function mockCall(address callee, uint256 msgValue, bytes memory data, bytes mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63076,7 +62506,6 @@ function mockCall(address callee, bytes memory data, bytes memory returnData) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -63120,7 +62549,6 @@ function mockCall(address callee, bytes memory data, bytes memory returnData) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63248,7 +62676,6 @@ function mockCall(address callee, uint256 msgValue, bytes4 data, bytes memory re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -63295,7 +62722,6 @@ function mockCall(address callee, uint256 msgValue, bytes4 data, bytes memory re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63425,7 +62851,6 @@ function mockCallRevert(address callee, bytes4 data, bytes memory revertData) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<4>,
@@ -63471,7 +62896,6 @@ function mockCallRevert(address callee, bytes4 data, bytes memory revertData) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63601,7 +63025,6 @@ function mockCallRevert(address callee, uint256 msgValue, bytes4 data, bytes mem
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -63650,7 +63073,6 @@ function mockCallRevert(address callee, uint256 msgValue, bytes4 data, bytes mem
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63784,7 +63206,6 @@ function mockCallRevert(address callee, uint256 msgValue, bytes memory data, byt
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -63833,7 +63254,6 @@ function mockCallRevert(address callee, uint256 msgValue, bytes memory data, byt
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -63965,7 +63385,6 @@ function mockCallRevert(address callee, bytes memory data, bytes memory revertDa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -64011,7 +63430,6 @@ function mockCallRevert(address callee, bytes memory data, bytes memory revertDa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -64141,7 +63559,6 @@ function mockCalls(address callee, uint256 msgValue, bytes memory data, bytes[] 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -64188,7 +63605,6 @@ function mockCalls(address callee, uint256 msgValue, bytes memory data, bytes[] 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -64318,7 +63734,6 @@ function mockCalls(address callee, bytes memory data, bytes[] memory returnData)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
@@ -64362,7 +63777,6 @@ function mockCalls(address callee, bytes memory data, bytes[] memory returnData)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -64488,7 +63902,6 @@ function mockFunction(address callee, address target, bytes memory data) externa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -64532,7 +63945,6 @@ function mockFunction(address callee, address target, bytes memory data) externa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -64659,7 +64071,6 @@ function parseAddress(string memory stringifiedValue) external pure returns (add
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -64691,7 +64102,6 @@ function parseAddress(string memory stringifiedValue) external pure returns (add
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -64811,7 +64221,6 @@ function parseBool(string memory stringifiedValue) external pure returns (bool p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -64843,7 +64252,6 @@ function parseBool(string memory stringifiedValue) external pure returns (bool p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -64963,7 +64371,6 @@ function parseBytes(string memory stringifiedValue) external pure returns (bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -64995,7 +64402,6 @@ function parseBytes(string memory stringifiedValue) external pure returns (bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -65115,7 +64521,6 @@ function parseBytes32(string memory stringifiedValue) external pure returns (byt
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -65147,7 +64552,6 @@ function parseBytes32(string memory stringifiedValue) external pure returns (byt
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -65267,7 +64671,6 @@ function parseInt(string memory stringifiedValue) external pure returns (int256 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -65299,7 +64702,6 @@ function parseInt(string memory stringifiedValue) external pure returns (int256 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -65421,7 +64823,6 @@ function parseJson(string memory json) external pure returns (bytes memory abiEn
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -65453,7 +64854,6 @@ function parseJson(string memory json) external pure returns (bytes memory abiEn
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -65575,7 +64975,6 @@ function parseJson(string memory json, string memory key) external pure returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -65616,7 +65015,6 @@ function parseJson(string memory json, string memory key) external pure returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -65744,7 +65142,6 @@ function parseJsonAddress(string memory json, string memory key) external pure r
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -65787,7 +65184,6 @@ function parseJsonAddress(string memory json, string memory key) external pure r
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -65917,7 +65313,6 @@ function parseJsonAddressArray(string memory json, string memory key) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -65960,7 +65355,6 @@ function parseJsonAddressArray(string memory json, string memory key) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -66098,7 +65492,6 @@ function parseJsonBool(string memory json, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -66139,7 +65532,6 @@ function parseJsonBool(string memory json, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -66267,7 +65659,6 @@ function parseJsonBoolArray(string memory json, string memory key) external pure
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -66310,7 +65701,6 @@ function parseJsonBoolArray(string memory json, string memory key) external pure
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
             );
@@ -66444,7 +65834,6 @@ function parseJsonBytes(string memory json, string memory key) external pure ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -66485,7 +65874,6 @@ function parseJsonBytes(string memory json, string memory key) external pure ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -66615,7 +66003,6 @@ function parseJsonBytes32(string memory json, string memory key) external pure r
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -66658,7 +66045,6 @@ function parseJsonBytes32(string memory json, string memory key) external pure r
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -66790,7 +66176,6 @@ function parseJsonBytes32Array(string memory json, string memory key) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -66833,7 +66218,6 @@ function parseJsonBytes32Array(string memory json, string memory key) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -66977,7 +66361,6 @@ function parseJsonBytesArray(string memory json, string memory key) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67020,7 +66403,6 @@ function parseJsonBytesArray(string memory json, string memory key) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
             );
@@ -67158,7 +66540,6 @@ function parseJsonInt(string memory json, string memory key) external pure retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67199,7 +66580,6 @@ function parseJsonInt(string memory json, string memory key) external pure retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -67331,7 +66711,6 @@ function parseJsonIntArray(string memory json, string memory key) external pure 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67374,7 +66753,6 @@ function parseJsonIntArray(string memory json, string memory key) external pure 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
             );
@@ -67514,7 +66892,6 @@ function parseJsonKeys(string memory json, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67555,7 +66932,6 @@ function parseJsonKeys(string memory json, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -67691,7 +67067,6 @@ function parseJsonString(string memory json, string memory key) external pure re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67732,7 +67107,6 @@ function parseJsonString(string memory json, string memory key) external pure re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -67862,7 +67236,6 @@ function parseJsonStringArray(string memory json, string memory key) external pu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -67905,7 +67278,6 @@ function parseJsonStringArray(string memory json, string memory key) external pu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -68043,7 +67415,6 @@ function parseJsonType(string memory json, string memory typeDescription) extern
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68084,7 +67455,6 @@ function parseJsonType(string memory json, string memory typeDescription) extern
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -68216,7 +67586,6 @@ function parseJsonType(string memory json, string memory key, string memory type
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68260,7 +67629,6 @@ function parseJsonType(string memory json, string memory key, string memory type
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -68396,7 +67764,6 @@ function parseJsonTypeArray(string memory json, string memory key, string memory
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68442,7 +67809,6 @@ function parseJsonTypeArray(string memory json, string memory key, string memory
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -68576,7 +67942,6 @@ function parseJsonUint(string memory json, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68617,7 +67982,6 @@ function parseJsonUint(string memory json, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -68749,7 +68113,6 @@ function parseJsonUintArray(string memory json, string memory key) external pure
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68792,7 +68155,6 @@ function parseJsonUintArray(string memory json, string memory key) external pure
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
@@ -68932,7 +68294,6 @@ function parseToml(string memory toml, string memory key) external pure returns 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -68973,7 +68334,6 @@ function parseToml(string memory toml, string memory key) external pure returns 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -69099,7 +68459,6 @@ function parseToml(string memory toml) external pure returns (bytes memory abiEn
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -69131,7 +68490,6 @@ function parseToml(string memory toml) external pure returns (bytes memory abiEn
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -69253,7 +68611,6 @@ function parseTomlAddress(string memory toml, string memory key) external pure r
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -69296,7 +68653,6 @@ function parseTomlAddress(string memory toml, string memory key) external pure r
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -69426,7 +68782,6 @@ function parseTomlAddressArray(string memory toml, string memory key) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -69469,7 +68824,6 @@ function parseTomlAddressArray(string memory toml, string memory key) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -69607,7 +68961,6 @@ function parseTomlBool(string memory toml, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -69648,7 +69001,6 @@ function parseTomlBool(string memory toml, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -69776,7 +69128,6 @@ function parseTomlBoolArray(string memory toml, string memory key) external pure
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -69819,7 +69170,6 @@ function parseTomlBoolArray(string memory toml, string memory key) external pure
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bool>,
             );
@@ -69953,7 +69303,6 @@ function parseTomlBytes(string memory toml, string memory key) external pure ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -69994,7 +69343,6 @@ function parseTomlBytes(string memory toml, string memory key) external pure ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -70124,7 +69472,6 @@ function parseTomlBytes32(string memory toml, string memory key) external pure r
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -70167,7 +69514,6 @@ function parseTomlBytes32(string memory toml, string memory key) external pure r
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -70299,7 +69645,6 @@ function parseTomlBytes32Array(string memory toml, string memory key) external p
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -70342,7 +69687,6 @@ function parseTomlBytes32Array(string memory toml, string memory key) external p
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedBytes<32>,
@@ -70486,7 +69830,6 @@ function parseTomlBytesArray(string memory toml, string memory key) external pur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -70529,7 +69872,6 @@ function parseTomlBytesArray(string memory toml, string memory key) external pur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Bytes>,
             );
@@ -70667,7 +70009,6 @@ function parseTomlInt(string memory toml, string memory key) external pure retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -70708,7 +70049,6 @@ function parseTomlInt(string memory toml, string memory key) external pure retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -70840,7 +70180,6 @@ function parseTomlIntArray(string memory toml, string memory key) external pure 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -70883,7 +70222,6 @@ function parseTomlIntArray(string memory toml, string memory key) external pure 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Int<256>>,
             );
@@ -71023,7 +70361,6 @@ function parseTomlKeys(string memory toml, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71064,7 +70401,6 @@ function parseTomlKeys(string memory toml, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -71200,7 +70536,6 @@ function parseTomlString(string memory toml, string memory key) external pure re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71241,7 +70576,6 @@ function parseTomlString(string memory toml, string memory key) external pure re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -71371,7 +70705,6 @@ function parseTomlStringArray(string memory toml, string memory key) external pu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71414,7 +70747,6 @@ function parseTomlStringArray(string memory toml, string memory key) external pu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -71552,7 +70884,6 @@ function parseTomlType(string memory toml, string memory typeDescription) extern
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71593,7 +70924,6 @@ function parseTomlType(string memory toml, string memory typeDescription) extern
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -71725,7 +71055,6 @@ function parseTomlType(string memory toml, string memory key, string memory type
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71769,7 +71098,6 @@ function parseTomlType(string memory toml, string memory key, string memory type
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -71905,7 +71233,6 @@ function parseTomlTypeArray(string memory toml, string memory key, string memory
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -71951,7 +71278,6 @@ function parseTomlTypeArray(string memory toml, string memory key, string memory
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -72085,7 +71411,6 @@ function parseTomlUint(string memory toml, string memory key) external pure retu
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -72126,7 +71451,6 @@ function parseTomlUint(string memory toml, string memory key) external pure retu
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -72258,7 +71582,6 @@ function parseTomlUintArray(string memory toml, string memory key) external pure
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -72301,7 +71624,6 @@ function parseTomlUintArray(string memory toml, string memory key) external pure
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
@@ -72439,7 +71761,6 @@ function parseUint(string memory stringifiedValue) external pure returns (uint25
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -72471,7 +71792,6 @@ function parseUint(string memory stringifiedValue) external pure returns (uint25
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -72585,7 +71905,6 @@ function pauseGasMetering() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -72619,7 +71938,6 @@ function pauseGasMetering() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -72726,7 +72044,6 @@ function pauseTracing() external view;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -72758,7 +72075,6 @@ function pauseTracing() external view;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -72868,7 +72184,6 @@ function prank(address msgSender, address txOrigin) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -72909,7 +72224,6 @@ function prank(address msgSender, address txOrigin) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73031,7 +72345,6 @@ function prank(address msgSender, address txOrigin, bool delegateCall) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -73075,7 +72388,6 @@ function prank(address msgSender, address txOrigin, bool delegateCall) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73199,7 +72511,6 @@ function prank(address msgSender, bool delegateCall) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -73237,7 +72548,6 @@ function prank(address msgSender, bool delegateCall) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73355,7 +72665,6 @@ function prank(address msgSender) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -73387,7 +72696,6 @@ function prank(address msgSender) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73499,7 +72807,6 @@ function prevrandao(bytes32 newPrevrandao) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -73531,7 +72838,6 @@ function prevrandao(bytes32 newPrevrandao) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73643,7 +72949,6 @@ function prevrandao(uint256 newPrevrandao) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -73677,7 +72982,6 @@ function prevrandao(uint256 newPrevrandao) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73791,7 +73095,6 @@ function projectRoot() external view returns (string memory path);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -73823,7 +73126,6 @@ function projectRoot() external view returns (string memory path);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -73939,7 +73241,6 @@ function prompt(string memory promptText) external returns (string memory input)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -73971,7 +73272,6 @@ function prompt(string memory promptText) external returns (string memory input)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74091,7 +73391,6 @@ function promptAddress(string memory promptText) external returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74123,7 +73422,6 @@ function promptAddress(string memory promptText) external returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -74243,7 +73541,6 @@ function promptSecret(string memory promptText) external returns (string memory 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74275,7 +73572,6 @@ function promptSecret(string memory promptText) external returns (string memory 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74395,7 +73691,6 @@ function promptSecretUint(string memory promptText) external returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74429,7 +73724,6 @@ function promptSecretUint(string memory promptText) external returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -74553,7 +73847,6 @@ function promptUint(string memory promptText) external returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -74585,7 +73878,6 @@ function promptUint(string memory promptText) external returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -74709,7 +74001,6 @@ function publicKeyP256(uint256 privateKey) external pure returns (uint256 public
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -74743,7 +74034,6 @@ function publicKeyP256(uint256 privateKey) external pure returns (uint256 public
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -74876,7 +74166,6 @@ function randomAddress() external returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -74908,7 +74197,6 @@ function randomAddress() external returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -75021,7 +74309,6 @@ function randomBool() external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -75053,7 +74340,6 @@ function randomBool() external view returns (bool);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -75169,7 +74455,6 @@ function randomBytes(uint256 len) external view returns (bytes memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -75203,7 +74488,6 @@ function randomBytes(uint256 len) external view returns (bytes memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -75320,7 +74604,6 @@ function randomBytes4() external view returns (bytes4);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -75352,7 +74635,6 @@ function randomBytes4() external view returns (bytes4);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<4>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<4>,);
@@ -75465,7 +74747,6 @@ function randomBytes8() external view returns (bytes8);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -75497,7 +74778,6 @@ function randomBytes8() external view returns (bytes8);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<8>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<8>,);
@@ -75610,7 +74890,6 @@ function randomInt() external view returns (int256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -75642,7 +74921,6 @@ function randomInt() external view returns (int256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -75760,7 +75038,6 @@ function randomInt(uint256 bits) external view returns (int256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -75794,7 +75071,6 @@ function randomInt(uint256 bits) external view returns (int256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -75913,7 +75189,6 @@ function randomUint() external returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -75945,7 +75220,6 @@ function randomUint() external returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -76063,7 +75337,6 @@ function randomUint(uint256 bits) external view returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -76097,7 +75370,6 @@ function randomUint(uint256 bits) external view returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -76221,7 +75493,6 @@ function randomUint(uint256 min, uint256 max) external returns (uint256);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -76259,7 +75530,6 @@ function randomUint(uint256 min, uint256 max) external returns (uint256);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -76388,7 +75658,6 @@ function readCallers() external returns (VmSafe.CallerMode callerMode, address m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -76420,7 +75689,6 @@ function readCallers() external returns (VmSafe.CallerMode callerMode, address m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 VmSafe::CallerMode,
                 alloy::sol_types::sol_data::Address,
@@ -76563,7 +75831,6 @@ function readDir(string memory path, uint64 maxDepth) external view returns (VmS
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -76601,7 +75868,6 @@ function readDir(string memory path, uint64 maxDepth) external view returns (VmS
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::DirEntry>,
             );
@@ -76743,7 +76009,6 @@ function readDir(string memory path, uint64 maxDepth, bool followLinks) external
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -76787,7 +76052,6 @@ function readDir(string memory path, uint64 maxDepth, bool followLinks) external
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::DirEntry>,
             );
@@ -76929,7 +76193,6 @@ function readDir(string memory path) external view returns (VmSafe.DirEntry[] me
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -76961,7 +76224,6 @@ function readDir(string memory path) external view returns (VmSafe.DirEntry[] me
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::DirEntry>,
             );
@@ -77091,7 +76353,6 @@ function readFile(string memory path) external view returns (string memory data)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77123,7 +76384,6 @@ function readFile(string memory path) external view returns (string memory data)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77243,7 +76503,6 @@ function readFileBinary(string memory path) external view returns (bytes memory 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77275,7 +76534,6 @@ function readFileBinary(string memory path) external view returns (bytes memory 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -77397,7 +76655,6 @@ function readLine(string memory path) external view returns (string memory line)
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77429,7 +76686,6 @@ function readLine(string memory path) external view returns (string memory line)
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77549,7 +76805,6 @@ function readLink(string memory linkPath) external view returns (string memory t
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77581,7 +76836,6 @@ function readLink(string memory linkPath) external view returns (string memory t
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -77693,7 +76947,6 @@ function record() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -77725,7 +76978,6 @@ function record() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -77830,7 +77082,6 @@ function recordLogs() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -77862,7 +77113,6 @@ function recordLogs() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -77975,7 +77225,6 @@ function rememberKey(uint256 privateKey) external returns (address keyAddr);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -78009,7 +77258,6 @@ function rememberKey(uint256 privateKey) external returns (address keyAddr);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -78133,7 +77381,6 @@ function rememberKeys(string memory mnemonic, string memory derivationPath, uint
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -78177,7 +77424,6 @@ function rememberKeys(string memory mnemonic, string memory derivationPath, uint
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -78323,7 +77569,6 @@ function rememberKeys(string memory mnemonic, string memory derivationPath, stri
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -78370,7 +77615,6 @@ function rememberKeys(string memory mnemonic, string memory derivationPath, stri
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -78511,7 +77755,6 @@ function removeDir(string memory path, bool recursive) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bool,
@@ -78549,7 +77792,6 @@ function removeDir(string memory path, bool recursive) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -78667,7 +77909,6 @@ function removeFile(string memory path) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -78699,7 +77940,6 @@ function removeFile(string memory path) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -78820,7 +78060,6 @@ function replace(string memory input, string memory from, string memory to) exte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -78864,7 +78103,6 @@ function replace(string memory input, string memory from, string memory to) exte
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -78986,7 +78224,6 @@ function resetGasMetering() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79020,7 +78257,6 @@ function resetGasMetering() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79130,7 +78366,6 @@ function resetNonce(address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -79162,7 +78397,6 @@ function resetNonce(address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79271,7 +78505,6 @@ function resumeGasMetering() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79305,7 +78538,6 @@ function resumeGasMetering() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79412,7 +78644,6 @@ function resumeTracing() external view;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79444,7 +78675,6 @@ function resumeTracing() external view;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -79557,7 +78787,6 @@ function revertTo(uint256 snapshotId) external returns (bool success);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -79591,7 +78820,6 @@ function revertTo(uint256 snapshotId) external returns (bool success);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -79711,7 +78939,6 @@ function revertToAndDelete(uint256 snapshotId) external returns (bool success);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -79747,7 +78974,6 @@ function revertToAndDelete(uint256 snapshotId) external returns (bool success);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -79869,7 +79095,6 @@ function revertToState(uint256 snapshotId) external returns (bool success);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -79903,7 +79128,6 @@ function revertToState(uint256 snapshotId) external returns (bool success);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -80023,7 +79247,6 @@ function revertToStateAndDelete(uint256 snapshotId) external returns (bool succe
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -80059,7 +79282,6 @@ function revertToStateAndDelete(uint256 snapshotId) external returns (bool succe
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -80176,7 +79398,6 @@ function revokePersistent(address[] memory accounts) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -80214,7 +79435,6 @@ function revokePersistent(address[] memory accounts) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -80330,7 +79550,6 @@ function revokePersistent(address account) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -80364,7 +79583,6 @@ function revokePersistent(address account) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -80478,7 +79696,6 @@ function roll(uint256 newHeight) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -80512,7 +79729,6 @@ function roll(uint256 newHeight) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -80624,7 +79840,6 @@ function rollFork(bytes32 txHash) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -80656,7 +79871,6 @@ function rollFork(bytes32 txHash) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -80770,7 +79984,6 @@ function rollFork(uint256 forkId, uint256 blockNumber) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -80811,7 +80024,6 @@ function rollFork(uint256 forkId, uint256 blockNumber) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -80929,7 +80141,6 @@ function rollFork(uint256 blockNumber) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -80963,7 +80174,6 @@ function rollFork(uint256 blockNumber) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -81077,7 +80287,6 @@ function rollFork(uint256 forkId, bytes32 txHash) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -81118,7 +80327,6 @@ function rollFork(uint256 forkId, bytes32 txHash) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -81245,7 +80453,6 @@ function rpc(string memory urlOrAlias, string memory method, string memory param
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -81289,7 +80496,6 @@ function rpc(string memory urlOrAlias, string memory method, string memory param
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -81421,7 +80627,6 @@ function rpc(string memory method, string memory params) external returns (bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -81462,7 +80667,6 @@ function rpc(string memory method, string memory params) external returns (bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -81588,7 +80792,6 @@ function rpcUrl(string memory rpcAlias) external view returns (string memory jso
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -81620,7 +80823,6 @@ function rpcUrl(string memory rpcAlias) external view returns (string memory jso
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -81739,7 +80941,6 @@ function rpcUrlStructs() external view returns (VmSafe.Rpc[] memory urls);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -81771,7 +80972,6 @@ function rpcUrlStructs() external view returns (VmSafe.Rpc[] memory urls);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::Rpc>,
             );
@@ -81894,7 +81094,6 @@ function rpcUrls() external view returns (string[2][] memory urls);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -81926,7 +81125,6 @@ function rpcUrls() external view returns (string[2][] memory urls);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<
                     alloy::sol_types::sol_data::FixedArray<
@@ -82060,7 +81258,6 @@ function selectFork(uint256 forkId) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -82094,7 +81291,6 @@ function selectFork(uint256 forkId) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -82215,7 +81411,6 @@ function serializeAddress(string memory objectKey, string memory valueKey, addre
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -82261,7 +81456,6 @@ function serializeAddress(string memory objectKey, string memory valueKey, addre
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -82397,7 +81591,6 @@ function serializeAddress(string memory objectKey, string memory valueKey, addre
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -82443,7 +81636,6 @@ function serializeAddress(string memory objectKey, string memory valueKey, addre
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -82579,7 +81771,6 @@ function serializeBool(string memory objectKey, string memory valueKey, bool[] m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -82623,7 +81814,6 @@ function serializeBool(string memory objectKey, string memory valueKey, bool[] m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -82759,7 +81949,6 @@ function serializeBool(string memory objectKey, string memory valueKey, bool val
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -82803,7 +81992,6 @@ function serializeBool(string memory objectKey, string memory valueKey, bool val
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -82939,7 +82127,6 @@ function serializeBytes(string memory objectKey, string memory valueKey, bytes[]
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -82985,7 +82172,6 @@ function serializeBytes(string memory objectKey, string memory valueKey, bytes[]
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -83121,7 +82307,6 @@ function serializeBytes(string memory objectKey, string memory valueKey, bytes m
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -83167,7 +82352,6 @@ function serializeBytes(string memory objectKey, string memory valueKey, bytes m
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -83305,7 +82489,6 @@ function serializeBytes32(string memory objectKey, string memory valueKey, bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -83353,7 +82536,6 @@ function serializeBytes32(string memory objectKey, string memory valueKey, bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -83491,7 +82673,6 @@ function serializeBytes32(string memory objectKey, string memory valueKey, bytes
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -83537,7 +82718,6 @@ function serializeBytes32(string memory objectKey, string memory valueKey, bytes
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -83673,7 +82853,6 @@ function serializeInt(string memory objectKey, string memory valueKey, int256 va
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -83717,7 +82896,6 @@ function serializeInt(string memory objectKey, string memory valueKey, int256 va
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -83855,7 +83033,6 @@ function serializeInt(string memory objectKey, string memory valueKey, int256[] 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -83901,7 +83078,6 @@ function serializeInt(string memory objectKey, string memory valueKey, int256[] 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84035,7 +83211,6 @@ function serializeJson(string memory objectKey, string memory value) external re
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -84076,7 +83251,6 @@ function serializeJson(string memory objectKey, string memory value) external re
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84204,7 +83378,6 @@ function serializeJsonType(string memory typeDescription, bytes memory value) ex
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bytes,
@@ -84247,7 +83420,6 @@ function serializeJsonType(string memory typeDescription, bytes memory value) ex
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84381,7 +83553,6 @@ function serializeJsonType(string memory objectKey, string memory valueKey, stri
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -84430,7 +83601,6 @@ function serializeJsonType(string memory objectKey, string memory valueKey, stri
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84570,7 +83740,6 @@ function serializeString(string memory objectKey, string memory valueKey, string
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -84616,7 +83785,6 @@ function serializeString(string memory objectKey, string memory valueKey, string
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84752,7 +83920,6 @@ function serializeString(string memory objectKey, string memory valueKey, string
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -84798,7 +83965,6 @@ function serializeString(string memory objectKey, string memory valueKey, string
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -84934,7 +84100,6 @@ function serializeUint(string memory objectKey, string memory valueKey, uint256 
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -84978,7 +84143,6 @@ function serializeUint(string memory objectKey, string memory valueKey, uint256 
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -85116,7 +84280,6 @@ function serializeUint(string memory objectKey, string memory valueKey, uint256[
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -85162,7 +84325,6 @@ function serializeUint(string memory objectKey, string memory valueKey, uint256[
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -85298,7 +84460,6 @@ function serializeUintToHex(string memory objectKey, string memory valueKey, uin
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -85344,7 +84505,6 @@ function serializeUintToHex(string memory objectKey, string memory valueKey, uin
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -85471,7 +84631,6 @@ function setArbitraryStorage(address target) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -85505,7 +84664,6 @@ function setArbitraryStorage(address target) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -85621,7 +84779,6 @@ function setBlockhash(uint256 blockNumber, bytes32 blockHash) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -85662,7 +84819,6 @@ function setBlockhash(uint256 blockNumber, bytes32 blockHash) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -85782,7 +84938,6 @@ function setEnv(string memory name, string memory value) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -85823,7 +84978,6 @@ function setEnv(string memory name, string memory value) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -85943,7 +85097,6 @@ function setNonce(address account, uint64 newNonce) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -85981,7 +85134,6 @@ function setNonce(address account, uint64 newNonce) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -86101,7 +85253,6 @@ function setNonceUnsafe(address account, uint64 newNonce) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -86139,7 +85290,6 @@ function setNonceUnsafe(address account, uint64 newNonce) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -86268,7 +85418,6 @@ function sign(bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -86300,7 +85449,6 @@ function sign(bytes32 digest) external pure returns (uint8 v, bytes32 r, bytes32
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86449,7 +85597,6 @@ function sign(address signer, bytes32 digest) external pure returns (uint8 v, by
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86490,7 +85637,6 @@ function sign(address signer, bytes32 digest) external pure returns (uint8 v, by
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86645,7 +85791,6 @@ function sign(VmSafe.Wallet memory wallet, bytes32 digest) external returns (uin
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 VmSafe::Wallet,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86686,7 +85831,6 @@ function sign(VmSafe.Wallet memory wallet, bytes32 digest) external returns (uin
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86839,7 +85983,6 @@ function sign(uint256 privateKey, bytes32 digest) external pure returns (uint8 v
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -86880,7 +86023,6 @@ function sign(uint256 privateKey, bytes32 digest) external pure returns (uint8 v
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87031,7 +86173,6 @@ function signAndAttachDelegation(address implementation, uint256 privateKey) ext
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -87074,7 +86215,6 @@ function signAndAttachDelegation(address implementation, uint256 privateKey) ext
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::SignedDelegation,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -87204,7 +86344,6 @@ function signCompact(VmSafe.Wallet memory wallet, bytes32 digest) external retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 VmSafe::Wallet,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87245,7 +86384,6 @@ function signCompact(VmSafe.Wallet memory wallet, bytes32 digest) external retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87386,7 +86524,6 @@ function signCompact(address signer, bytes32 digest) external pure returns (byte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87427,7 +86564,6 @@ function signCompact(address signer, bytes32 digest) external pure returns (byte
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87568,7 +86704,6 @@ function signCompact(bytes32 digest) external pure returns (bytes32 r, bytes32 v
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -87600,7 +86735,6 @@ function signCompact(bytes32 digest) external pure returns (bytes32 r, bytes32 v
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87737,7 +86871,6 @@ function signCompact(uint256 privateKey, bytes32 digest) external pure returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87778,7 +86911,6 @@ function signCompact(uint256 privateKey, bytes32 digest) external pure returns (
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -87919,7 +87051,6 @@ function signDelegation(address implementation, uint256 privateKey) external ret
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -87960,7 +87091,6 @@ function signDelegation(address implementation, uint256 privateKey) external ret
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::SignedDelegation,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -88090,7 +87220,6 @@ function signP256(uint256 privateKey, bytes32 digest) external pure returns (byt
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -88131,7 +87260,6 @@ function signP256(uint256 privateKey, bytes32 digest) external pure returns (byt
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -88267,7 +87395,6 @@ function skip(bool skipTest, string memory reason) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Bool,
                 alloy::sol_types::sol_data::String,
@@ -88305,7 +87432,6 @@ function skip(bool skipTest, string memory reason) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -88423,7 +87549,6 @@ function skip(bool skipTest) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -88455,7 +87580,6 @@ function skip(bool skipTest) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -88567,7 +87691,6 @@ function sleep(uint256 duration) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -88601,7 +87724,6 @@ function sleep(uint256 duration) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -88715,7 +87837,6 @@ function snapshot() external returns (uint256 snapshotId);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -88747,7 +87868,6 @@ function snapshot() external returns (uint256 snapshotId);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -88867,7 +87987,6 @@ function snapshotGasLastCall(string memory group, string memory name) external r
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -88910,7 +88029,6 @@ function snapshotGasLastCall(string memory group, string memory name) external r
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -89040,7 +88158,6 @@ function snapshotGasLastCall(string memory name) external returns (uint256 gasUs
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -89074,7 +88191,6 @@ function snapshotGasLastCall(string memory name) external returns (uint256 gasUs
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -89195,7 +88311,6 @@ function snapshotState() external returns (uint256 snapshotId);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -89227,7 +88342,6 @@ function snapshotState() external returns (uint256 snapshotId);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -89342,7 +88456,6 @@ function snapshotValue(string memory name, uint256 value) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -89383,7 +88496,6 @@ function snapshotValue(string memory name, uint256 value) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -89507,7 +88619,6 @@ function snapshotValue(string memory group, string memory name, uint256 value) e
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -89551,7 +88662,6 @@ function snapshotValue(string memory group, string memory name, uint256 value) e
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -89682,7 +88792,6 @@ function split(string memory input, string memory delimiter) external pure retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -89723,7 +88832,6 @@ function split(string memory input, string memory delimiter) external pure retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -89849,7 +88957,6 @@ function startBroadcast() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -89883,7 +88990,6 @@ function startBroadcast() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -89993,7 +89099,6 @@ function startBroadcast(address signer) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -90027,7 +89132,6 @@ function startBroadcast(address signer) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90141,7 +89245,6 @@ function startBroadcast(uint256 privateKey) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -90177,7 +89280,6 @@ function startBroadcast(uint256 privateKey) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90288,7 +89390,6 @@ function startDebugTraceRecording() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90322,7 +89423,6 @@ function startDebugTraceRecording() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90431,7 +89531,6 @@ function startMappingRecording() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90465,7 +89564,6 @@ function startMappingRecording() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90577,7 +89675,6 @@ function startPrank(address msgSender) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -90609,7 +89706,6 @@ function startPrank(address msgSender) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90723,7 +89819,6 @@ function startPrank(address msgSender, bool delegateCall) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bool,
@@ -90761,7 +89856,6 @@ function startPrank(address msgSender, bool delegateCall) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -90881,7 +89975,6 @@ function startPrank(address msgSender, address txOrigin) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -90922,7 +90015,6 @@ function startPrank(address msgSender, address txOrigin) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91044,7 +90136,6 @@ function startPrank(address msgSender, address txOrigin, bool delegateCall) exte
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -91088,7 +90179,6 @@ function startPrank(address msgSender, address txOrigin, bool delegateCall) exte
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91210,7 +90300,6 @@ function startSnapshotGas(string memory name) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -91244,7 +90333,6 @@ function startSnapshotGas(string memory name) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91360,7 +90448,6 @@ function startSnapshotGas(string memory group, string memory name) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -91403,7 +90490,6 @@ function startSnapshotGas(string memory group, string memory name) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91520,7 +90606,6 @@ function startStateDiffRecording() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91554,7 +90639,6 @@ function startStateDiffRecording() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91670,7 +90754,6 @@ function stopAndReturnDebugTraceRecording() external returns (VmSafe.DebugStep[]
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91704,7 +90787,6 @@ function stopAndReturnDebugTraceRecording() external returns (VmSafe.DebugStep[]
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::DebugStep>,
             );
@@ -91831,7 +90913,6 @@ function stopAndReturnStateDiff() external returns (VmSafe.AccountAccess[] memor
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -91865,7 +90946,6 @@ function stopAndReturnStateDiff() external returns (VmSafe.AccountAccess[] memor
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<VmSafe::AccountAccess>,
             );
@@ -91985,7 +91065,6 @@ function stopBroadcast() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92017,7 +91096,6 @@ function stopBroadcast() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92122,7 +91200,6 @@ function stopExpectSafeMemory() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92156,7 +91233,6 @@ function stopExpectSafeMemory() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92265,7 +91341,6 @@ function stopMappingRecording() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92299,7 +91374,6 @@ function stopMappingRecording() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92408,7 +91482,6 @@ function stopPrank() external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92440,7 +91513,6 @@ function stopPrank() external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92555,7 +91627,6 @@ function stopSnapshotGas(string memory group, string memory name) external retur
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -92598,7 +91669,6 @@ function stopSnapshotGas(string memory group, string memory name) external retur
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -92728,7 +91798,6 @@ function stopSnapshotGas(string memory name) external returns (uint256 gasUsed);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -92762,7 +91831,6 @@ function stopSnapshotGas(string memory name) external returns (uint256 gasUsed);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -92883,7 +91951,6 @@ function stopSnapshotGas() external returns (uint256 gasUsed);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -92917,7 +91984,6 @@ function stopSnapshotGas() external returns (uint256 gasUsed);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -93036,7 +92102,6 @@ function store(address target, bytes32 slot, bytes32 value) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -93080,7 +92145,6 @@ function store(address target, bytes32 slot, bytes32 value) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -93207,7 +92271,6 @@ function toBase64(string memory data) external pure returns (string memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93239,7 +92302,6 @@ function toBase64(string memory data) external pure returns (string memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93359,7 +92421,6 @@ function toBase64(bytes memory data) external pure returns (string memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -93391,7 +92452,6 @@ function toBase64(bytes memory data) external pure returns (string memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93511,7 +92571,6 @@ function toBase64URL(string memory data) external pure returns (string memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93543,7 +92602,6 @@ function toBase64URL(string memory data) external pure returns (string memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93663,7 +92721,6 @@ function toBase64URL(bytes memory data) external pure returns (string memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -93695,7 +92752,6 @@ function toBase64URL(bytes memory data) external pure returns (string memory);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93815,7 +92871,6 @@ function toLowercase(string memory input) external pure returns (string memory o
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93847,7 +92902,6 @@ function toLowercase(string memory input) external pure returns (string memory o
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -93967,7 +93021,6 @@ function toString(address value) external pure returns (string memory stringifie
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -93999,7 +93052,6 @@ function toString(address value) external pure returns (string memory stringifie
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94119,7 +93171,6 @@ function toString(uint256 value) external pure returns (string memory stringifie
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -94153,7 +93204,6 @@ function toString(uint256 value) external pure returns (string memory stringifie
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94273,7 +93323,6 @@ function toString(bytes memory value) external pure returns (string memory strin
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bytes,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Bytes,);
@@ -94305,7 +93354,6 @@ function toString(bytes memory value) external pure returns (string memory strin
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94425,7 +93473,6 @@ function toString(bool value) external pure returns (string memory stringifiedVa
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -94457,7 +93504,6 @@ function toString(bool value) external pure returns (string memory stringifiedVa
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94577,7 +93623,6 @@ function toString(int256 value) external pure returns (string memory stringified
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -94611,7 +93656,6 @@ function toString(int256 value) external pure returns (string memory stringified
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94731,7 +93775,6 @@ function toString(bytes32 value) external pure returns (string memory stringifie
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -94763,7 +93806,6 @@ function toString(bytes32 value) external pure returns (string memory stringifie
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94883,7 +93925,6 @@ function toUppercase(string memory input) external pure returns (string memory o
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -94915,7 +93956,6 @@ function toUppercase(string memory input) external pure returns (string memory o
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -95032,7 +94072,6 @@ function transact(uint256 forkId, bytes32 txHash) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
@@ -95073,7 +94112,6 @@ function transact(uint256 forkId, bytes32 txHash) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -95191,7 +94229,6 @@ function transact(bytes32 txHash) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
@@ -95223,7 +94260,6 @@ function transact(bytes32 txHash) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -95340,7 +94376,6 @@ function trim(string memory input) external pure returns (string memory output);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -95372,7 +94407,6 @@ function trim(string memory input) external pure returns (string memory output);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -95494,7 +94528,6 @@ function tryFfi(string[] memory commandInput) external returns (VmSafe.FfiResult
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::String>,
             );
@@ -95530,7 +94563,6 @@ function tryFfi(string[] memory commandInput) external returns (VmSafe.FfiResult
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (VmSafe::FfiResult,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -95645,7 +94677,6 @@ function txGasPrice(uint256 newGasPrice) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -95679,7 +94710,6 @@ function txGasPrice(uint256 newGasPrice) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -95793,7 +94823,6 @@ function unixTime() external view returns (uint256 milliseconds);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -95825,7 +94854,6 @@ function unixTime() external view returns (uint256 milliseconds);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -95938,7 +94966,6 @@ function warp(uint256 newTimestamp) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -95972,7 +94999,6 @@ function warp(uint256 newTimestamp) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96086,7 +95112,6 @@ function writeFile(string memory path, string memory data) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -96127,7 +95152,6 @@ function writeFile(string memory path, string memory data) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96247,7 +95271,6 @@ function writeFileBinary(string memory path, bytes memory data) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::Bytes,
@@ -96288,7 +95311,6 @@ function writeFileBinary(string memory path, bytes memory data) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96412,7 +95434,6 @@ function writeJson(string memory json, string memory path, string memory valueKe
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -96456,7 +95477,6 @@ function writeJson(string memory json, string memory path, string memory valueKe
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96580,7 +95600,6 @@ function writeJson(string memory json, string memory path) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -96621,7 +95640,6 @@ function writeJson(string memory json, string memory path) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96741,7 +95759,6 @@ function writeLine(string memory path, string memory data) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -96782,7 +95799,6 @@ function writeLine(string memory path, string memory data) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -96904,7 +95920,6 @@ function writeToml(string memory json, string memory path, string memory valueKe
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -96948,7 +95963,6 @@ function writeToml(string memory json, string memory path, string memory valueKe
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -97072,7 +96086,6 @@ function writeToml(string memory json, string memory path) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::String,
                 alloy::sol_types::sol_data::String,
@@ -97113,7 +96126,6 @@ function writeToml(string memory json, string memory path) external;
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -97206,7 +96218,6 @@ function writeToml(string memory json, string memory path) external;
         }
     };
     ///Container for all the [`Vm`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum VmCalls {
@@ -98189,6 +97200,7 @@ function writeToml(string memory json, string memory path) external;
         #[allow(missing_docs)]
         writeToml_1(writeToml_1Call),
     }
+    #[automatically_derived]
     impl VmCalls {
         /// All the selectors of this enum.
         ///
@@ -98687,1010 +97699,6 @@ function writeToml(string memory json, string memory path) external;
             [255u8, 72u8, 60u8, 84u8],
             [255u8, 161u8, 134u8, 73u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(parseJsonTypeArray),
-            ::core::stringify!(rpc_0),
-            ::core::stringify!(revertToAndDelete),
-            ::core::stringify!(assertApproxEqAbsDecimal_0),
-            ::core::stringify!(randomBytes8),
-            ::core::stringify!(assertGtDecimal_0),
-            ::core::stringify!(expectSafeMemoryCall),
-            ::core::stringify!(assertNotEq_0),
-            ::core::stringify!(startPrank_0),
-            ::core::stringify!(toUppercase),
-            ::core::stringify!(parseBytes32),
-            ::core::stringify!(mockCalls_0),
-            ::core::stringify!(deleteStateSnapshot),
-            ::core::stringify!(mockCall_0),
-            ::core::stringify!(expectCallMinGas_0),
-            ::core::stringify!(stopExpectSafeMemory),
-            ::core::stringify!(assertGe_0),
-            ::core::stringify!(assertNotEq_1),
-            ::core::stringify!(stopSnapshotGas_0),
-            ::core::stringify!(assertTrue_0),
-            ::core::stringify!(assertEq_0),
-            ::core::stringify!(stopMappingRecording),
-            ::core::stringify!(getDeployment_0),
-            ::core::stringify!(rollFork_0),
-            ::core::stringify!(assertNotEq_2),
-            ::core::stringify!(randomInt_0),
-            ::core::stringify!(assertLeDecimal_0),
-            ::core::stringify!(expectPartialRevert_0),
-            ::core::stringify!(rpc_1),
-            ::core::stringify!(parseTomlBoolArray),
-            ::core::stringify!(randomInt_1),
-            ::core::stringify!(blobhashes),
-            ::core::stringify!(serializeUint_0),
-            ::core::stringify!(readDir_0),
-            ::core::stringify!(attachDelegation),
-            ::core::stringify!(envString_0),
-            ::core::stringify!(assertNotEqDecimal_0),
-            ::core::stringify!(createDir),
-            ::core::stringify!(assertApproxEqAbs_0),
-            ::core::stringify!(readFileBinary),
-            ::core::stringify!(parseJsonBytes32),
-            ::core::stringify!(getRecordedLogs),
-            ::core::stringify!(assertEq_1),
-            ::core::stringify!(resetNonce),
-            ::core::stringify!(startPrank_1),
-            ::core::stringify!(makePersistent_0),
-            ::core::stringify!(assertNotEq_3),
-            ::core::stringify!(parseJsonAddress),
-            ::core::stringify!(promptSecret),
-            ::core::stringify!(serializeAddress_0),
-            ::core::stringify!(assertApproxEqRel_0),
-            ::core::stringify!(writeFileBinary),
-            ::core::stringify!(getBlobBaseFee),
-            ::core::stringify!(roll),
-            ::core::stringify!(expectRevert_0),
-            ::core::stringify!(snapshotGasLastCall_0),
-            ::core::stringify!(serializeBytes32_0),
-            ::core::stringify!(copyStorage),
-            ::core::stringify!(assertLtDecimal_0),
-            ::core::stringify!(parseJsonKeys),
-            ::core::stringify!(assertApproxEqRelDecimal_0),
-            ::core::stringify!(rememberKey),
-            ::core::stringify!(envOr_0),
-            ::core::stringify!(expectCall_0),
-            ::core::stringify!(assertNotEq_4),
-            ::core::stringify!(assertApproxEqAbs_1),
-            ::core::stringify!(randomUint_0),
-            ::core::stringify!(expectRevert_1),
-            ::core::stringify!(exists),
-            ::core::stringify!(record),
-            ::core::stringify!(assertEqDecimal_0),
-            ::core::stringify!(assumeNoRevert),
-            ::core::stringify!(assertNotEq_5),
-            ::core::stringify!(getLabel),
-            ::core::stringify!(deriveKey_0),
-            ::core::stringify!(deployCode_0),
-            ::core::stringify!(lastCallGas),
-            ::core::stringify!(resumeGasMetering),
-            ::core::stringify!(getNonce_0),
-            ::core::stringify!(serializeBytes32_1),
-            ::core::stringify!(mockCallRevert_0),
-            ::core::stringify!(expectEmitAnonymous_0),
-            ::core::stringify!(activeFork),
-            ::core::stringify!(assertEq_2),
-            ::core::stringify!(getMappingLength),
-            ::core::stringify!(parseJsonAddressArray),
-            ::core::stringify!(createFork_0),
-            ::core::stringify!(deriveKey_1),
-            ::core::stringify!(assertNotEqDecimal_1),
-            ::core::stringify!(envAddress_0),
-            ::core::stringify!(writeJson_0),
-            ::core::stringify!(eth_getLogs),
-            ::core::stringify!(assertEq_3),
-            ::core::stringify!(parseToml_0),
-            ::core::stringify!(assertEq_4),
-            ::core::stringify!(fee),
-            ::core::stringify!(revertToStateAndDelete),
-            ::core::stringify!(prevrandao_0),
-            ::core::stringify!(startSnapshotGas_0),
-            ::core::stringify!(revokePersistent_0),
-            ::core::stringify!(assertNotEq_6),
-            ::core::stringify!(signCompact_0),
-            ::core::stringify!(assertGeDecimal_0),
-            ::core::stringify!(setEnv),
-            ::core::stringify!(assertApproxEqAbsDecimal_1),
-            ::core::stringify!(getBroadcast),
-            ::core::stringify!(parseTomlBytes32Array),
-            ::core::stringify!(assertLt_0),
-            ::core::stringify!(assertEq_5),
-            ::core::stringify!(startMappingRecording),
-            ::core::stringify!(getDeployedCode),
-            ::core::stringify!(serializeInt_0),
-            ::core::stringify!(toBase64_0),
-            ::core::stringify!(contains),
-            ::core::stringify!(clearMockedCalls),
-            ::core::stringify!(chainId),
-            ::core::stringify!(makePersistent_1),
-            ::core::stringify!(assertLtDecimal_1),
-            ::core::stringify!(startDebugTraceRecording),
-            ::core::stringify!(recordLogs),
-            ::core::stringify!(envInt_0),
-            ::core::stringify!(deleteSnapshots),
-            ::core::stringify!(parseInt),
-            ::core::stringify!(getBlockNumber),
-            ::core::stringify!(expectEmit_0),
-            ::core::stringify!(revertTo),
-            ::core::stringify!(startPrank_2),
-            ::core::stringify!(removeDir),
-            ::core::stringify!(difficulty),
-            ::core::stringify!(assertNotEq_7),
-            ::core::stringify!(envOr_1),
-            ::core::stringify!(assertNotEq_8),
-            ::core::stringify!(envOr_2),
-            ::core::stringify!(prank_0),
-            ::core::stringify!(prompt),
-            ::core::stringify!(parseTomlType_0),
-            ::core::stringify!(assertEqDecimal_1),
-            ::core::stringify!(closeFile),
-            ::core::stringify!(txGasPrice),
-            ::core::stringify!(expectEmit_1),
-            ::core::stringify!(parseJsonStringArray),
-            ::core::stringify!(expectRevert_2),
-            ::core::stringify!(parseTomlTypeArray),
-            ::core::stringify!(parseJsonString),
-            ::core::stringify!(readCallers),
-            ::core::stringify!(assume),
-            ::core::stringify!(expectEmit_2),
-            ::core::stringify!(envBytes_0),
-            ::core::stringify!(transact_0),
-            ::core::stringify!(assertEq_6),
-            ::core::stringify!(assertLe_0),
-            ::core::stringify!(startPrank_3),
-            ::core::stringify!(expectRevert_3),
-            ::core::stringify!(toLowercase),
-            ::core::stringify!(assertEq_7),
-            ::core::stringify!(expectPartialRevert_1),
-            ::core::stringify!(writeToml_0),
-            ::core::stringify!(snapshotValue_0),
-            ::core::stringify!(parseJsonUintArray),
-            ::core::stringify!(keyExists),
-            ::core::stringify!(setBlockhash),
-            ::core::stringify!(cloneAccount),
-            ::core::stringify!(serializeString_0),
-            ::core::stringify!(envOr_3),
-            ::core::stringify!(toString_0),
-            ::core::stringify!(assertNotEq_9),
-            ::core::stringify!(makePersistent_2),
-            ::core::stringify!(parseToml_1),
-            ::core::stringify!(mockCallRevert_1),
-            ::core::stringify!(assertGt_0),
-            ::core::stringify!(envBytes32_0),
-            ::core::stringify!(signDelegation),
-            ::core::stringify!(mockCalls_1),
-            ::core::stringify!(assertEq_8),
-            ::core::stringify!(assertGeDecimal_1),
-            ::core::stringify!(expectEmit_3),
-            ::core::stringify!(envOr_4),
-            ::core::stringify!(keyExistsToml),
-            ::core::stringify!(assertApproxEqAbsDecimal_2),
-            ::core::stringify!(readFile),
-            ::core::stringify!(writeLine),
-            ::core::stringify!(expectRevert_4),
-            ::core::stringify!(deriveKey_2),
-            ::core::stringify!(unixTime),
-            ::core::stringify!(assertNotEq_10),
-            ::core::stringify!(promptAddress),
-            ::core::stringify!(assertGtDecimal_1),
-            ::core::stringify!(isContext),
-            ::core::stringify!(envOr_5),
-            ::core::stringify!(promptUint),
-            ::core::stringify!(expectCall_1),
-            ::core::stringify!(accesses),
-            ::core::stringify!(parseTomlAddressArray),
-            ::core::stringify!(assertLt_1),
-            ::core::stringify!(parseTomlAddress),
-            ::core::stringify!(parseJsonBytesArray),
-            ::core::stringify!(load),
-            ::core::stringify!(assertNotEqDecimal_2),
-            ::core::stringify!(toString_1),
-            ::core::stringify!(promptSecretUint),
-            ::core::stringify!(assertApproxEqAbsDecimal_3),
-            ::core::stringify!(assertNotEq_11),
-            ::core::stringify!(parseJson_0),
-            ::core::stringify!(createFork_1),
-            ::core::stringify!(deriveKey_3),
-            ::core::stringify!(randomBytes),
-            ::core::stringify!(startSnapshotGas_1),
-            ::core::stringify!(expectSafeMemory),
-            ::core::stringify!(snapshotValue_1),
-            ::core::stringify!(blobBaseFee),
-            ::core::stringify!(serializeJsonType_0),
-            ::core::stringify!(getArtifactPathByDeployedCode),
-            ::core::stringify!(serializeJsonType_1),
-            ::core::stringify!(expectEmitAnonymous_1),
-            ::core::stringify!(assertEq_9),
-            ::core::stringify!(dumpState),
-            ::core::stringify!(store),
-            ::core::stringify!(readLine),
-            ::core::stringify!(assertEq_10),
-            ::core::stringify!(assertEq_11),
-            ::core::stringify!(toString_2),
-            ::core::stringify!(expectEmitAnonymous_2),
-            ::core::stringify!(toString_3),
-            ::core::stringify!(createSelectFork_0),
-            ::core::stringify!(resumeTracing),
-            ::core::stringify!(assertNotEq_12),
-            ::core::stringify!(createWallet_0),
-            ::core::stringify!(envOr_6),
-            ::core::stringify!(computeCreateAddress),
-            ::core::stringify!(getDeployments),
-            ::core::stringify!(serializeInt_1),
-            ::core::stringify!(stopBroadcast),
-            ::core::stringify!(stopSnapshotGas_1),
-            ::core::stringify!(assertGtDecimal_2),
-            ::core::stringify!(assertNotEq_13),
-            ::core::stringify!(getBlockTimestamp),
-            ::core::stringify!(sign_0),
-            ::core::stringify!(createWallet_1),
-            ::core::stringify!(parseJsonInt),
-            ::core::stringify!(assertFalse_0),
-            ::core::stringify!(assertEq_12),
-            ::core::stringify!(createFork_2),
-            ::core::stringify!(isDir),
-            ::core::stringify!(prank_1),
-            ::core::stringify!(assertEqDecimal_2),
-            ::core::stringify!(envBool_0),
-            ::core::stringify!(startBroadcast_0),
-            ::core::stringify!(startBroadcast_1),
-            ::core::stringify!(assertLeDecimal_1),
-            ::core::stringify!(getStateDiff),
-            ::core::stringify!(readDir_1),
-            ::core::stringify!(parseTomlKeys),
-            ::core::stringify!(mockCall_1),
-            ::core::stringify!(expectEmit_4),
-            ::core::stringify!(assertApproxEqAbs_2),
-            ::core::stringify!(assertApproxEqRelDecimal_1),
-            ::core::stringify!(signP256),
-            ::core::stringify!(assertLe_1),
-            ::core::stringify!(createSelectFork_1),
-            ::core::stringify!(envOr_7),
-            ::core::stringify!(parseJson_1),
-            ::core::stringify!(expectEmit_5),
-            ::core::stringify!(getMappingKeyAndParentOf),
-            ::core::stringify!(assertNotEq_14),
-            ::core::stringify!(assertEq_13),
-            ::core::stringify!(serializeString_1),
-            ::core::stringify!(computeCreate2Address_0),
-            ::core::stringify!(ffi),
-            ::core::stringify!(envInt_1),
-            ::core::stringify!(writeFile),
-            ::core::stringify!(assertNotEq_15),
-            ::core::stringify!(indexOf),
-            ::core::stringify!(split),
-            ::core::stringify!(parseTomlString),
-            ::core::stringify!(assertGeDecimal_2),
-            ::core::stringify!(broadcastRawTransaction),
-            ::core::stringify!(sign_1),
-            ::core::stringify!(ensNamehash),
-            ::core::stringify!(assertApproxEqRel_1),
-            ::core::stringify!(getCode),
-            ::core::stringify!(parseTomlBytes32),
-            ::core::stringify!(signCompact_1),
-            ::core::stringify!(parseBytes),
-            ::core::stringify!(stopPrank),
-            ::core::stringify!(parseJsonBytes32Array),
-            ::core::stringify!(parseJsonBoolArray),
-            ::core::stringify!(serializeBool_0),
-            ::core::stringify!(assertNotEq_16),
-            ::core::stringify!(assertLe_2),
-            ::core::stringify!(snapshot),
-            ::core::stringify!(serializeAddress_1),
-            ::core::stringify!(parseBool),
-            ::core::stringify!(rpcUrl),
-            ::core::stringify!(assertEq_14),
-            ::core::stringify!(assertEq_15),
-            ::core::stringify!(envBytes32_1),
-            ::core::stringify!(rememberKeys_0),
-            ::core::stringify!(assertEq_16),
-            ::core::stringify!(createSelectFork_2),
-            ::core::stringify!(serializeBytes_0),
-            ::core::stringify!(assertNotEq_17),
-            ::core::stringify!(revokePersistent_1),
-            ::core::stringify!(parseJsonIntArray),
-            ::core::stringify!(assertNotEq_18),
-            ::core::stringify!(deployCode_1),
-            ::core::stringify!(serializeJson),
-            ::core::stringify!(setNonceUnsafe),
-            ::core::stringify!(randomBytes4),
-            ::core::stringify!(prevrandao_1),
-            ::core::stringify!(snapshotState),
-            ::core::stringify!(rpcUrlStructs),
-            ::core::stringify!(selectFork),
-            ::core::stringify!(readLink),
-            ::core::stringify!(parseTomlStringArray),
-            ::core::stringify!(parseJsonBool),
-            ::core::stringify!(assertLt_2),
-            ::core::stringify!(signCompact_2),
-            ::core::stringify!(expectCall_2),
-            ::core::stringify!(toString_4),
-            ::core::stringify!(assertTrue_1),
-            ::core::stringify!(copyFile),
-            ::core::stringify!(getNonce_1),
-            ::core::stringify!(assertFalse_1),
-            ::core::stringify!(toBase64_1),
-            ::core::stringify!(deleteSnapshot),
-            ::core::stringify!(prank_2),
-            ::core::stringify!(getDeployment_1),
-            ::core::stringify!(assertGe_1),
-            ::core::stringify!(rpcUrls),
-            ::core::stringify!(assertGe_2),
-            ::core::stringify!(assertLtDecimal_2),
-            ::core::stringify!(parseJsonType_0),
-            ::core::stringify!(assertLeDecimal_2),
-            ::core::stringify!(stopAndReturnStateDiff),
-            ::core::stringify!(envBool_1),
-            ::core::stringify!(assertApproxEqRelDecimal_2),
-            ::core::stringify!(serializeBool_1),
-            ::core::stringify!(envAddress_1),
-            ::core::stringify!(parseJsonUint),
-            ::core::stringify!(mockFunction),
-            ::core::stringify!(toBase64URL_0),
-            ::core::stringify!(serializeUintToHex),
-            ::core::stringify!(fsMetadata),
-            ::core::stringify!(broadcast_0),
-            ::core::stringify!(expectRevert_5),
-            ::core::stringify!(toString_5),
-            ::core::stringify!(assertNotEq_19),
-            ::core::stringify!(assertLt_3),
-            ::core::stringify!(parseTomlBytesArray),
-            ::core::stringify!(assertNotEq_20),
-            ::core::stringify!(sign_2),
-            ::core::stringify!(trim),
-            ::core::stringify!(loadAllocs),
-            ::core::stringify!(envOr_8),
-            ::core::stringify!(expectEmit_6),
-            ::core::stringify!(envOr_9),
-            ::core::stringify!(etch),
-            ::core::stringify!(parseTomlUintArray),
-            ::core::stringify!(assertNotEq_21),
-            ::core::stringify!(assertNotEq_22),
-            ::core::stringify!(assertNotEq_23),
-            ::core::stringify!(mockCall_2),
-            ::core::stringify!(envOr_10),
-            ::core::stringify!(expectCall_3),
-            ::core::stringify!(assertNotEq_24),
-            ::core::stringify!(resetGasMetering),
-            ::core::stringify!(transact_1),
-            ::core::stringify!(writeToml_1),
-            ::core::stringify!(parseTomlInt),
-            ::core::stringify!(envUint_0),
-            ::core::stringify!(expectCall_4),
-            ::core::stringify!(assertEq_17),
-            ::core::stringify!(revertToState),
-            ::core::stringify!(assertLeDecimal_3),
-            ::core::stringify!(expectRevert_6),
-            ::core::stringify!(expectEmit_7),
-            ::core::stringify!(skip_0),
-            ::core::stringify!(publicKeyP256),
-            ::core::stringify!(readDir_2),
-            ::core::stringify!(label),
-            ::core::stringify!(parseAddress),
-            ::core::stringify!(envOr_11),
-            ::core::stringify!(signAndAttachDelegation),
-            ::core::stringify!(deal),
-            ::core::stringify!(toBase64URL_1),
-            ::core::stringify!(expectEmitAnonymous_3),
-            ::core::stringify!(pauseTracing),
-            ::core::stringify!(prank_3),
-            ::core::stringify!(signCompact_3),
-            ::core::stringify!(parseTomlUint),
-            ::core::stringify!(randomBool),
-            ::core::stringify!(startBroadcast_2),
-            ::core::stringify!(envExists),
-            ::core::stringify!(stopAndReturnDebugTraceRecording),
-            ::core::stringify!(assertEq_18),
-            ::core::stringify!(startStateDiffRecording),
-            ::core::stringify!(randomUint_1),
-            ::core::stringify!(assertEqDecimal_3),
-            ::core::stringify!(envOr_12),
-            ::core::stringify!(assertLe_3),
-            ::core::stringify!(pauseGasMetering),
-            ::core::stringify!(mockCallRevert_2),
-            ::core::stringify!(parseTomlBool),
-            ::core::stringify!(computeCreate2Address_1),
-            ::core::stringify!(expectRevert_7),
-            ::core::stringify!(parseTomlIntArray),
-            ::core::stringify!(assertNotEq_25),
-            ::core::stringify!(randomAddress),
-            ::core::stringify!(randomUint_2),
-            ::core::stringify!(rollFork_1),
-            ::core::stringify!(parseTomlBytes),
-            ::core::stringify!(expectRevert_8),
-            ::core::stringify!(isPersistent),
-            ::core::stringify!(projectRoot),
-            ::core::stringify!(assertGt_1),
-            ::core::stringify!(rollFork_2),
-            ::core::stringify!(assertGt_2),
-            ::core::stringify!(keyExistsJson),
-            ::core::stringify!(getWallets),
-            ::core::stringify!(mockCallRevert_3),
-            ::core::stringify!(assertLtDecimal_3),
-            ::core::stringify!(assertGeDecimal_3),
-            ::core::stringify!(skip_1),
-            ::core::stringify!(snapshotGasLastCall_1),
-            ::core::stringify!(envBytes_1),
-            ::core::stringify!(replace),
-            ::core::stringify!(assertEq_19),
-            ::core::stringify!(deleteStateSnapshots),
-            ::core::stringify!(isFile),
-            ::core::stringify!(expectCallMinGas_1),
-            ::core::stringify!(setArbitraryStorage),
-            ::core::stringify!(writeJson_1),
-            ::core::stringify!(assertEq_20),
-            ::core::stringify!(assertGe_3),
-            ::core::stringify!(sign_3),
-            ::core::stringify!(parseJsonType_1),
-            ::core::stringify!(expectRevert_9),
-            ::core::stringify!(assertEq_21),
-            ::core::stringify!(warp),
-            ::core::stringify!(assertEq_22),
-            ::core::stringify!(broadcast_1),
-            ::core::stringify!(mockCall_3),
-            ::core::stringify!(allowCheatcodes),
-            ::core::stringify!(getFoundryVersion),
-            ::core::stringify!(getArtifactPathByCode),
-            ::core::stringify!(envOr_13),
-            ::core::stringify!(getMappingSlotAt),
-            ::core::stringify!(assertGtDecimal_3),
-            ::core::stringify!(createWallet_2),
-            ::core::stringify!(assertNotEq_26),
-            ::core::stringify!(assertApproxEqRel_2),
-            ::core::stringify!(makePersistent_3),
-            ::core::stringify!(assertEq_23),
-            ::core::stringify!(breakpoint_0),
-            ::core::stringify!(removeFile),
-            ::core::stringify!(serializeBytes_1),
-            ::core::stringify!(rollFork_3),
-            ::core::stringify!(expectRevert_10),
-            ::core::stringify!(getBroadcasts_0),
-            ::core::stringify!(expectCall_5),
-            ::core::stringify!(assertEq_24),
-            ::core::stringify!(envUint_1),
-            ::core::stringify!(assertEq_25),
-            ::core::stringify!(tryFfi),
-            ::core::stringify!(expectRevert_11),
-            ::core::stringify!(assertNotEq_27),
-            ::core::stringify!(getStateDiffJson),
-            ::core::stringify!(getBlobhashes),
-            ::core::stringify!(assertNotEqDecimal_3),
-            ::core::stringify!(stopSnapshotGas_2),
-            ::core::stringify!(broadcast_2),
-            ::core::stringify!(assertApproxEqAbs_3),
-            ::core::stringify!(getBroadcasts_1),
-            ::core::stringify!(breakpoint_1),
-            ::core::stringify!(assertEq_26),
-            ::core::stringify!(envString_1),
-            ::core::stringify!(assertGt_3),
-            ::core::stringify!(rememberKeys_1),
-            ::core::stringify!(setNonce),
-            ::core::stringify!(parseTomlType_1),
-            ::core::stringify!(parseUint),
-            ::core::stringify!(sleep),
-            ::core::stringify!(assertApproxEqRelDecimal_3),
-            ::core::stringify!(parseJsonBytes),
-            ::core::stringify!(assertEq_27),
-            ::core::stringify!(assertApproxEqRel_3),
-            ::core::stringify!(serializeUint_1),
-            ::core::stringify!(coinbase),
-            ::core::stringify!(addr),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <parseJsonTypeArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <rpc_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <revertToAndDeleteCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbsDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomBytes8Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGtDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectSafeMemoryCallCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startPrank_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toUppercaseCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseBytes32Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCalls_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deleteStateSnapshotCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCall_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCallMinGas_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopExpectSafeMemoryCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGe_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopSnapshotGas_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertTrue_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopMappingRecordingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getDeployment_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rollFork_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomInt_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLeDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectPartialRevert_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rpc_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBoolArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomInt_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <blobhashesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeUint_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <readDir_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <attachDelegationCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envString_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEqDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createDirCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbs_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <readFileBinaryCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBytes32Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getRecordedLogsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <resetNonceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <startPrank_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <makePersistent_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <promptSecretCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeAddress_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRel_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeFileBinaryCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBlobBaseFeeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <rollCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotGasLastCall_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBytes32_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <copyStorageCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLtDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonKeysCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRelDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rememberKeyCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbs_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomUint_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <existsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <recordCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEqDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assumeNoRevertCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getLabelCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <deriveKey_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deployCode_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <lastCallGasCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <resumeGasMeteringCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getNonce_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBytes32_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCallRevert_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmitAnonymous_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <activeForkCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getMappingLengthCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonAddressArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <createFork_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deriveKey_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEqDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envAddress_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeJson_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <eth_getLogsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseToml_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <feeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <revertToStateAndDeleteCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <prevrandao_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startSnapshotGas_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <revokePersistent_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_6Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signCompact_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGeDecimal_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <setEnvCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbsDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBroadcastCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBytes32ArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLt_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startMappingRecordingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getDeployedCodeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeInt_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toBase64_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <containsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <clearMockedCallsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <chainIdCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <makePersistent_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLtDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startDebugTraceRecordingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <recordLogsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envInt_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deleteSnapshotsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseIntCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBlockNumberCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <revertToCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <startPrank_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <removeDirCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <difficultyCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_7Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_8Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <prank_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <promptCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlType_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEqDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <closeFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <txGasPriceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonStringArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlTypeArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonStringCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <readCallersCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assumeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBytes_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <transact_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_6Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLe_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startPrank_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toLowercaseCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_7Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectPartialRevert_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeToml_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotValue_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonUintArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <keyExistsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <setBlockhashCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <cloneAccountCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeString_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_9Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <makePersistent_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseToml_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCallRevert_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGt_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBytes32_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signDelegationCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCalls_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_8Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGeDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <keyExistsTomlCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbsDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <readFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeLineCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deriveKey_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <unixTimeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_10Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <promptAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGtDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <isContextCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <promptUintCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <accessesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlAddressArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLt_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBytesArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <loadCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEqDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <promptSecretUintCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbsDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_11Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJson_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createFork_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deriveKey_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomBytesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <startSnapshotGas_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectSafeMemoryCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotValue_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <blobBaseFeeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeJsonType_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getArtifactPathByDeployedCodeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeJsonType_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmitAnonymous_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_9Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <dumpStateCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <storeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <readLineCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_10Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_11Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmitAnonymous_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createSelectFork_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <resumeTracingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_12Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createWallet_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_6Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <computeCreateAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getDeploymentsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeInt_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopBroadcastCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopSnapshotGas_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGtDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_13Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBlockTimestampCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sign_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createWallet_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonIntCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertFalse_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_12Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createFork_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <isDirCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <prank_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEqDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBool_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startBroadcast_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startBroadcast_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLeDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getStateDiffCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <readDir_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlKeysCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCall_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbs_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRelDecimal_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signP256Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLe_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createSelectFork_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_7Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJson_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getMappingKeyAndParentOfCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_14Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_13Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeString_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <computeCreate2Address_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <ffiCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envInt_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_15Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <indexOfCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <splitCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlStringCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGeDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <broadcastRawTransactionCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sign_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <ensNamehashCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRel_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getCodeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBytes32Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signCompact_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseBytesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopPrankCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBytes32ArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBoolArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBool_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_16Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLe_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeAddress_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseBoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <rpcUrlCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_14Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_15Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBytes32_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rememberKeys_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_16Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createSelectFork_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBytes_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_17Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <revokePersistent_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonIntArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_18Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deployCode_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeJsonCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <setNonceUnsafeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomBytes4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <prevrandao_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotStateCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <rpcUrlStructsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <selectForkCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <readLinkCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlStringArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLt_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signCompact_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertTrue_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <copyFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getNonce_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertFalse_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toBase64_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deleteSnapshotCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <prank_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getDeployment_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGe_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rpcUrlsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGe_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLtDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonType_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLeDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopAndReturnStateDiffCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBool_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRelDecimal_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBool_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envAddress_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonUintCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockFunctionCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <toBase64URL_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeUintToHexCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <fsMetadataCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <broadcast_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <toString_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_19Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLt_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBytesArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_20Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <sign_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <trimCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <loadAllocsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_8Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_6Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_9Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <etchCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlUintArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_21Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_22Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_23Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCall_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_10Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_24Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <resetGasMeteringCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <transact_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeToml_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlIntCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envUint_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_4Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_17Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <revertToStateCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLeDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_6Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmit_7Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <skip_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <publicKeyP256Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <readDir_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <labelCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_11Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signAndAttachDelegationCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <dealCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <toBase64URL_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectEmitAnonymous_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <pauseTracingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <prank_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <signCompact_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlUintCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomBoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <startBroadcast_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envExistsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopAndReturnDebugTraceRecordingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_18Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <startStateDiffRecordingCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomUint_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEqDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_12Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLe_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <pauseGasMeteringCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCallRevert_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBoolCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <computeCreate2Address_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_7Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlIntArrayCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_25Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomAddressCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <randomUint_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rollFork_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlBytesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_8Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <isPersistentCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <projectRootCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGt_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rollFork_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGt_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <keyExistsJsonCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getWalletsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCallRevert_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertLtDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGeDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <skip_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <snapshotGasLastCall_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envBytes_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <replaceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_19Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <deleteStateSnapshotsCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <isFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCallMinGas_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <setArbitraryStorageCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <writeJson_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_20Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGe_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <sign_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonType_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_9Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_21Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <warpCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_22Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <broadcast_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <mockCall_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <allowCheatcodesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getFoundryVersionCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getArtifactPathByCodeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <envOr_13Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getMappingSlotAtCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGtDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <createWallet_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_26Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRel_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <makePersistent_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_23Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <breakpoint_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <removeFileCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeBytes_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rollFork_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_10Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBroadcasts_0Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectCall_5Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_24Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envUint_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_25Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <tryFfiCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <expectRevert_11Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEq_27Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getStateDiffJsonCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBlobhashesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertNotEqDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <stopSnapshotGas_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <broadcast_2Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqAbs_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <getBroadcasts_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <breakpoint_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_26Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <envString_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertGt_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <rememberKeys_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <setNonceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseTomlType_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseUintCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sleepCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRelDecimal_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <parseJsonBytesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertEq_27Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <assertApproxEqRel_3Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <serializeUint_1Call as alloy_sol_types::SolCall>::SIGNATURE,
-            <coinbaseCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <addrCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for VmCalls {
@@ -115194,8 +113202,8 @@ See the [wrapper's documentation](`VmInstance`) for more details.*/
     pub const fn new<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(address: alloy_sol_types::private::Address, __provider: P) -> VmInstance<P, N> {
-        VmInstance::<P, N>::new(address, __provider)
+    >(address: alloy_sol_types::private::Address, provider: P) -> VmInstance<P, N> {
+        VmInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -115207,9 +113215,9 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
     ) -> impl ::core::future::Future<Output = alloy_contract::Result<VmInstance<P, N>>> {
-        VmInstance::<P, N>::deploy(__provider)
+        VmInstance::<P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -115220,8 +113228,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        VmInstance::<P, N>::deploy_builder(__provider)
+    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        VmInstance::<P, N>::deploy_builder(provider)
     }
     /**A [`Vm`](self) instance.
 
@@ -115248,6 +113256,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -115258,11 +113267,11 @@ See the [wrapper's documentation](`VmInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -115272,8 +113281,8 @@ Returns a new instance of the contract, if the deployment was successful.
 
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
-        pub async fn deploy(__provider: P) -> alloy_contract::Result<VmInstance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider);
+        pub async fn deploy(provider: P) -> alloy_contract::Result<VmInstance<P, N>> {
+            let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -115283,9 +113292,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
@@ -115322,6 +113331,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -120557,6 +118567,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,

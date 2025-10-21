@@ -166,7 +166,6 @@ error InsufficientAllowance(uint256 allowance, uint256 amount);
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
-        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = (
             alloy::sol_types::sol_data::Uint<256>,
             alloy::sol_types::sol_data::Uint<256>,
@@ -254,7 +253,6 @@ constructor(address _arbInbox, address _syndToken);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Address,
@@ -349,7 +347,6 @@ function L1_BLOCK_ADDRESS() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -383,7 +380,6 @@ function L1_BLOCK_ADDRESS() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -498,7 +494,6 @@ function arbInbox() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -530,7 +525,6 @@ function arbInbox() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -645,7 +639,6 @@ function sendBlockHashes(address gasArchive, uint256 gasLimit, uint256 maxFeePer
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Uint<256>,
@@ -689,7 +682,6 @@ function sendBlockHashes(address gasArchive, uint256 gasLimit, uint256 maxFeePer
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -815,7 +807,6 @@ function syndToken() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -847,7 +838,6 @@ function syndToken() external view returns (address);
         }
         {
             #[doc(hidden)]
-            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -933,7 +923,6 @@ function syndToken() external view returns (address);
         }
     };
     ///Container for all the [`BlockHashRelayer`](self) function calls.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum BlockHashRelayerCalls {
@@ -946,6 +935,7 @@ function syndToken() external view returns (address);
         #[allow(missing_docs)]
         syndToken(syndTokenCall),
     }
+    #[automatically_derived]
     impl BlockHashRelayerCalls {
         /// All the selectors of this enum.
         ///
@@ -959,40 +949,6 @@ function syndToken() external view returns (address);
             [134u8, 31u8, 134u8, 44u8],
             [243u8, 80u8, 192u8, 214u8],
         ];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(arbInbox),
-            ::core::stringify!(syndToken),
-            ::core::stringify!(sendBlockHashes),
-            ::core::stringify!(L1_BLOCK_ADDRESS),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <arbInboxCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <syndTokenCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sendBlockHashesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <L1_BLOCK_ADDRESSCall as alloy_sol_types::SolCall>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for BlockHashRelayerCalls {
@@ -1198,13 +1154,13 @@ function syndToken() external view returns (address);
         }
     }
     ///Container for all the [`BlockHashRelayer`](self) custom errors.
-    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum BlockHashRelayerErrors {
         #[allow(missing_docs)]
         InsufficientAllowance(InsufficientAllowance),
     }
+    #[automatically_derived]
     impl BlockHashRelayerErrors {
         /// All the selectors of this enum.
         ///
@@ -1213,34 +1169,6 @@ function syndToken() external view returns (address);
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[[42u8, 27u8, 45u8, 216u8]];
-        /// The names of the variants in the same order as `SELECTORS`.
-        pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(InsufficientAllowance),
-        ];
-        /// The signatures in the same order as `SELECTORS`.
-        pub const SIGNATURES: &'static [&'static str] = &[
-            <InsufficientAllowance as alloy_sol_types::SolError>::SIGNATURE,
-        ];
-        /// Returns the signature for the given selector, if known.
-        #[inline]
-        pub fn signature_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            match Self::SELECTORS.binary_search(&selector) {
-                ::core::result::Result::Ok(idx) => {
-                    ::core::option::Option::Some(Self::SIGNATURES[idx])
-                }
-                ::core::result::Result::Err(_) => ::core::option::Option::None,
-            }
-        }
-        /// Returns the enum variant name for the given selector, if known.
-        #[inline]
-        pub fn name_by_selector(
-            selector: [u8; 4usize],
-        ) -> ::core::option::Option<&'static str> {
-            let sig = Self::signature_by_selector(selector)?;
-            sig.split_once('(').map(|(name, _)| name)
-        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for BlockHashRelayerErrors {
@@ -1357,9 +1285,9 @@ See the [wrapper's documentation](`BlockHashRelayerInstance`) for more details.*
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        __provider: P,
+        provider: P,
     ) -> BlockHashRelayerInstance<P, N> {
-        BlockHashRelayerInstance::<P, N>::new(address, __provider)
+        BlockHashRelayerInstance::<P, N>::new(address, provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -1371,13 +1299,13 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _arbInbox: alloy::sol_types::private::Address,
         _syndToken: alloy::sol_types::private::Address,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<BlockHashRelayerInstance<P, N>>,
     > {
-        BlockHashRelayerInstance::<P, N>::deploy(__provider, _arbInbox, _syndToken)
+        BlockHashRelayerInstance::<P, N>::deploy(provider, _arbInbox, _syndToken)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -1389,14 +1317,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        __provider: P,
+        provider: P,
         _arbInbox: alloy::sol_types::private::Address,
         _syndToken: alloy::sol_types::private::Address,
     ) -> alloy_contract::RawCallBuilder<P, N> {
-        BlockHashRelayerInstance::<
-            P,
-            N,
-        >::deploy_builder(__provider, _arbInbox, _syndToken)
+        BlockHashRelayerInstance::<P, N>::deploy_builder(provider, _arbInbox, _syndToken)
     }
     /**A [`BlockHashRelayer`](self) instance.
 
@@ -1423,6 +1348,7 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -1433,11 +1359,11 @@ See the [wrapper's documentation](`BlockHashRelayerInstance`) for more details.*
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            __provider: P,
+            provider: P,
         ) -> Self {
             Self {
                 address,
-                provider: __provider,
+                provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -1448,11 +1374,11 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            __provider: P,
+            provider: P,
             _arbInbox: alloy::sol_types::private::Address,
             _syndToken: alloy::sol_types::private::Address,
         ) -> alloy_contract::Result<BlockHashRelayerInstance<P, N>> {
-            let call_builder = Self::deploy_builder(__provider, _arbInbox, _syndToken);
+            let call_builder = Self::deploy_builder(provider, _arbInbox, _syndToken);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -1463,12 +1389,12 @@ This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(
-            __provider: P,
+            provider: P,
             _arbInbox: alloy::sol_types::private::Address,
             _syndToken: alloy::sol_types::private::Address,
         ) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                __provider,
+                provider,
                 [
                     &BYTECODE[..],
                     &alloy_sol_types::SolConstructor::abi_encode(
@@ -1515,6 +1441,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -1560,6 +1487,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
+    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
