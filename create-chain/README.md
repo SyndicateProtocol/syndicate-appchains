@@ -92,7 +92,7 @@ Create a `features.config.json` based on `features.config.json.example` for the 
 bun features
 ```
 
-Once the bridge has been successfully created all required contract address will be output to `out/<chain_name>/*.json`. Please copy these into the [AppChains Directory in Notion](https://www.notion.so/syndicateprotocol/AppChains-Directory-1ae94475eae6809e9ff1ff8f99679e3b?pvs=4).
+Once the bridge has been successfully created all required contract address will be output to `out/<chain_name>/*.json`. Please save these values.
 
 > NOTE: This process can take some time (~5-10 minutes) as there are checks the retryable tickets used to communicate between the settlement and appchain are successful.
 
