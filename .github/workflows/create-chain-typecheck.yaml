@@ -1,4 +1,4 @@
-name: create-chain Typecheck
+name: Typecheck create-chain
 permissions:
   contents: read
 
