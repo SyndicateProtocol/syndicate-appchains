@@ -11,7 +11,6 @@ import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
  *
  * @dev Environment Variables Required:
  *      - FACTORY_ADDRESS: Address of SyndicateFactory proxy
- *      - ADMIN_ADDRESS: Address with DEFAULT_ADMIN_ROLE
  *
  * @dev Usage:
  *      make upgrade-factory

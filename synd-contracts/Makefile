@@ -175,7 +175,7 @@ create-sequencing-chain :; forge script script/upgrade/CreateSequencingChain.s.s
 ## ⚠️  Upgrade Commands - ALWAYS run 'make storage-layout-check' first!
 
 # Upgrade SyndicateFactory to new implementation
-# Required env: FACTORY_ADDRESS, ADMIN_ADDRESS
+# Required env: FACTORY_ADDRESS
 upgrade-factory :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
 	forge script script/upgrade/UpgradeContracts.s.sol:UpgradeSyndicateFactory \
 	--rpc-url ${RPC_URL} \
