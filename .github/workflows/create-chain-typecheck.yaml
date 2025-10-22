@@ -1,4 +1,6 @@
 name: create-chain Typecheck
+permissions:
+  contents: read
 
 on:
   push:
