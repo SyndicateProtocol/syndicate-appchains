@@ -93,7 +93,7 @@ airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_AD
 
 # Simple storage layout validation for upgradeable contracts
 storage-layout-check :; @echo "Validating storage layouts for upgradeable contracts..." && \
-	contracts=(SyndicateFactory SyndicateSequencingChain ArbChainConfig) && \
+	contracts=(SyndicateFactory SyndicateSequencingChain GasArchive ArbChainConfig) && \
 	mkdir -p .storage-layouts && \
 	for contract in "$${contracts[@]}"; do \
     	forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.temp.json"; \
@@ -126,7 +126,7 @@ storage-layout-clean :; rm -rf .storage-layouts out/build-info
 storage-layout-update :; @echo "Updating storage layout..." && \
 	$(MAKE) storage-layout-clean && \
 	mkdir -p .storage-layouts && \
-	contracts=(SyndicateFactory SyndicateSequencingChain ArbChainConfig) && \
+	contracts=(SyndicateFactory SyndicateSequencingChain GasArchive ArbChainConfig) && \
 	for contract in "$${contracts[@]}"; do \
 		forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.json"; \
 	done && \
