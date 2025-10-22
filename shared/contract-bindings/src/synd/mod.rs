@@ -29,6 +29,7 @@ pub mod r#deploy_arb_config_manager;
 pub mod r#deploy_arb_config_manager_factory;
 pub mod r#deploy_block_hash_relayer;
 pub mod r#deploy_syndicate_sequencing_chain_plus_setup_with_always_allow_module;
+pub mod r#deploy_gas_aggregator;
 pub mod r#deploy_gas_archive;
 pub mod r#deploy_tee_module;
 pub mod r#deploy_test_tee_module;
