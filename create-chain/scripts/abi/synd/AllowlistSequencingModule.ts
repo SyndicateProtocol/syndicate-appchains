@@ -1,169 +1,169 @@
 export const AllowlistSequencingModuleABI = [
   {
-    type: "constructor",
-    inputs: [
+    "type": "constructor",
+    "inputs": [
       {
-        name: "_admin",
-        type: "address",
-        internalType: "address"
+        "name": "_admin",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    stateMutability: "nonpayable"
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "addToAllowlist",
-    inputs: [
+    "type": "function",
+    "name": "addToAllowlist",
+    "inputs": [
       {
-        name: "user",
-        type: "address",
-        internalType: "address"
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    outputs: [],
-    stateMutability: "nonpayable"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "admin",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "admin",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address"
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    stateMutability: "view"
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "allowlist",
-    inputs: [
+    "type": "function",
+    "name": "allowlist",
+    "inputs": [
       {
-        name: "user",
-        type: "address",
-        internalType: "address"
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "isAllowed",
-        type: "bool",
-        internalType: "bool"
+        "name": "isAllowed",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
-    stateMutability: "view"
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "isAllowed",
-    inputs: [
+    "type": "function",
+    "name": "isAllowed",
+    "inputs": [
       {
-        name: "proposer",
-        type: "address",
-        internalType: "address"
+        "name": "proposer",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "",
-        type: "address",
-        internalType: "address"
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "",
-        type: "bytes",
-        internalType: "bytes"
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool"
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
-    stateMutability: "view"
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "removeFromAllowlist",
-    inputs: [
+    "type": "function",
+    "name": "removeFromAllowlist",
+    "inputs": [
       {
-        name: "user",
-        type: "address",
-        internalType: "address"
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    outputs: [],
-    stateMutability: "nonpayable"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "transferAdmin",
-    inputs: [
+    "type": "function",
+    "name": "transferAdmin",
+    "inputs": [
       {
-        name: "newAdmin",
-        type: "address",
-        internalType: "address"
+        "name": "newAdmin",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    outputs: [],
-    stateMutability: "nonpayable"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "event",
-    name: "AdminTransferred",
-    inputs: [
+    "type": "event",
+    "name": "AdminTransferred",
+    "inputs": [
       {
-        name: "previousAdmin",
-        type: "address",
-        indexed: true,
-        internalType: "address"
+        "name": "previousAdmin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "newAdmin",
-        type: "address",
-        indexed: true,
-        internalType: "address"
+        "name": "newAdmin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
-    anonymous: false
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "UserAdded",
-    inputs: [
+    "type": "event",
+    "name": "UserAdded",
+    "inputs": [
       {
-        name: "user",
-        type: "address",
-        indexed: true,
-        internalType: "address"
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
-    anonymous: false
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "UserRemoved",
-    inputs: [
+    "type": "event",
+    "name": "UserRemoved",
+    "inputs": [
       {
-        name: "user",
-        type: "address",
-        indexed: true,
-        internalType: "address"
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
-    anonymous: false
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "AddressNotAllowed",
-    inputs: []
+    "type": "error",
+    "name": "AddressNotAllowed",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "NotAdmin",
-    inputs: []
+    "type": "error",
+    "name": "NotAdmin",
+    "inputs": []
   }
 ] as const
 

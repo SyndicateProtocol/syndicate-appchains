@@ -37,7 +37,7 @@ generate-contract-abis:
 	# Generate RequireAndModuleFactory
 	@echo "Generating RequireAndModuleFactory..."
 	@cd ../synd-contracts && \
-	  echo "export const RequireAndModuleFactoryABI = $$(forge inspect src/factory/RequireAndModuleFactory.sol:RequireAndModuleFactory abi --json) as const" > ../create-chain/scripts/abi/synd/RequireAndModuleFactory.ts
+	  echo "export const RequireAndModuleFactoryABI = $$(forge inspect src/factory/PermissionModuleFactories.sol:RequireAndModuleFactory abi --json) as const" > ../create-chain/scripts/abi/synd/RequireAndModuleFactory.ts
 
 	# Generate SyndicateFactory
 	@echo "Generating SyndicateFactory..."
