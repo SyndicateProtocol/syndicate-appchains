@@ -1,0 +1,43 @@
+{
+  // USE THESE VALUES FOR TESTNET/DEVNET:
+  "settlementChainRpcUrl": "https://base-sepolia.d.alchemy.com/v2/IYuoq85jytJl17x6nlsTe", // ! Double check if Base Sepolia is the correct settlement chain !
+  "sequencingChainRpcUrl": "https://risa-testnet.d.alchemy.com/v2/IYuoq85jytJl17x6nlsTe",
+  "ethereumChainRpcUrl": "https://eth-sepolia.d.alchemy.com/v2/IYuoq85jytJl17x6nlsTe",
+
+  // USE THESE VALUES FOR MAINNET:
+  //"settlementChainRpcUrl": "https://base-mainnet.d.alchemy.com/v2/SAv6Q-A_UTqkbAvVhq9fj", // ! Double check if Base is the correct settlement chain !
+  //"sequencingChainRpcUrl": "https://synd-mainnet.d.alchemy.com/v2/SAv6Q-A_UTqkbAvVhq9fj",
+  //"ethereumChainRpcUrl": "https://eth-mainnet.d.alchemy.com/v2/SAv6Q-A_UTqkbAvVhq9fj",
+
+  // These values come from the Appchain Intake form
+  "chainId": "<YOUR_CHAIN_ID>",
+  "chainName": "<YOU_CHAIN_NAME>",
+  "appChainRpcUrl": "https://<APPCHAIN_RPC_URL>",
+  "appChainExplorerUrl": "https://<APPCHAIN_EXPLORER_URL>",
+
+  // Use the "TESTNET|MAINNET: Appchain Deployer" secret from 1Pass,
+  "deployerPrivateKey": "<SYNDICATE_APPCHAIN_DEPLOYER_KEY_FROM_1PASS>",
+
+  // Appchain Owner Wallet - this is the dedicated EOA you created for this Appchain
+  "ownerPrivateKey": "<OWNER_PRIVATE_KEY_NEW_WALLET>",
+
+  // Copy the `syndicateSequencingChain` value from the config in your /out directory
+  "sequencingContractAddress": "<SEQ_CONTRACT_ADDRESS>",
+
+  // Replace this whole block with the `coreContracts` config in your /out directory
+  "coreContracts": {
+    "rollup": "0x0000000000000000000000000000000000000000",
+    "inbox": "0x0000000000000000000000000000000000000000",
+    "nativeToken": "0x0000000000000000000000000000000000000000",
+    "outbox": "0x0000000000000000000000000000000000000000",
+    "rollupEventInbox": "0x0000000000000000000000000000000000000000",
+    "challengeManager": "0x0000000000000000000000000000000000000000",
+    "adminProxy": "0x0000000000000000000000000000000000000000",
+    "sequencerInbox": "0x0000000000000000000000000000000000000000",
+    "bridge": "0x0000000000000000000000000000000000000000",
+    "upgradeExecutor": "0x0000000000000000000000000000000000000000",
+    "validatorUtils": "0x0000000000000000000000000000000000000000",
+    "validatorWalletCreator": "0x0000000000000000000000000000000000000000",
+    "deployedAtBlockNumber": 0
+  }
+}
