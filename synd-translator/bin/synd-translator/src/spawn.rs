@@ -147,7 +147,6 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     Ok(synd_slotter::slotter::run(
         settlement_delay.unwrap(),
-        safe_state,
         sequencing,
         settlement,
         &mchain,
