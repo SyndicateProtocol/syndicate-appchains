@@ -3,6 +3,8 @@
 # This ensures that any changes to smart contracts are reflected in the TypeScript bindings used by create-chain.
 
 name: Create Chain ABI Check
+permissions:
+  contents: read
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -14,10 +16,10 @@ on:
   # Only run on PRs that touch contracts or create-chain ABIs
   pull_request:
     paths:
-      - 'synd-contracts/**'
-      - 'create-chain/scripts/abi/synd/**'
-      - 'create-chain/Makefile'
-      - '.github/workflows/create-chain-check.yaml'
+      - "synd-contracts/**"
+      - "create-chain/scripts/abi/synd/**"
+      - "create-chain/Makefile"
+      - ".github/workflows/create-chain-check.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
