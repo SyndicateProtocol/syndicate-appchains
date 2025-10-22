@@ -33,8 +33,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
             Ok(()) => std::process::exit(0),
             Err(e) => {
                 error!("restarting the translator components: {e}");
-                // Sleep for 1 second to avoid spamming the logs on unrecoverable errors
-                // TODO [SEQ-985]: Review errors thrown by slotter and handle them appropriately
+                // Sleep for 1 second to avoid spamming the logs on re-occuring errors
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         };

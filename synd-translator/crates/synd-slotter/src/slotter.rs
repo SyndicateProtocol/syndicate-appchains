@@ -103,12 +103,15 @@ pub async fn run(
     }
 }
 
-#[allow(missing_docs)] // self-documenting
+/// Slotter Errors
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum SlotterError {
+    /// Means something went wrong when trying to apply the batch to the mchain
     #[error("Slot processor error: {0}")]
     SlotProcessorError(String),
 
+    /// An ingestion error, this essentially will be handled as a reorg - the slotter will be
+    /// restarted and attempt to reconcile the mchain state with the real world
     #[error("{0} chain ingestor error: {1}")]
     IngestorError(Chain, String),
 }
