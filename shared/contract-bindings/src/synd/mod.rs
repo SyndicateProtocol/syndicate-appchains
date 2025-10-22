@@ -309,8 +309,6 @@ pub mod r#h04_missing_finalization_for_destination_appchain_po_c;
 pub mod r#reentrant_contract;
 pub mod r#synd_staking_test;
 pub mod r#syndicate_factory;
-pub mod r#syndicate_factory_storage_test;
-pub mod r#test_namespaced_storage_contract;
 pub mod r#syndicate_factory_test;
 pub mod r#syndicate_factory_upgrade_v2;
 pub mod r#syndicate_factory_wrapper;
