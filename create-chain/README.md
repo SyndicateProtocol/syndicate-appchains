@@ -44,7 +44,7 @@ This will deploy the required contracts to both the sequencing chain and the set
 
 > NOTE: An EOA is created for the batch sequencer during this process & you will be prompted at the end to optionally fund it from the deployer.
 
-Please add the interm-owner private key & sequencer private key into 1Password in the format
+Please save the interm-owner private key & sequencer private keys in a secure location
 
 ```txt
 Interim Owner
@@ -100,7 +100,7 @@ Once the bridge has been successfully created all required contract address will
 
 > NOTE: An EOA is created for the proposer during this process & you will be prompted at the end to optionally fund it from the deployer.
 
-Please add the proposer wallet details into the same 1Password as before:
+Please save the proposer wallet details in a secure location:
 
 ```txt
 Proposer

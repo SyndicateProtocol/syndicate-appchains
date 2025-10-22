@@ -6,7 +6,7 @@
   "chainName": "<YOU_CHAIN_NAME>",
   "appChainRpcUrl": "https://<APPCHAIN_RPC_URL>",
   "appChainExplorerUrl": "https://<APPCHAIN_EXPLORER_URL>",
-  "deployerPrivateKey": "<SYNDICATE_APPCHAIN_DEPLOYER_KEY_FROM_1PASS>",
+  "deployerPrivateKey": "<DEPLOYER_KEY>",
   "ownerPrivateKey": "<OWNER_PRIVATE_KEY_NEW_WALLET>",
   "nativeTokenAddress": "0x0000000000000000000000000000000000000000"
 }
