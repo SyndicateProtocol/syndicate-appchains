@@ -549,7 +549,9 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             $.seqChainOutbox[chainID] = outboxAddress;
             $.seqChainSettlesToBase[chainID] = settlesToBase;
         }
-        emit ChainAdded($.epoch, chainID, aggregatorAddress, $.seqChainOutbox[chainID], $.seqChainSettlesToBase[chainID]);
+        emit ChainAdded(
+            $.epoch, chainID, aggregatorAddress, $.seqChainOutbox[chainID], $.seqChainSettlesToBase[chainID]
+        );
     }
 
     function addSettlementChainAsSequencingChain(address aggregatorAddress) external {
