@@ -7,6 +7,7 @@ create-contract-bindings-rust:
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
 	# Generate bindings only for contracts actually used in the codebase
 	cd ../synd-contracts && forge bind --alloy --module --force \
+		--skip test --skip script \
 		--select 'GasAggregator|GasArchive|BlockHashRelayer|EmissionsCalculator|EmissionsScheduler|Refunder' \
 		--select 'ArbConfigManager|SyndicateSequencingChain|Rollup|IInbox|AssertionPoster' \
 		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
