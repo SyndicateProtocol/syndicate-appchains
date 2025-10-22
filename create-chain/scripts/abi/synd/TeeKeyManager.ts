@@ -1,4 +1,4 @@
-export const TeeKeyManagerABI = [
+export const teeKeyManagerABI = [
   {
     "type": "constructor",
     "inputs": [

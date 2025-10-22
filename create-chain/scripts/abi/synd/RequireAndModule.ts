@@ -1,4 +1,4 @@
-export const RequireAndModuleABI = [
+export const requireAndModuleABI = [
   {
     "type": "constructor",
     "inputs": [

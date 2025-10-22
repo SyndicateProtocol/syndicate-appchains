@@ -1,4 +1,4 @@
-export const SyndicateSequencingChainABI = [
+export const syndicateSequencingChainABI = [
   {
     "type": "constructor",
     "inputs": [

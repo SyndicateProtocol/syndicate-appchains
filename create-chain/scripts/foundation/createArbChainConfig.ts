@@ -1,4 +1,4 @@
-import { ArbConfigManagerABI } from "@/scripts/abi/synd/ArbConfigManager"
+import { arbConfigManagerABI } from "@/scripts/abi/synd/ArbConfigManager"
 import type { CoreContracts } from "@arbitrum/orbit-sdk"
 import { type Hex, parseEventLogs } from "viem"
 import { getFoundationConfig } from "../utils/config"
@@ -30,7 +30,7 @@ export async function createArbChainConfig(
   const { request } = await settlementPublicClient.simulateContract({
     account: deployerSettlementWalletClient.account,
     address: arbConfigManagerAddress,
-    abi: ArbConfigManagerABI,
+    abi: arbConfigManagerABI,
     functionName: "createArbChainConfig",
     args: [
       // owner
@@ -65,7 +65,7 @@ export async function createArbChainConfig(
     hash: txHash
   })
   const creationLogs = parseEventLogs({
-    abi: ArbConfigManagerABI,
+    abi: arbConfigManagerABI,
     logs: tx.logs
   })
   const arbChainConfigAddress = creationLogs.find(

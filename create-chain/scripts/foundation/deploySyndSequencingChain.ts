@@ -1,13 +1,13 @@
 import { type Account, type Hex, parseEventLogs, toBytes, toHex } from "viem"
 
 import {
-  AllowlistSequencingModuleABI,
-  AllowlistSequencingModuleBytecode
+  allowlistSequencingModuleABI,
+  allowlistSequencingModuleBytecode
 } from "@/scripts/abi/synd/AllowlistSequencingModule"
-import { RequireAndModuleABI } from "@/scripts/abi/synd/RequireAndModule"
-import { RequireAndModuleFactoryABI } from "@/scripts/abi/synd/RequireAndModuleFactory"
-import { SyndicateFactoryABI } from "@/scripts/abi/synd/SyndicateFactory"
-import { SyndicateSequencingChainABI } from "@/scripts/abi/synd/SyndicateSequencingChain"
+import { requireAndModuleABI } from "@/scripts/abi/synd/RequireAndModule"
+import { requireAndModuleFactoryABI } from "@/scripts/abi/synd/RequireAndModuleFactory"
+import { syndicateFactoryABI } from "@/scripts/abi/synd/SyndicateFactory"
+import { syndicateSequencingChainABI } from "@/scripts/abi/synd/SyndicateSequencingChain"
 import { supportedSequencingChains } from "@/scripts/utils/constants"
 import { getFoundationConfig } from "../utils/config"
 import { getChainExplorerUrl } from "../utils/helpers"
@@ -58,7 +58,7 @@ async function createRequireAndModule() {
     await sequencingPublicClient.simulateContract({
       account: deployerSequencingWalletClient.account,
       address: requireAndFactoryAddress,
-      abi: RequireAndModuleFactoryABI,
+      abi: requireAndModuleFactoryABI,
       functionName: "createRequireAndModule",
       args: [
         deployerSequencingWalletClient.account.address,
@@ -72,7 +72,7 @@ async function createRequireAndModule() {
       hash: requireAndModuleHash
     })
   const requireAndFactoryLogs = parseEventLogs({
-    abi: RequireAndModuleFactoryABI,
+    abi: requireAndModuleFactoryABI,
     logs: requireAndModuleTx.logs
   })
   const requireAndModuleAddress = requireAndFactoryLogs.find(
@@ -100,7 +100,7 @@ async function createSyndicateSequencingChain(requireAndModuleAddress: Hex) {
     await sequencingPublicClient.simulateContract({
       account: deployerSequencingWalletClient.account,
       address: syndicateFactoryAddress,
-      abi: SyndicateFactoryABI,
+      abi: syndicateFactoryABI,
       functionName: "createSyndicateSequencingChain",
       args: [
         BigInt(chainId),
@@ -118,7 +118,7 @@ async function createSyndicateSequencingChain(requireAndModuleAddress: Hex) {
       hash: syndicateSequencingChainHash
     })
   const syndicateFactoryLogs = parseEventLogs({
-    abi: SyndicateFactoryABI,
+    abi: syndicateFactoryABI,
     logs: syndicateSequencingChainTx.logs
   })
   const syndicateSequencingChainAddress = syndicateFactoryLogs.find(
@@ -145,8 +145,8 @@ async function deployAndSetupAllowlistSequencingModule(
     await getFoundationConfig()
   const allowlistSequencingModuleHash =
     await deployerSequencingWalletClient.deployContract({
-      abi: AllowlistSequencingModuleABI,
-      bytecode: AllowlistSequencingModuleBytecode,
+      abi: allowlistSequencingModuleABI,
+      bytecode: allowlistSequencingModuleBytecode,
       account: deployerSequencingWalletClient.account,
       args: [deployerSequencingWalletClient.account.address]
     })
@@ -168,7 +168,7 @@ async function deployAndSetupAllowlistSequencingModule(
   const addAllowlistTxHash = await deployerSequencingWalletClient.writeContract(
     {
       address: allowlistSequencingModuleAddress,
-      abi: AllowlistSequencingModuleABI,
+      abi: allowlistSequencingModuleABI,
       functionName: "addToAllowlist",
       args: [sequencerAccount.address],
       account: deployerSequencingWalletClient.account
@@ -195,7 +195,7 @@ async function registerAllowlistSequencingModuleOnRequireAllModule(
   const registerSequencerAllowlistTxHash =
     await deployerSequencingWalletClient.writeContract({
       address: requireAndModuleAddress,
-      abi: RequireAndModuleABI,
+      abi: requireAndModuleABI,
       functionName: "addPermissionCheck",
       args: [allowlistSequencingModuleAddress, true],
       account: deployerSequencingWalletClient.account
@@ -228,7 +228,7 @@ async function transferAllContractsOwnership({
   const transferOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
       address: syndicateSequencingChainAddress,
-      abi: SyndicateSequencingChainABI,
+      abi: syndicateSequencingChainABI,
       functionName: "transferOwnership",
       args: [ownerSequencingWalletClient.account.address],
       account: deployerSequencingWalletClient.account
@@ -247,7 +247,7 @@ async function transferAllContractsOwnership({
   const transferAllowlistSequencingModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
       address: allowlistSequencingModuleAddress,
-      abi: AllowlistSequencingModuleABI,
+      abi: allowlistSequencingModuleABI,
       functionName: "transferAdmin",
       args: [ownerSequencingWalletClient.account.address],
       account: deployerSequencingWalletClient.account
@@ -266,7 +266,7 @@ async function transferAllContractsOwnership({
   const transferRequireAllModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
       address: requireAndModuleAddress,
-      abi: RequireAndModuleABI,
+      abi: requireAndModuleABI,
       functionName: "transferOwnership",
       args: [ownerSequencingWalletClient.account.address],
       account: deployerSequencingWalletClient.account

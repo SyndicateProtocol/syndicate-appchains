@@ -1,4 +1,4 @@
-export const AssertionPosterABI = [
+export const assertionPosterABI = [
   {
     "type": "constructor",
     "inputs": [

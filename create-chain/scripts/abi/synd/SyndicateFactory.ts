@@ -1,4 +1,4 @@
-export const SyndicateFactoryABI = [
+export const syndicateFactoryABI = [
   {
     "type": "constructor",
     "inputs": [

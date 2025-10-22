@@ -125,6 +125,7 @@ export const featuresConfig = z.object({
   chainName: z.string(),
   settlementChainRpcUrl: z.string().url(),
   sequencingChainRpcUrl: z.string().url(),
+  syndForkSequencingChainRpcUrl: z.string().url(),
   ethereumChainRpcUrl: z.string().url(),
   appChainRpcUrl: z.string().url(),
   appChainExplorerUrl: z.string().url(),

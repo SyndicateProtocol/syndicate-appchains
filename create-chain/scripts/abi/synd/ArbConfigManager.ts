@@ -1,4 +1,4 @@
-export const ArbConfigManagerABI = [
+export const arbConfigManagerABI = [
   {
     "type": "constructor",
     "inputs": [

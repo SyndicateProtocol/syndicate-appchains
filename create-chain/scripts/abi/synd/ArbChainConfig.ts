@@ -1,4 +1,4 @@
-export const ArbChainConfigABI = [
+export const arbChainConfigABI = [
   {
     "type": "constructor",
     "inputs": [],

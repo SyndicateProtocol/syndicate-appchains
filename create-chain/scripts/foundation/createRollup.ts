@@ -17,8 +17,8 @@ import {
 import { getFoundationConfig } from "../utils/config"
 
 import {
-  OwnerAdjustableExchangeRatePricerABI,
-  OwnerAdjustableExchangeRatePricerBytecode
+  ownerAdjustableExchangeRatePricerAbi,
+  ownerAdjustableExchangeRatePricerBytecode
 } from "@/scripts/abi/nitro/OwnerAdjustableExchangeRatePricer"
 import type { CreateSettlementRollupParams } from "@/scripts/types"
 import { supportedSettlementChains } from "@/scripts/utils/constants"
@@ -145,8 +145,8 @@ export async function createRollup({
     print("🔍  Deploying exchange rate pricer...")
     const createExchangeRatePricerHash =
       await deployerSettlementWalletClient.deployContract({
-        abi: OwnerAdjustableExchangeRatePricerABI,
-        bytecode: OwnerAdjustableExchangeRatePricerBytecode,
+        abi: ownerAdjustableExchangeRatePricerAbi,
+        bytecode: ownerAdjustableExchangeRatePricerBytecode,
         account: deployerAccount,
         // Exchange rate set to 1:1
         args: [parseEther("1")]
@@ -172,7 +172,7 @@ export async function createRollup({
     const transferOwnershipHash =
       await deployerSettlementWalletClient.writeContract({
         address: exchangeRatePricerAddress,
-        abi: OwnerAdjustableExchangeRatePricerABI,
+        abi: ownerAdjustableExchangeRatePricerAbi,
         functionName: "transferOwnership",
         args: [owner]
       })

@@ -104,7 +104,6 @@ export type SupportedSequencingChains = Record<
     bridgeAddress: Hex
     requireAndFactoryAddress: Hex
     syndicateFactoryAddress: Hex
-    syndNitroForkRpcUrl: string
     chain: Chain
   }
 >

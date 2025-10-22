@@ -1,5 +1,5 @@
-import { TeeKeyManagerABI } from "@/scripts/abi/synd/TeeKeyManager"
-import { TeeModuleABI, teeModuleBytecode } from "@/scripts/abi/synd/TeeModule"
+import { teeKeyManagerABI } from "@/scripts/abi/synd/TeeKeyManager"
+import { teeModuleABI, teeModuleBytecode } from "@/scripts/abi/synd/TeeModule"
 import { sleep } from "bun"
 import {
   type Hex,
@@ -21,7 +21,7 @@ import { print } from "../utils/print"
 import { createAssertionPoster } from "./createAssertionPoster"
 
 export async function deployTeeModule() {
-  const { ownerSettlementWalletClient, settlementPublicClient } =
+  const { ownerSettlementWalletClient, settlementPublicClient, deployerSettlementWalletClient } =
     await getFeaturesConfig()
   const assertionPosterAddress = await createAssertionPoster()
   const teeModuleAddress = await createTeeModule(assertionPosterAddress)
@@ -41,18 +41,8 @@ export async function deployTeeModule() {
     )}/tx/${assertionPosterOwnershipTransferHash}`
   )
 
-  // TeeModule should be owned by the owner
-  const teeModuleOwnershipTransferHash = await transferOwnershipFromDeployer(
-    teeModuleAddress,
-    ownerSettlementWalletClient.account.address
-  )
-  print(
-    `🔍  TeeModule ownership transferred to owner (${
-      ownerSettlementWalletClient.account.address
-    })\n${getChainExplorerUrl(
-      settlementPublicClient.chain
-    )}/tx/${teeModuleOwnershipTransferHash}`
-  )
+  // TeeModule's DEFAULT_ADMIN_ROLE should be set to the owner
+  await transferTeeModuleDefaultAdminRole(teeModuleAddress)
 
   // Read attestation doc verifier address from TeeKeyManager
   const teeKeyManagerAddress =
@@ -62,7 +52,7 @@ export async function deployTeeModule() {
   const attestationDocVerifierAddress =
     await settlementPublicClient.readContract({
       address: teeKeyManagerAddress,
-      abi: TeeKeyManagerABI,
+      abi: teeKeyManagerABI,
       functionName: "attestationDocVerifier"
     })
 
@@ -82,7 +72,8 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
     sequencingContractAddress,
     sequencingPublicClient,
     appchainPublicClient,
-    ethereumPublicClient
+    ethereumPublicClient,
+    syndForkSequencingChainRpcUrl
   } = await getFeaturesConfig()
 
   const isL1Chain = (
@@ -101,6 +92,7 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
 
   const settlementDelay = BigInt(60) // seconds
   const challengeWindowDuration = BigInt(10 * 60) // 10 minutes
+  const slowDuration = BigInt(7 * 24 * 60 * 60) // 7 days
 
   const sequencerMessageCount = await ethereumPublicClient.readContract({
     address: bridgeAddress,
@@ -120,8 +112,7 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
   })
 
   const res = await fetch(
-    supportedSequencingChains[sequencingPublicClient.chain.id]
-      .syndNitroForkRpcUrl,
+    syndForkSequencingChainRpcUrl,
     {
       method: "POST",
       headers: {
@@ -180,6 +171,8 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
     isL1Chain,
     // 9. challengeWindowDuration_: The duration of the challenge window in seconds
     challengeWindowDuration,
+    // 10. slowDuration_: The duration of the challenge window in slow mode in seconds.
+    slowDuration,
     // 10. teeKeyManager_: The address of the TEE key manager contract
     // Note that the AssertionPoster must be owned by the TeeModule for closing the challenge window to work properly
     teeKeyManagerAddress
@@ -188,7 +181,7 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
   print(`🔍  Deploying TeeModule with args: ${stringify(args)}`)
 
   const teeModuleHash = await deployerSettlementWalletClient.deployContract({
-    abi: TeeModuleABI,
+    abi: teeModuleABI,
     bytecode: teeModuleBytecode,
     args
   })
@@ -246,6 +239,51 @@ export async function transferOwnershipFromDeployer(
     throw new Error("AssertionPoster ownership transfer to TeeModule failed")
   }
   return transferOwnershipHash
+}
+
+async function transferTeeModuleDefaultAdminRole(teeModuleAddress: Hex) {
+  const { ownerSettlementWalletClient, settlementPublicClient, deployerSettlementWalletClient } =
+    await getFeaturesConfig()
+
+  const defaultAdminRole = await settlementPublicClient.readContract({
+    address: teeModuleAddress,
+    abi: teeModuleABI,
+    functionName: "DEFAULT_ADMIN_ROLE"
+  })
+  const teeModuleDefaultAdminRoleTransferHash = await deployerSettlementWalletClient.writeContract({
+    address: teeModuleAddress,
+    abi: teeModuleABI,
+    functionName: "grantRole",
+    args: [defaultAdminRole, ownerSettlementWalletClient.account.address]
+  })
+  await settlementPublicClient.waitForTransactionReceipt({
+    hash: teeModuleDefaultAdminRoleTransferHash
+  })
+  print(
+    `🔍  TeeModule's DEFAULT_ADMIN_ROLE set to owner (${
+      ownerSettlementWalletClient.account.address
+    })\n${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${teeModuleDefaultAdminRoleTransferHash}`
+  )
+
+  // Revoke the DEFAULT_ADMIN_ROLE from the deployer
+  const teeModuleDefaultAdminRoleRevokeHash = await deployerSettlementWalletClient.writeContract({
+    address: teeModuleAddress,
+    abi: teeModuleABI,
+    functionName: "revokeRole",
+    args: [defaultAdminRole, deployerSettlementWalletClient.account.address]
+  })
+  await settlementPublicClient.waitForTransactionReceipt({
+    hash: teeModuleDefaultAdminRoleRevokeHash
+  })
+  print(
+    `🔍  TeeModule's DEFAULT_ADMIN_ROLE revoked from deployer (${
+      deployerSettlementWalletClient.account.address
+    })\n${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${teeModuleDefaultAdminRoleRevokeHash}`
+  )
 }
 
 async function findAppStartBlockHash(

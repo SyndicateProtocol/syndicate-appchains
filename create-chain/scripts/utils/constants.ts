@@ -63,16 +63,12 @@ export const supportedSequencingChains: SupportedSequencingChains = {
     bridgeAddress: "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA",
     requireAndFactoryAddress: "0x60e6Ac9FF8ff09175329EfB3daDa27abDA812aA4",
     syndicateFactoryAddress: "0x2e44cd104A6b67037b5e6DB662C0E917d1828D9E",
-    syndNitroForkRpcUrl:
-      "https://risa-testnet.us-central1.gcp.testnet.syndicate.io",
     chain: risa
   },
   [syndicate.id]: {
     bridgeAddress: "0x3C8cF0ae6E89AC0796f29B3a58e7dEa1cD072277",
     requireAndFactoryAddress: "0x3eEb8b1500cbaCbc4A3718D39414C8D191AC906B",
     syndicateFactoryAddress: "0x0620625c3662CbD6a8ca8Eef196ee3b10A8Bd157",
-    syndNitroForkRpcUrl:
-      "https://syndicate.rpc.mainnet.us-central1.syndicate.io",
     chain: syndicate
   }
 }

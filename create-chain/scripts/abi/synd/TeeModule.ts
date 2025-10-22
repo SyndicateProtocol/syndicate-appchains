@@ -1,4 +1,4 @@
-export const TeeModuleABI = [
+export const teeModuleABI = [
   {
     "type": "constructor",
     "inputs": [

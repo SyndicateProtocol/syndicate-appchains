@@ -1,8 +1,8 @@
 import { parseAbiItem } from "viem"
 
 import {
-  AssertionPosterABI,
-  AssertionPosterBytecode
+  assertionPosterABI,
+  assertionPosterBytecode
 } from "@/scripts/abi/synd/AssertionPoster"
 import { sleep } from "bun"
 import { getFeaturesConfig } from "../utils/config"
@@ -33,8 +33,8 @@ export async function createAssertionPoster() {
   print("🔍  Deploying assertion poster...")
   const assertionPosterCreationHash =
     await deployerSettlementWalletClient.deployContract({
-      abi: AssertionPosterABI,
-      bytecode: AssertionPosterBytecode,
+      abi: assertionPosterABI,
+      bytecode: assertionPosterBytecode,
       account: deployerSettlementWalletClient.account,
       args: [rollup]
     })
