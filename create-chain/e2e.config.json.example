@@ -1,13 +1,7 @@
-// Update with your own values
-// Check here for values: https://www.notion.so/syndicateprotocol/AppChains-Directory-1ae94475eae6809e9ff1ff8f99679e3b
 {
-  "settlementRpcUrl": "https://rpc.ankr.com/base_sepolia/<YOUR_ANKR_API_KEY>",
+  "settlementRpcUrl": "<SETTLEMENT_RPC_URL>",
   "l3RpcUrl": "<SYNDICATE_L3_RPC_URL>",
   "inboxAddress": "<SYNDICATE_INBOX_ADDRESS>",
-
-  // Private key of the SOURCE wallet i.e. where the deposit is coming FROM (needs to be funded with base sepolia)
   "privateKey": "<YOUR_PRIVATE_KEY>",
-
-  // Address of the DEST wallet i.e. where the deposit is going TO (can be the same as source)
   "toAddress": "<YOUR_ADDRESS>",
 }

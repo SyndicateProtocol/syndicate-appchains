@@ -5,7 +5,6 @@
   "appChainExplorerUrl": "<YOUR_APPCHAIN_EXPLORER_URL>",
   "ownerPrivateKey": "<YOUR_OWNER_PRIVATE_KEY>",
   "newOwnerAddress": "<YOUR_NEW_OWNER_ADDRESS>",
-  // Get synd config from notion
   "synd": {
     "config": {
       "arbConfigManager": "<YOUR_ARB_CONFIG_MANAGER_ADDRESS>",
