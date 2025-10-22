@@ -10,25 +10,64 @@ import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeabl
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
 
+/// @notice Storage struct for SyndicateFactory using ERC-7201 namespaced storage pattern
+/// @dev This struct contains all the state variables for the factory contract.
+///      Using ERC-7201 ensures storage slots don't conflict during upgrades.
+/// @custom:storage-location erc7201:syndicate.storage.SyndicateFactory
+struct SyndicateFactoryStorage {
+    /// @notice Stub implementation for consistent proxy deployment
+    /// @dev This address is computed deterministically and never changes to ensure consistent CREATE2 addresses
+    address stubImplementation;
+    /// @notice Current implementation address used for new deployments
+    /// @dev This can be updated by admins to use newer versions of SyndicateSequencingChain
+    address syndicateChainImpl;
+    /// @notice Version of the SyndicateFactory contract
+    /// @dev Used to track the current version of the factory contract
+    uint256 version;
+}
+
 /// @title SyndicateFactory
 /// @notice Factory contract for creating SyndicateSequencingChain contracts
 /// @dev Uses UUPS proxy pattern for upgradeability and CREATE2 pattern for deterministic deployments
 contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
+                            STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Stub implementation for consistent proxy deployment
-    /// @dev This address is computed deterministically and never changes to ensure consistent CREATE2 addresses
-    address public stubImplementation;
+    /// @notice ERC-7201 storage slot for SyndicateFactory-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.SyndicateFactory
+    bytes32 public constant SYNDICATE_FACTORY_STORAGE_LOCATION =
+        0x172dc7d0dcf94b29f0d6a133670a38a5db195bb2828e4d07ec71b370800c9300;
 
-    /// @notice Current implementation address used for new deployments
-    /// @dev This can be updated by admins to use newer versions of SyndicateSequencingChain
-    address public syndicateChainImpl;
+    /// @notice Internal function to access the ERC-7201 namespaced storage
+    /// @dev Uses inline assembly to access the specific storage slot for this contract's data
+    /// @return $ Storage pointer to the SyndicateFactoryStorage struct
+    function _getSyndicateFactoryStorage() private pure returns (SyndicateFactoryStorage storage $) {
+        assembly {
+            $.slot := SYNDICATE_FACTORY_STORAGE_LOCATION
+        }
+    }
 
-    /// @notice Version of the SyndicateFactory contract
-    /// @dev Used to track the current version of the factory contract
-    uint256 public version;
+    /// @notice Get the stub implementation address
+    /// @return The stub implementation address
+    function stubImplementation() public view returns (address) {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        return $.stubImplementation;
+    }
+
+    /// @notice Get the current SyndicateSequencingChain implementation address
+    /// @return The implementation address
+    function syndicateChainImpl() public view returns (address) {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        return $.syndicateChainImpl;
+    }
+
+    /// @notice Get the current version of this contract implementation
+    /// @return The version number
+    function version() public view returns (uint256) {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        return $.version;
+    }
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -90,16 +129,18 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+
         // Set initial version
-        version = 1_000_000; // 1.0.0
+        $.version = 1_000_000; // 1.0.0
 
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
-        stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
+        $.stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
 
         // Deploy the real implementation and make it the default for new appchains
-        syndicateChainImpl = address(new SyndicateSequencingChain());
-        emit ImplementationAdded(syndicateChainImpl);
+        $.syndicateChainImpl = address(new SyndicateSequencingChain());
+        emit ImplementationAdded($.syndicateChainImpl);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -151,7 +192,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @dev Always returns the same bytecode for predictable CREATE2 addresses
     /// @return The bytecode to be used for deployment
     function getProxyBytecode() public view returns (bytes memory) {
-        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(stubImplementation, ""));
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode($.stubImplementation, ""));
     }
 
     /// @notice Computes the deterministic stub implementation address
@@ -199,6 +241,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         internal
         returns (address sequencingChain)
     {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+
         // Deploy the sequencing chain using consistent proxy bytecode for deterministic addresses
         bytes memory consistentBytecode = getProxyBytecode();
         sequencingChain = Create2.deploy(0, bytes32(chainId), consistentBytecode);
@@ -207,7 +251,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         bytes memory initData =
             abi.encodeWithSignature("initialize(address,address,uint256)", admin, address(permissionModule), chainId);
         (bool upgradeSuccess,) = sequencingChain.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", $.syndicateChainImpl, initData)
         );
         if (!upgradeSuccess) {
             revert FailedToInitializeSyndicateSequencingChain();
@@ -255,7 +299,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Updates the contract version (admin only, typically called during upgrades)
     /// @param newVersion The new version number (e.g., 1)
     function updateVersion(uint256 newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        version = newVersion;
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        $.version = newVersion;
     }
 
     /// @notice Pause the factory (admin only)
@@ -275,6 +320,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        syndicateChainImpl = newImplementation;
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        $.syndicateChainImpl = newImplementation;
     }
 }

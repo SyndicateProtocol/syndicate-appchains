@@ -10,6 +10,35 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+/// @notice Storage struct for GasArchive using ERC-7201 namespaced storage pattern
+/// @dev This struct contains all the state variables for the gas archive contract.
+///      Using ERC-7201 ensures storage slots don't conflict during upgrades.
+/// @custom:storage-location erc7201:syndicate.storage.GasArchive
+struct GasArchiveStorage {
+    /// @notice the current epoch
+    uint256 epoch;
+    /// @notice list of sequencing chains
+    EnumerableSet.UintSet seqChains;
+    /// @notice tracks the remaining chains for the epoch
+    uint256 epochRemainingChains;
+    /// @notice mapping of sequencing chain IDs to the address of the gas aggregator contract
+    mapping(uint256 chainId => address aggregatorAddress) seqChainGasAggregator;
+    /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
+    mapping(uint256 chainId => address outboxAddress) seqChainOutbox;
+    mapping(uint256 chainId => bool) seqChainSettlesToBase;
+    /// @notice block hashes for l1 and settlement chains
+    mapping(bytes32 blockHash => bool isPresent) ethBlockHashes;
+    mapping(bytes32 blockHash => bool isPresent) setBlockHashes;
+    /// @notice tracks which sequencing chains have submitted data for each epoch
+    mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) epochChainDataSubmitted;
+    /// @notice Stores the verified epoch data hash
+    mapping(uint256 epoch => mapping(uint256 seqChainID => bytes32 dataHash)) epochVerifiedDataHash;
+    /// @notice Validated epoch data
+    mapping(uint256 epoch => uint256 totalTokens) totalGasFees;
+    mapping(uint256 epoch => EnumerableSet.UintSet appchainIds) appchainIDs;
+    mapping(uint256 epoch => mapping(uint256 appchainId => uint256 tokens)) appchainGasFees;
+}
+
 /// @title GasArchive
 /// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
 /// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
@@ -19,10 +48,28 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     using RLPReader for bytes;
 
     /*//////////////////////////////////////////////////////////////
+                            STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice ERC-7201 storage slot for GasArchive-specific data
+    /// @dev Generated using: cast index-erc7201 syndicate.storage.GasArchive
+    bytes32 public constant GAS_ARCHIVE_STORAGE_LOCATION =
+        0xd6f5d5932ff2716a1d050c5c8f3a1f0545e980f5b0f5ff32a773ed0818c1a400;
+
+    /// @notice Internal function to access the ERC-7201 namespaced storage
+    /// @dev Uses inline assembly to access the specific storage slot for this contract's data
+    /// @return $ Storage pointer to the GasArchiveStorage struct
+    function _getGasArchiveStorage() internal pure returns (GasArchiveStorage storage $) {
+        assembly {
+            $.slot := GAS_ARCHIVE_STORAGE_LOCATION
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice ERC-7201 storage slot for GasAggregator-specific data
+    /// @notice ERC-7201 storage slot for GasAggregator-specific data (used for storage proofs)
     /// @dev Generated using: cast index-erc7201 syndicate.storage.GasAggregator
     bytes32 public constant GAS_AGGREGATOR_STORAGE_LOCATION =
         0xb7dfb3be9e2ba9b0349e11a21cd1baebde23ce111dd0651619b69a6e26aa0600;
@@ -48,38 +95,97 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     uint256 public immutable settlementChainID;
 
     /*//////////////////////////////////////////////////////////////
-                            STORAGE VARIABLES
+                        STORAGE VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice the current epoch
-    uint256 public epoch;
+    /// @notice Get the current epoch
+    /// @return The current epoch number
+    function epoch() public view returns (uint256) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.epoch;
+    }
 
-    /// @notice list of sequencing chains
-    // The chains are enumerable to make it easy to tell which chains are tracked by the archiver
-    EnumerableSet.UintSet seqChains;
+    /// @notice Get the number of remaining chains for the current epoch
+    /// @return The number of remaining chains
+    function epochRemainingChains() public view returns (uint256) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.epochRemainingChains;
+    }
 
-    /// @notice tracks the remaining chains for the epoch
-    uint256 public epochRemainingChains;
+    /// @notice Get the gas aggregator address for a sequencing chain
+    /// @param chainId The chain ID
+    /// @return The gas aggregator address
+    function seqChainGasAggregator(uint256 chainId) public view returns (address) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.seqChainGasAggregator[chainId];
+    }
 
-    /// @notice mapping of sequencing chain IDs to the address of the gas aggregator contract
-    mapping(uint256 chainId => address aggregatorAddress) public seqChainGasAggregator;
-    /// @notice mapping of sequencing chain IDs to the address of the Outbox contract for that sequencing chain (where the confirmed rollup hash can be found)
-    mapping(uint256 chainId => address outboxAddress) public seqChainOutbox;
-    mapping(uint256 chainId => bool) public seqChainSettlesToBase;
-    /// @notice block hashes for l1 and settlement chains
-    mapping(bytes32 blockHash => bool isPresent) public ethBlockHashes;
-    mapping(bytes32 blockHash => bool isPresent) public setBlockHashes;
+    /// @notice Get the outbox address for a sequencing chain
+    /// @param chainId The chain ID
+    /// @return The outbox address
+    function seqChainOutbox(uint256 chainId) public view returns (address) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.seqChainOutbox[chainId];
+    }
 
-    /// @notice tracks which sequencing chains have submitted data for each epoch
-    mapping(uint256 epoch => mapping(uint256 chainId => bool submitted)) public epochChainDataSubmitted;
+    /// @notice Check if a sequencing chain settles to base
+    /// @param chainId The chain ID
+    /// @return True if settles to base
+    function seqChainSettlesToBase(uint256 chainId) public view returns (bool) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.seqChainSettlesToBase[chainId];
+    }
 
-    /// @notice Stores the verified epoch data hash
-    mapping(uint256 epoch => mapping(uint256 seqChainID => bytes32 dataHash)) public epochVerifiedDataHash;
+    /// @notice Check if an ETH block hash is known
+    /// @param blockHash The block hash
+    /// @return True if known
+    function ethBlockHashes(bytes32 blockHash) public view returns (bool) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.ethBlockHashes[blockHash];
+    }
 
-    /// @notice Validated epoch data
-    mapping(uint256 epoch => uint256 totalTokens) public totalGasFees;
-    mapping(uint256 epoch => EnumerableSet.UintSet appchainIds) internal appchainIDs;
-    mapping(uint256 epoch => mapping(uint256 appchainId => uint256 tokens)) public appchainGasFees;
+    /// @notice Check if a settlement block hash is known
+    /// @param blockHash The block hash
+    /// @return True if known
+    function setBlockHashes(bytes32 blockHash) public view returns (bool) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.setBlockHashes[blockHash];
+    }
+
+    /// @notice Check if a chain has submitted data for an epoch
+    /// @param _epoch The epoch
+    /// @param chainId The chain ID
+    /// @return True if submitted
+    function epochChainDataSubmitted(uint256 _epoch, uint256 chainId) public view returns (bool) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.epochChainDataSubmitted[_epoch][chainId];
+    }
+
+    /// @notice Get the verified epoch data hash for a chain
+    /// @param _epoch The epoch
+    /// @param seqChainID The sequencing chain ID
+    /// @return The data hash
+    function epochVerifiedDataHash(uint256 _epoch, uint256 seqChainID) public view returns (bytes32) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.epochVerifiedDataHash[_epoch][seqChainID];
+    }
+
+    /// @notice Get the total gas fees for an epoch
+    /// @param _epoch The epoch
+    /// @return The total fees
+    function totalGasFees(uint256 _epoch) public view returns (uint256) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.totalGasFees[_epoch];
+    }
+
+    /// @notice Get the gas fees for a specific appchain in an epoch
+    /// @param _epoch The epoch
+    /// @param appchainId The appchain ID
+    /// @return The gas fees
+    function appchainGasFees(uint256 _epoch, uint256 appchainId) public view returns (uint256) {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.appchainGasFees[_epoch][appchainId];
+    }
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -148,7 +254,8 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
      * @param _epoch Initial epoch number (stored in proxy storage)
      */
     function initialize(uint256 _epoch) external initializer {
-        epoch = _epoch;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        $.epoch = _epoch;
         __Ownable_init(msg.sender);
     }
 
@@ -163,8 +270,9 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     function sendBlockHashes(bytes32 ethBlockHash, bytes32 setBlockHash) external {
         require(msg.sender == blockHashSender, NotBlockHashSender());
 
-        ethBlockHashes[ethBlockHash] = true;
-        setBlockHashes[setBlockHash] = true;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        $.ethBlockHashes[ethBlockHash] = true;
+        $.setBlockHashes[setBlockHash] = true;
         emit KnownBlockHash(ethBlockHash, setBlockHash);
     }
 
@@ -174,7 +282,8 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         bytes[] calldata storageProof
     ) external {
         _confirmEpochDataHash(settlementChainID, blockHeader, accountProof, storageProof);
-        require(setBlockHashes[keccak256(blockHeader)], InvalidSeqBlockHeader());
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require($.setBlockHashes[keccak256(blockHeader)], InvalidSeqBlockHeader());
     }
 
     /// @notice Validates and stores the epochDataHash for a given sequencing chain / epoch using sequencing chain storage proofs
@@ -197,23 +306,24 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         bytes[] calldata seqAccountProof,
         bytes[] calldata seqStorageProof
     ) external {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
         _confirmEpochDataHash(seqChainID, seqBlockHeader, seqAccountProof, seqStorageProof);
         if (seqChainID == settlementChainID) {
-            require(setBlockHashes[keccak256(seqBlockHeader)], InvalidSeqBlockHeader());
+            require($.setBlockHashes[keccak256(seqBlockHeader)], InvalidSeqBlockHeader());
             return;
         }
 
-        if (seqChainSettlesToBase[seqChainID]) {
-            require(setBlockHashes[keccak256(ethBlockHeader)], InvalidSetBlockHeader());
+        if ($.seqChainSettlesToBase[seqChainID]) {
+            require($.setBlockHashes[keccak256(ethBlockHeader)], InvalidSetBlockHeader());
         } else {
-            require(ethBlockHashes[keccak256(ethBlockHeader)], InvalidEthBlockHeader());
+            require($.ethBlockHashes[keccak256(ethBlockHeader)], InvalidEthBlockHeader());
         }
 
         bytes32 verifiedSeqChainBlockHash = _getSlotValueFromProof({
             blockHeader: ethBlockHeader,
             accountProof: ethAccountProof,
             storageProof: ethStorageProof,
-            account: seqChainOutbox[seqChainID],
+            account: $.seqChainOutbox[seqChainID],
             storageSlot: keccak256(abi.encode(sendRoot, SEND_ROOT_STORAGE_SLOT))
         });
 
@@ -227,25 +337,26 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         bytes[] calldata accountProof,
         bytes[] calldata storageProof
     ) internal {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
         // prevent resubmission for the same epoch and chain
-        require(epochVerifiedDataHash[epoch][chainID] == bytes32(0), AlreadySubmitted());
+        require($.epochVerifiedDataHash[$.epoch][chainID] == bytes32(0), AlreadySubmitted());
 
         // submissions are only allowed for active sequencing chains
-        require(seqChains.contains(chainID), InvalidSequencingChain());
+        require($.seqChains.contains(chainID), InvalidSequencingChain());
 
         // verify that the provided epoch data is valid according to the sequencing chain proof
         bytes32 verifiedEpochDataHash = _getSlotValueFromProof({
             blockHeader: blockHeader,
             accountProof: accountProof,
             storageProof: storageProof,
-            account: seqChainGasAggregator[chainID],
-            storageSlot: keccak256(abi.encode(epoch, GAS_AGGREGATOR_STORAGE_LOCATION))
+            account: $.seqChainGasAggregator[chainID],
+            storageSlot: keccak256(abi.encode($.epoch, GAS_AGGREGATOR_STORAGE_LOCATION))
         });
 
         require(verifiedEpochDataHash != bytes32(0), EmptyDataHash());
 
         // data submitted is valid, store it
-        epochVerifiedDataHash[epoch][chainID] = verifiedEpochDataHash;
+        $.epochVerifiedDataHash[$.epoch][chainID] = verifiedEpochDataHash;
     }
 
     /// @notice Receives the pre-image data for a verified epoch
@@ -255,33 +366,34 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     function submitEpochPreImageData(uint256 seqChainID, uint256[] calldata appchains, uint256[] calldata tokens)
         external
     {
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
         // prevent resubmission for the same epoch and chain
-        require(!epochChainDataSubmitted[epoch][seqChainID], AlreadySubmitted());
+        require(!$.epochChainDataSubmitted[$.epoch][seqChainID], AlreadySubmitted());
 
         // note: we skip validating that appchains.length == tokens.length
         // because the GasAggregator already enforces this.
         // similarly we skip epoch validation because confirmEpochDataHash already enforces this.
-        require(epochVerifiedDataHash[epoch][seqChainID] == keccak256(abi.encode(appchains, tokens)), InvalidData());
+        require($.epochVerifiedDataHash[$.epoch][seqChainID] == keccak256(abi.encode(appchains, tokens)), InvalidData());
 
         for (uint256 i = 0; i < appchains.length; i++) {
             uint256 gasUsed = tokens[i];
             // ignore appchains with no gas
             if (gasUsed > 0) {
                 uint256 appchain = appchains[i];
-                appchainIDs[epoch].add(appchain);
-                totalGasFees[epoch] += gasUsed;
-                appchainGasFees[epoch][appchain] += gasUsed;
+                $.appchainIDs[$.epoch].add(appchain);
+                $.totalGasFees[$.epoch] += gasUsed;
+                $.appchainGasFees[$.epoch][appchain] += gasUsed;
             }
         }
 
-        epochChainDataSubmitted[epoch][seqChainID] = true;
-        epochRemainingChains--;
-        if (epochRemainingChains == 0) {
-            emit EpochCompleted(epoch);
-            epoch++;
-            epochRemainingChains = seqChains.length();
+        $.epochChainDataSubmitted[$.epoch][seqChainID] = true;
+        $.epochRemainingChains--;
+        if ($.epochRemainingChains == 0) {
+            emit EpochCompleted($.epoch);
+            $.epoch++;
+            $.epochRemainingChains = $.seqChains.length();
         }
-        emit ChainSubmitted(epoch, seqChainID);
+        emit ChainSubmitted($.epoch, seqChainID);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -345,30 +457,35 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     //////////////////////////////////////////////////////////////*/
 
     function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
-        require(epochIndex < epoch, NotArchivedEpoch());
-        return appchainGasFees[epochIndex][appchainId];
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(epochIndex < $.epoch, NotArchivedEpoch());
+        return $.appchainGasFees[epochIndex][appchainId];
     }
 
     function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
-        require(epochIndex < epoch, NotArchivedEpoch());
-        return totalGasFees[epochIndex];
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(epochIndex < $.epoch, NotArchivedEpoch());
+        return $.totalGasFees[epochIndex];
     }
 
     function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory chainIDs) {
-        require(epochIndex < epoch, NotArchivedEpoch());
-        bytes32[] memory ids = appchainIDs[epochIndex]._inner._values;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(epochIndex < $.epoch, NotArchivedEpoch());
+        bytes32[] memory ids = $.appchainIDs[epochIndex]._inner._values;
         assembly {
             chainIDs := ids
         }
     }
 
     function getAppchainCount(uint256 epochIndex) external view returns (uint256) {
-        require(epochIndex < epoch, NotArchivedEpoch());
-        return appchainIDs[epochIndex].length();
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(epochIndex < $.epoch, NotArchivedEpoch());
+        return $.appchainIDs[epochIndex].length();
     }
 
     function sequencingChainCount() external view returns (uint256) {
-        return seqChains.length();
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.seqChains.length();
     }
 
     // when count is zero, returns the full list of results
@@ -378,29 +495,32 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         view
         returns (uint256[] memory chainIds, uint256[] memory gasUsed)
     {
-        require(epochIndex < epoch, NotArchivedEpoch());
-        uint256 maxCount = appchainIDs[epochIndex].length() - startIndex;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(epochIndex < $.epoch, NotArchivedEpoch());
+        uint256 maxCount = $.appchainIDs[epochIndex].length() - startIndex;
         if (count == 0 || count > maxCount) {
             count = maxCount;
         }
         chainIds = new uint256[](count);
         gasUsed = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
-            uint256 chainId = appchainIDs[epochIndex].at(startIndex + i);
+            uint256 chainId = $.appchainIDs[epochIndex].at(startIndex + i);
             chainIds[i] = chainId;
-            gasUsed[i] = appchainGasFees[epochIndex][chainId];
+            gasUsed[i] = $.appchainGasFees[epochIndex][chainId];
         }
     }
 
     function getSequencingChainIds() external view returns (uint256[] memory chainIDs) {
-        bytes32[] memory ids = seqChains._inner._values;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        bytes32[] memory ids = $.seqChains._inner._values;
         assembly {
             chainIDs := ids
         }
     }
 
     function sequencingChainId(uint256 index) external view returns (uint256) {
-        return seqChains.at(index);
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        return $.seqChains.at(index);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -419,16 +539,17 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         require(aggregatorAddress != address(0), ZeroAddress());
         require(chainID != 0, ZeroChainId());
 
-        require(seqChains.add(chainID), SequencingChainAlreadyExists());
-        epochRemainingChains++;
-        seqChainGasAggregator[chainID] = aggregatorAddress;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require($.seqChains.add(chainID), SequencingChainAlreadyExists());
+        $.epochRemainingChains++;
+        $.seqChainGasAggregator[chainID] = aggregatorAddress;
 
         if (chainID != settlementChainID) {
             require(outboxAddress != address(0), ZeroAddress());
-            seqChainOutbox[chainID] = outboxAddress;
-            seqChainSettlesToBase[chainID] = settlesToBase;
+            $.seqChainOutbox[chainID] = outboxAddress;
+            $.seqChainSettlesToBase[chainID] = settlesToBase;
         }
-        emit ChainAdded(epoch, chainID, aggregatorAddress, seqChainOutbox[chainID], seqChainSettlesToBase[chainID]);
+        emit ChainAdded($.epoch, chainID, aggregatorAddress, $.seqChainOutbox[chainID], $.seqChainSettlesToBase[chainID]);
     }
 
     function addSettlementChainAsSequencingChain(address aggregatorAddress) external {
@@ -438,23 +559,24 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     /// @notice Removes an existing sequencing chain immediately
     /// @dev Only admin can remove sequencing chains
     function removeSequencingChain(uint256 chainID) external onlyOwner {
-        require(seqChains.remove(chainID), SequencingChainDoesNotExist());
-        seqChainGasAggregator[chainID] = address(0);
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require($.seqChains.remove(chainID), SequencingChainDoesNotExist());
+        $.seqChainGasAggregator[chainID] = address(0);
         if (chainID != settlementChainID) {
-            seqChainOutbox[chainID] = address(0);
-            seqChainSettlesToBase[chainID] = false;
+            $.seqChainOutbox[chainID] = address(0);
+            $.seqChainSettlesToBase[chainID] = false;
         }
-        if (!epochChainDataSubmitted[epoch][chainID]) {
+        if (!$.epochChainDataSubmitted[$.epoch][chainID]) {
             // clear the verified data hash in case it is set
-            epochVerifiedDataHash[epoch][chainID] = bytes32(0);
-            epochRemainingChains--;
-            uint256 seqChainCount = seqChains.length();
-            if (seqChainCount > 0 && epochRemainingChains == 0) {
-                emit EpochCompleted(epoch);
-                epoch++;
-                epochRemainingChains = seqChainCount;
+            $.epochVerifiedDataHash[$.epoch][chainID] = bytes32(0);
+            $.epochRemainingChains--;
+            uint256 seqChainCount = $.seqChains.length();
+            if (seqChainCount > 0 && $.epochRemainingChains == 0) {
+                emit EpochCompleted($.epoch);
+                $.epoch++;
+                $.epochRemainingChains = seqChainCount;
             }
         }
-        emit ChainRemoved(epoch, chainID);
+        emit ChainRemoved($.epoch, chainID);
     }
 }
