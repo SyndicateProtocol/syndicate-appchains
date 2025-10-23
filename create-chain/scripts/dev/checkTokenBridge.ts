@@ -13,12 +13,8 @@ import { getFeaturesConfig } from "../utils/config"
 async function main() {
   const {
     coreContracts,
-    chainId,
-    chainName,
     appchainPublicClient,
-    deployerSequencingWalletClient,
     ownerSettlementWalletClient,
-    deployerSettlementWalletClient,
     settlementPublicClient
   } = await getFeaturesConfig()
 
@@ -29,16 +25,15 @@ async function main() {
     ownerSettlementWalletClient.chain.testnet ?? false
   )
 
-  const hash =
-    "0x1dbb20c1b59fb372a472b04b90dbf25bfec95b46b34f378a6eedf14603bb55df"
+  const tokenBridgeCreatedAtHash = "0x"
 
   const transaction = await settlementPublicClient.getTransaction({
-    hash
+    hash: tokenBridgeCreatedAtHash
   })
+  console.log("Bridge created at transaction:", transaction)
 
-  // get the transaction receipt after waiting for the transaction to complete
   const txReceipt = createTokenBridgePrepareTransactionReceipt(
-    await settlementPublicClient.waitForTransactionReceipt({ hash })
+    await settlementPublicClient.waitForTransactionReceipt({ hash: tokenBridgeCreatedAtHash })
   )
 
   console.log("Waiting for retryable tickets to execute on the Orbit chain...")

@@ -5,7 +5,6 @@ export default async function main() {
   const {
     newOwnerAddress,
     ownerSettlementWalletClient,
-    ownerSequencingWalletClient,
     ownerAppchainWalletClient,
     settlementPublicClient,
     sequencingPublicClient,

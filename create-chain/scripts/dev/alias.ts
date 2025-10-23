@@ -1,7 +1,8 @@
 import { toHex } from "viem"
 
 async function main() {
-  console.log(applyL1ToL2Alias("0x4F816281ce1a78E8989f632A1669DA6BeF9C86a9"))
+  const addressToAlias = "0x0000000000000000000000000000000000000000"
+  console.log(applyL1ToL2Alias(addressToAlias))
 }
 
 const ALIAS_OFFSET = BigInt("0x1111000000000000000000000000000000001111")
