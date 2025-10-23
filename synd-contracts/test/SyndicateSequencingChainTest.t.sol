@@ -9,6 +9,7 @@ import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -57,6 +58,10 @@ contract SyndicateSequencingChainTestSetUp is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
+
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+        factory.setGasMeter(gasMeter);
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
@@ -128,7 +133,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessTransaction() public {
+    function testProcessTransaction_blah() public {
         bytes memory data = abi.encode("raw transaction");
 
         vm.startPrank(admin);
@@ -169,13 +174,13 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0, gasMeter);
     }
 
     function testUpgradeBadguy() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1, gasMeter);
 
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
@@ -186,7 +191,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeOwner() public {
         address chainImpl = address(new SyndicateSequencingChain());
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1, gasMeter);
 
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));

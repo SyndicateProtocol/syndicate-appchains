@@ -38,6 +38,7 @@ contract StorageUpgradeTest is Test {
     uint256 constant TEST_APPCHAIN_ID = 12345;
     address constant ADMIN = address(0x9999);
     address constant PERMISSION_MODULE = address(1); // Always allow module
+    address constant GAS_METER = address(2);
 
     // Contract instances
     SyndicateSequencingChain syndicateV1;
@@ -61,7 +62,7 @@ contract StorageUpgradeTest is Test {
 
         // Deploy proxy pointing to V1
         bytes memory initData =
-            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID));
+            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID, GAS_METER));
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));

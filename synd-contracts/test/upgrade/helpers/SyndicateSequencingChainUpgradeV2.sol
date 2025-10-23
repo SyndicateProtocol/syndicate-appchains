@@ -49,7 +49,7 @@ contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain {
 
     /// @notice Process transaction with fee (new V2 functionality)
     /// @dev Adds fee collection to existing functionality
-    function processTransactionWithFee(bytes calldata data) external payable trackGasUsage {
+    function processTransactionWithFee(bytes calldata data) external payable {
         require(data.length > 0, NoTxData());
 
         // Encode transaction

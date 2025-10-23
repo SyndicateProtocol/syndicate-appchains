@@ -69,6 +69,10 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return $.version;
     }
 
+    /// @notice Address of the gas meter contract
+    /// @dev This is the contract that will be used to meter the gas used by the sequencing chain
+    address public gasMeter;
+
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -113,7 +117,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     }
 
     /// @notice Initializes the upgradeable factory
-    /// @dev MUST setup gasAggregator separately after initialization
+    /// @dev MUST setup gasMeter separately after initialization
     /// @dev This function can only be called once and sets up the entire factory infrastructure including:
     ///      - Role-based access control with the provided admin
     ///      - Deterministic stub implementation deployment
@@ -248,8 +252,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         sequencingChain = Create2.deploy(0, bytes32(chainId), consistentBytecode);
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
-        bytes memory initData =
-            abi.encodeWithSignature("initialize(address,address,uint256)", admin, address(permissionModule), chainId);
+        bytes memory initData = abi.encodeWithSignature(
+            "initialize(address,address,uint256,address)", admin, address(permissionModule), chainId, gasMeter
+        );
         (bool upgradeSuccess,) = sequencingChain.call(
             abi.encodeWithSignature("upgradeToAndCall(address,bytes)", $.syndicateChainImpl, initData)
         );
@@ -322,5 +327,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     {
         SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
         $.syndicateChainImpl = newImplementation;
+    }
+
+    /// @notice Set the gas meter for new sequencing contract deployments (admin only)
+    /// @param newGasMeter The address of the gas meter contract to use
+    function setGasMeter(address newGasMeter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        gasMeter = newGasMeter;
     }
 }

@@ -9,6 +9,7 @@ import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {EpochTracker} from "src/staking/EpochTracker.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 
 // Test upgrades
 import {SyndicateSequencingChainUpgradeV2} from "./helpers/SyndicateSequencingChainUpgradeV2.sol";
@@ -95,6 +96,11 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         factoryProxy = SyndicateFactory(address(factoryProxyContract));
         console2.log("Factory proxy deployed:", address(factoryProxy));
 
+        // 3. Deploy GasMeter
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+        factoryProxy.setGasMeter(gasMeter);
+
         // 3. Deploy GasAggregator (non-upgradeable)
         gasAggregator = new GasAggregator(
             1, // start epoch
@@ -160,8 +166,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         assertEq(
             address(chain1.permissionRequirementModule()), address(permissionModule), "Permission module should match"
         );
-        assertTrue(chain1.gasTrackingEnabled(), "Gas tracking should be enabled");
-
         vm.stopPrank();
     }
 
@@ -182,9 +186,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
         vm.prank(USER);
         chain1.processTransaction(txData);
-
-        // Verify the transaction was processed by checking gas tracking
-        assertTrue(chain1.gasTrackingEnabled(), "Gas tracking should still be enabled");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -425,7 +426,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         // Capture all storage
         uint256 preAppchainId = chain1.appchainId();
         address preOwner = chain1.owner();
-        bool preGasTrackingEnabled = chain1.gasTrackingEnabled();
+        address preGasMeter = chain1.gasMeter();
 
         // Upgrade
         chainV2 = new SyndicateSequencingChainUpgradeV2();
@@ -438,6 +439,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         // Verify ALL storage preserved
         assertEq(chainProxyV2.appchainId(), preAppchainId, "AppchainId must be preserved");
         assertEq(chainProxyV2.owner(), preOwner, "Owner must be preserved");
-        assertEq(chainProxyV2.gasTrackingEnabled(), preGasTrackingEnabled, "GasTrackingEnabled must be preserved");
+        assertEq(chainProxyV2.gasMeter(), preGasMeter, "GasMeter must be preserved");
     }
 }
