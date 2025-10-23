@@ -48,7 +48,9 @@ contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
+
     address public admin;
+    address public gasMeter;
 
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
@@ -60,7 +62,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
         factory = SyndicateFactory(address(proxy));
 
         GasMeter gasMeterImpl = new GasMeter();
-        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+        gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
         factory.setGasMeter(gasMeter);
 
         (address chainAddress,) =
