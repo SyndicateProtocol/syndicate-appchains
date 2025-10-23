@@ -15,6 +15,14 @@ contract ArbChainConfig is Initializable {
     event AppchainBlockExplorerUrlUpdated(string newUrl);
     //#olympix-ignore-missing-events-assertion
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    //#olympix-ignore-missing-events-assertion
+    event Migration(
+        uint256 setStartBlock,
+        uint256 seqStartBlock,
+        uint256 batchAcc,
+        uint256 delayedMsgsAcc,
+        uint256 indexed appchainBlockHash
+    );
 
     address public owner;
 
@@ -27,6 +35,7 @@ contract ArbChainConfig is Initializable {
     uint256 public CHAIN_ID;
     uint256 public SEQUENCING_CHAIN_ID;
     uint256 public SETTLEMENT_DELAY;
+    // NOTE: SET/SEQ start blocks can be changed in the event of a migration
     uint256 public SETTLEMENT_START_BLOCK;
     uint256 public SEQUENCING_START_BLOCK;
 
@@ -34,6 +43,11 @@ contract ArbChainConfig is Initializable {
     // These parameters can be updated by the contract owner
     string public DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
+
+    // Migration-only data
+    uint256 public MIGRATED_BATCH_ACC;
+    uint256 public MIGRATED_DELAYED_MSGS_ACC;
+    uint256 public MIGRATED_APPCHAIN_BLOCK_HASH; // migrated
 
     /**
      * @dev Constructor for the implementation contract
@@ -107,6 +121,27 @@ contract ArbChainConfig is Initializable {
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller is not the owner");
         _;
+    }
+
+    function migration(
+        uint256 _set_start_block,
+        uint256 _seq_start_block,
+        uint256 _batch_acc,
+        uint256 _delayed_msgs_acc,
+        uint256 _appchain_block_hash
+    ) external onlyOwner {
+        SETTLEMENT_START_BLOCK = _set_start_block;
+        SEQUENCING_START_BLOCK = _seq_start_block;
+        MIGRATED_BATCH_ACC = _batch_acc;
+        MIGRATED_DELAYED_MSGS_ACC = _delayed_msgs_acc;
+        MIGRATED_APPCHAIN_BLOCK_HASH = _appchain_block_hash;
+        emit Migration(
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_START_BLOCK,
+            MIGRATED_BATCH_ACC,
+            MIGRATED_DELAYED_MSGS_ACC,
+            MIGRATED_APPCHAIN_BLOCK_HASH
+        );
     }
 
     /**

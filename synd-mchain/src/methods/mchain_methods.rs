@@ -5,12 +5,13 @@ use crate::{
     methods::common::{create_header, err, Context},
     metrics::MchainMetrics,
 };
-use alloy::eips::BlockNumberOrTag;
+use alloy::{eips::BlockNumberOrTag, primitives::B256};
 use jsonrpsee::{
     server::SubscriptionMessage,
     types::{ErrorObjectOwned, Params},
     Extensions,
 };
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tracing::error;
 
@@ -131,6 +132,30 @@ pub fn rollback_to_block(
     Ok(())
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct MigrationParams {
+    pub batch_acc: B256,
+    pub batch_count: u64,
+    pub delayed_msgs_acc: B256,
+    pub delayed_msgs_count: u64,
+}
+
+/// `mchain_appchainMigration`
+pub fn appchain_migration(
+    params: Params<'_>,
+    (db, _metrics, _mutex): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
+    _: &Extensions,
+) -> Result<(), ErrorObjectOwned> {
+    let (migration_params,): (MigrationParams,) = params.parse()?;
+    db.appchain_migration(
+        migration_params.batch_acc,
+        migration_params.batch_count,
+        migration_params.delayed_msgs_acc,
+        migration_params.delayed_msgs_count,
+    )
+    .map_err(to_err)?;
+    Ok(())
+}
 /// `mchain_getSourceChainsProcessedBlocks`
 pub fn get_source_chains_processed_blocks(
     params: Params<'_>,

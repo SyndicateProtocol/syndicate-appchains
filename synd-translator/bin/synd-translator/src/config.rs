@@ -3,15 +3,16 @@
 //! This module contains all possible configuration options for the `synd-translator`. Different
 //! crates each inherit a subset of these options to configure themselves
 
-use alloy::primitives::Address;
+use alloy::primitives::{Address, B256};
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
-use shared::parse::parse_address;
+use shared::parse::{parse_address, parse_hash, parse_url};
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
 use thiserror::Error;
 use tracing::{debug, error};
+use url::Url;
 
 /// Configuration for a generic chain ingestor
 #[allow(missing_docs)]
@@ -179,6 +180,31 @@ pub struct TranslatorConfig {
     /// The chain ID of the Appchain rollup (not the mchain)
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
+
+    /// The batch accumulator at the point of migration
+    #[arg(long, env = "MIGRATED_BATCH_ACC", value_parser = parse_hash)]
+    pub migrated_batch_acc: Option<B256>,
+
+    /// The batch accumulator at the point of migration
+    #[arg(long, env = "MIGRATED_BATCH_COUNT", value_parser = parse_hash)]
+    pub migrated_batch_count: Option<u64>,
+
+    /// The delayed messages accumulator at the point of migration
+    #[arg(long, env = "MIGRATED_DELAYED_MSGS_ACC", value_parser = parse_hash)]
+    pub migrated_delayed_msgs_acc: Option<B256>,
+
+    /// The delayed messages count at the point of migration
+    #[arg(long, env = "MIGRATED_DELAYED_MSGS_COUNT", value_parser = parse_hash)]
+    pub migrated_delayed_msgs_count: Option<u64>,
+
+    /// The appchain block hash at the point of migration
+    #[arg(long, env = "MIGRATED_APPCHAIN_BLOCK_HASH", value_parser = parse_hash)]
+    pub migrated_appchain_block_hash: Option<B256>,
+
+    // The appchain rpc url (it's only used to check the appchain block hash if a migration is
+    // taking place)
+    #[arg(long, env = "APPCHAIN_RPC_URL", value_parser = parse_url)]
+    pub appchain_rpc_url: Option<Url>,
 
     /// The address of the ConfigManager contract on the settlement chain
     #[arg(

@@ -11,7 +11,9 @@ use crate::{
             eth_call, eth_chain_id, eth_get_block_by_hash, eth_get_block_by_number, eth_get_code,
             eth_get_logs, eth_subscribe,
         },
-        mchain_methods::{add_batch, get_source_chains_processed_blocks, rollback_to_block},
+        mchain_methods::{
+            add_batch, appchain_migration, get_source_chains_processed_blocks, rollback_to_block,
+        },
     },
     metrics::MchainMetrics,
 };
@@ -116,6 +118,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             get_source_chains_processed_blocks,
         )
         .unwrap();
+    module.register_method("mchain_appchainMigration", appchain_migration).unwrap();
 
     // -------------------------------------------------
     // eth methods

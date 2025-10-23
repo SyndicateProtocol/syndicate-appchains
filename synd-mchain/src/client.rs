@@ -1,15 +1,22 @@
 //! The `synd-mchain` client
 
-use crate::db::{MBlock, Slot};
-use alloy::eips::BlockNumberOrTag;
-pub use jsonrpsee::core::{traits::ToRpcParams, ClientError};
-use jsonrpsee::{
-    core::{async_trait, client::ClientT as _},
+use crate::{
+    db::{MBlock, Slot},
+    methods::mchain_methods::MigrationParams,
+};
+use alloy::{
+    eips::{BlockId, BlockNumberOrTag},
+    primitives::B256,
+    providers::{Provider, ProviderBuilder},
+};
+pub use jsonrpsee::{
+    core::{async_trait, client::ClientT as _, traits::ToRpcParams, ClientError},
     ws_client::{WsClient, WsClientBuilder},
 };
 pub use serde::de::DeserializeOwned;
 use shared::{tracing::SpanKind, types::BlockRef};
-use tracing::{info, instrument};
+use tracing::{info, instrument, warn};
+use url::Url;
 
 /// Known state of the `synd-mchain`
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -23,7 +30,7 @@ pub struct KnownState {
 /// The trait for the provider of the synd-mchain
 #[async_trait]
 #[allow(clippy::unwrap_used)]
-pub trait Provider: Send + Sync {
+pub trait MchainProvider: Send + Sync {
     /// Sends a request to the provider with the given method and parameters
     /// Returns the deserialized response of type T
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
@@ -85,6 +92,12 @@ pub trait Provider: Send + Sync {
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
         settlement_client: &impl synd_chain_ingestor::client::Provider,
+        migrated_batch_acc: Option<B256>,
+        migrated_batch_count: Option<u64>,
+        migrated_delayed_msgs_acc: Option<B256>,
+        migrated_delayed_msgs_count: Option<u64>,
+        migrated_appchain_block_hash: Option<B256>,
+        appchain_rpc_url: Option<Url>,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -96,6 +109,40 @@ pub trait Provider: Send + Sync {
                 "reconciliation complete: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
                 mchain_block_before, safe_state, mchain_block_after
             );
+        }
+
+        if safe_state.is_none() && migrated_batch_acc.is_some() {
+            // mchain is empty, and there is migration data, proceed with migration
+
+            let batch_acc = migrated_batch_acc.unwrap_or_else(|| panic!("batch acc is none"));
+            let delayed_msgs_acc =
+                migrated_delayed_msgs_acc.unwrap_or_else(|| panic!("delayed msgs acc is none"));
+            let delayed_msgs_count =
+                migrated_delayed_msgs_count.unwrap_or_else(|| panic!("delayed msgs count is none"));
+            let batch_count = migrated_batch_count.unwrap_or_else(|| panic!("batch count is none"));
+
+            // assert that the appchain block hash matches the rpc node
+            if let Some(appchain_block_hash) = migrated_appchain_block_hash {
+                let rpc_url = appchain_rpc_url.unwrap_or_else(|| {
+                    panic!(" migrated appchain block hash was provided but rpc url is none")
+                });
+                let appchain_provider =
+                    ProviderBuilder::new().connect(rpc_url.to_string().as_str()).await?;
+                let node_latest_block = appchain_provider
+                    .get_block(BlockId::latest())
+                    .await?
+                    .unwrap_or_else(|| panic!("appchain rpc node has no latest block"));
+
+                let node_block_hash = node_latest_block.hash();
+                if node_block_hash != appchain_block_hash {
+                    return Err(eyre::eyre!("migrated appchain block hash does not match the rpc node. migrated: {appchain_block_hash}, node:{node_block_hash}"));
+                }
+            } else {
+                warn!("migration is taking place, but no appchain block hash was provided, so the rpc node state check will be skipped");
+            }
+
+            self.appchain_migration(batch_acc, batch_count, delayed_msgs_acc, delayed_msgs_count)
+                .await?;
         }
         Ok(safe_state)
     }
@@ -150,6 +197,23 @@ pub trait Provider: Send + Sync {
             current_block = BlockNumberOrTag::Number(mchain_block_number - 1);
         }
     }
+
+    /// Applies a migration to the mchain
+    #[instrument(skip_all, err, fields(otel.kind = ?SpanKind::Client))]
+    async fn appchain_migration(
+        &self,
+        batch_acc: B256,
+        batch_count: u64,
+        delayed_msgs_acc: B256,
+        delayed_msgs_count: u64,
+    ) -> eyre::Result<()> {
+        Ok(self
+            .request(
+                "mchain_appchainMigration",
+                [MigrationParams { batch_acc, batch_count, delayed_msgs_acc, delayed_msgs_count }],
+            )
+            .await?)
+    }
 }
 
 async fn validate_block_add_timestamp(
@@ -178,7 +242,7 @@ impl MProvider {
 }
 
 #[async_trait]
-impl Provider for MProvider {
+impl MchainProvider for MProvider {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
         &self,
         method: &'static str,
@@ -190,7 +254,7 @@ impl Provider for MProvider {
 
 #[cfg(test)]
 mod tests {
-    use super::Provider;
+    use super::MchainProvider;
     use crate::{
         client::{validate_block_add_timestamp, KnownState},
         db::{tests::TestDB, ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock, Slot},
@@ -218,7 +282,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl<X: Send + Sync> Provider for RpcModule<X> {
+    impl<X: Send + Sync> MchainProvider for RpcModule<X> {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             method: &'static str,
@@ -244,7 +308,7 @@ mod tests {
         }
     }
 
-    async fn setup() -> eyre::Result<(impl Provider, Arc<TestDB>)> {
+    async fn setup() -> eyre::Result<(impl MchainProvider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
         let mchain = start_mchain(10, 60, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
@@ -255,7 +319,7 @@ mod tests {
         async fn get_finalized_block(&self) -> u64;
     }
 
-    impl<T: Provider> TestProvider for T {
+    impl<T: MchainProvider> TestProvider for T {
         async fn get_finalized_block(&self) -> u64 {
             let block: alloy::rpc::types::Block = self
                 .request("eth_getBlockByNumber", (BlockNumberOrTag::Finalized, false))
@@ -347,7 +411,18 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
+            mchain
+                .reconcile_mchain_with_source_chains(
+                    &seq_client,
+                    &set_client,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None
+                )
+                .await?,
             state
         );
         // check safe state again
@@ -391,7 +466,18 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
+            mchain
+                .reconcile_mchain_with_source_chains(
+                    &seq_client,
+                    &set_client,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None
+                )
+                .await?,
             state
         );
         // check safe state again
@@ -426,7 +512,18 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
+            mchain
+                .reconcile_mchain_with_source_chains(
+                    &seq_client,
+                    &set_client,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None
+                )
+                .await?,
             None
         );
         // check safe state again

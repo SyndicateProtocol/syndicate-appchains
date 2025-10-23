@@ -14,7 +14,7 @@ use synd_chain_ingestor::{
     client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
     eth_client::EthClient,
 };
-use synd_mchain::client::{MProvider, Provider};
+use synd_mchain::client::{MProvider, MchainProvider};
 use tracing::{error, instrument, log::info};
 use url::Url;
 
@@ -75,8 +75,18 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     )
     .await?;
 
-    let safe_state =
-        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
+    let safe_state = mchain
+        .reconcile_mchain_with_source_chains(
+            &sequencing_client,
+            &settlement_client,
+            config.migrated_batch_acc,
+            config.migrated_batch_count,
+            config.migrated_delayed_msgs_acc,
+            config.migrated_delayed_msgs_count,
+            config.migrated_appchain_block_hash,
+            config.appchain_rpc_url.clone(),
+        )
+        .await?;
 
     let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
     let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();

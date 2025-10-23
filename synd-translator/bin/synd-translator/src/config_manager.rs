@@ -26,6 +26,8 @@ async fn rpc_client_from_urls(urls: &[String]) -> RpcClient {
     panic!("Failed to connect to any of the provided URLs");
 }
 
+// TODO override migration stuff
+
 /// Overrides the config with onchain values where the config values are None
 fn override_with_onchain_config(
     mut config: TranslatorConfig,

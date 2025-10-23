@@ -6,7 +6,7 @@ use common::types::{Chain, SequencingBlock, SettlementBlock};
 use shared::tracing::SpanKind;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
-    client::Provider,
+    client::MchainProvider,
     db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
@@ -25,7 +25,7 @@ pub async fn run(
     settlement_delay: u64,
     mut sequencing: impl BlockStreamT<SequencingBlock> + Send,
     mut settlement: impl BlockStreamT<SettlementBlock> + Send,
-    provider: &impl Provider,
+    provider: &impl MchainProvider,
     metrics: &SlotterMetrics,
 ) -> Result<(), SlotterError> {
     info!("Starting Slotter");
@@ -128,7 +128,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use synd_chain_ingestor::client::BlockStreamT;
     use synd_mchain::{
-        client::{ClientError, DeserializeOwned, Provider, ToRpcParams},
+        client::{ClientError, DeserializeOwned, MchainProvider, ToRpcParams},
         db::DelayedMessage,
     };
 
@@ -171,7 +171,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl Provider for MockMchainProvider {
+    impl MchainProvider for MockMchainProvider {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
             &self,
             method: &'static str,

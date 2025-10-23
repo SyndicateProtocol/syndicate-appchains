@@ -1,7 +1,7 @@
 //! The `synd-mchain` database
 
 use alloy::{
-    primitives::{keccak256, Address, Bytes, FixedBytes, U256},
+    primitives::{keccak256, Address, Bytes, FixedBytes, B256, U256},
     sol_types::SolValue as _,
 };
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
@@ -142,7 +142,7 @@ pub enum DBKey {
     Block(u64),
     /// State of the chain at the latest head
     State,
-    /// Message accumulator with message number
+    /// Message accumulator with message number (used for fast lookup by index in `eth_call`)
     MessageAcc(u64),
     /// DB schema version
     Version,
@@ -356,6 +356,37 @@ pub trait ArbitrumDB {
             slot: block.slot,
         });
         Ok(Some(block_number))
+    }
+
+    /// Applies a custom batch with appchain migration information
+    fn appchain_migration(
+        &self,
+        batch_acc: B256,
+        batch_count: u64,
+        delayed_msgs_acc: B256,
+        delayed_msgs_count: u64,
+    ) -> eyre::Result<()> {
+        if self.get_state().batch_count != 0 {
+            return Err(to_err("cannot apply migration: chain is not empty").into());
+        }
+        self.put_message_acc(delayed_msgs_count, &delayed_msgs_acc);
+        self.put_state(&State {
+            batch_count,
+            batch_acc,
+            message_count: delayed_msgs_count,
+            message_acc: delayed_msgs_acc,
+            timestamp: 0u64,
+            // NOTE: setting the slot to zero can cause an edge case where the "known state" is
+            // empty if the translator is re-started with just this migrated batch and nothing else
+            // on top
+            slot: Slot {
+                seq_block_number: 0u64,
+                seq_block_hash: B256::ZERO,
+                set_block_number: 0u64,
+                set_block_hash: B256::ZERO,
+            },
+        });
+        Ok(())
     }
 }
 
