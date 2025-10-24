@@ -45,72 +45,15 @@ jobs:
       - name: Install Foundry dependencies
         run: forge install
 
-      - name: Validate storage layouts
+      - name: Validate UUPS storage layouts
         run: |
-          echo "🔍 Validating storage layouts for upgradeable contracts..."
+          echo "🔍 Validating UUPS upgradeable contracts use namespaced storage..."
+          echo ""
 
           # Build contracts
           forge build
-          mkdir -p .storage-layouts-current
 
-          # Extract current storage layouts for upgradeable contracts
-          echo "📊 Extracting current storage layouts..."
+          # Run storage validation script
+          chmod +x scripts/check-uups-storage.sh
+          ./scripts/check-uups-storage.sh
 
-          CONTRACTS="SyndicateFactory SyndicateSequencingChain ArbChainConfig"
-          VALIDATION_FAILED=false
-
-          for contract in $CONTRACTS; do
-            echo "Extracting current layout for $contract..."
-
-            # Extract current storage layout
-            forge inspect --json $contract storageLayout > .storage-layouts-current/$contract.json
-
-            # Check if baseline exists
-            if [ -f .storage-layouts/$contract.json ]; then
-              echo "Comparing $contract storage layout against baseline..."
-
-              if ! cmp -s .storage-layouts/$contract.json .storage-layouts-current/$contract.json; then
-                echo "❌ STORAGE LAYOUT CHANGED: $contract"
-                echo "This change could corrupt storage during upgrades!"
-                echo ""
-                echo "=== BASELINE ==="
-                cat .storage-layouts/$contract.json
-                echo ""
-                echo "=== CURRENT ==="
-                cat .storage-layouts-current/$contract.json
-                echo ""
-                echo "=== DIFF ==="
-                diff .storage-layouts/$contract.json .storage-layouts-current/$contract.json || true
-                echo ""
-                VALIDATION_FAILED=true
-              else
-                echo "✅ $contract: Storage layout unchanged"
-              fi
-            else
-              echo "❌  $contract: No baseline found"
-              VALIDATION_FAILED=true
-            fi
-          done
-
-          if [ "$VALIDATION_FAILED" = true ]; then
-            echo ""
-            echo "❌ Storage layout validation FAILED!"
-            echo "The above contracts have storage layout changes that could corrupt data during upgrades."
-            echo ""
-            echo "If these changes are intentional:"
-            echo "1. Ensure you understand the implications"
-            echo "2. Consider if this requires a new deployment instead of an upgrade"
-            echo "3. Update storage layout baselines by running 'make storage-layout-update'"
-            exit 1
-          else
-            echo ""
-            echo "✅ All storage layouts are safe for upgrades!"
-          fi
-
-      - name: Upload storage layouts as artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: storage-layouts-${{ github.sha }}
-          path: synd-contracts/.storage-layouts/
-          retention-days: 30

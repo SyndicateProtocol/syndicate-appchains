@@ -1,7 +1,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {GasArchive} from "../../src/staking/GasArchive.sol";
+import {GasArchive, GasArchiveStorage} from "../../src/staking/GasArchive.sol";
 import {RLPReader} from "../../src/staking/lib/RLPReader.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -11,8 +11,9 @@ contract GasArchiveTestHelper is GasArchive {
     {}
 
     function setEpochDataHashForTesting(uint256 newEpoch, uint256 seqChainId, bytes32 hash) external {
-        require(newEpoch <= epoch, "cannot set future epoch data hash");
-        epochVerifiedDataHash[epoch][seqChainId] = hash;
+        GasArchiveStorage storage $ = _getGasArchiveStorage();
+        require(newEpoch <= $.epoch, "cannot set future epoch data hash");
+        $.epochVerifiedDataHash[$.epoch][seqChainId] = hash;
     }
 }
 
