@@ -1,0 +1,12 @@
+{
+  "settlementChainRpcUrl": "<SETTLEMENT_RPC_URL>",
+  "sequencingChainRpcUrl": "<SEQUENCING_RPC_URL>",
+  "ethereumChainRpcUrl": "<ETHEREUM_RPC_URL>",
+  "chainId": "<YOUR_CHAIN_ID>",
+  "chainName": "<YOU_CHAIN_NAME>",
+  "appChainRpcUrl": "https://<APPCHAIN_RPC_URL>",
+  "appChainExplorerUrl": "https://<APPCHAIN_EXPLORER_URL>",
+  "deployerPrivateKey": "<DEPLOYER_KEY>",
+  "ownerPrivateKey": "<OWNER_PRIVATE_KEY_NEW_WALLET>",
+  "nativeTokenAddress": "0x0000000000000000000000000000000000000000"
+}
