@@ -39,6 +39,10 @@ contract SyndicateFactoryTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
+
+        address sequencingChainImpl = address(new SyndicateSequencingChain(address(1)));
+        vm.prank(admin);
+        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
     }
 
     function testCreateSequencingChainWithRequireAndModule() public {

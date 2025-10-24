@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {EpochTracker} from "./EpochTracker.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 struct GasMeterStorage {
     /// @notice Mapping of epoch to gas data
@@ -15,7 +16,9 @@ struct GasMeterStorage {
 /// @title GasMeter
 /// @notice Tracks gas usage for sequencing chains
 /// @dev This contract is used to track gas usage for sequencing chains per epoch
-contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, EpochTracker {
+contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, EpochTracker {
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -56,25 +59,19 @@ contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, EpochTr
     /// @notice Meter a call and track the gas used
     /// @dev Meters the gas used for a call and tracks it in the gas used mapping
     /// @param meteredCall The call to track gas for
-    function meterCall(bytes calldata meteredCall) public {
+    function meterCall(bytes calldata meteredCall) public nonReentrant {
         uint256 startGas = gasleft();
         (bool success, bytes memory result) = address(msg.sender).call(meteredCall);
         if (!success) {
             revert(string(result));
         }
-        _getGasMeterStorage().gasUsed[getCurrentEpoch()][msg.sender] += startGas - gasleft();
+
+        uint256 gasPrice = tx.gasprice == 0 ? 1 : tx.gasprice;
+        _getGasMeterStorage().gasUsed[getCurrentEpoch()][msg.sender] += (startGas - gasleft()) * gasPrice;
     }
 
     /// @notice Authorizes the upgrade of the GasMeter contract
     /// @dev Authorizes the upgrade of the GasMeter contract only if the caller is the owner
     /// @param newImplementation The address of the new implementation contract
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
-    /// @notice Fallback function as a helper for tracking calls
-    /// @dev Allows for contracts to call the gas meter address like they would call a function on their own contract to track gas used
-    ///      Allows for usage like: MyContract(gasMeterAddress).fooBar(arg1, arg2, arg3);
-    ///      Instead of: gasMeterAddress.meterCall(abi.encodeWithSelector(MyContract.fooBar.selector, arg1, arg2, arg3));
-    fallback() external {
-        meterCall(msg.data);
-    }
 }

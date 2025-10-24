@@ -66,6 +66,10 @@ contract SyndicateSequencingChain is
     ISyndicateSequencingChain,
     UUPSUpgradeable
 {
+    /// @notice The address of the GasMeter contract
+    /// @dev This is set during initialization and never changes
+    address public immutable gasMeter;
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -100,11 +104,6 @@ contract SyndicateSequencingChain is
         return $.version;
     }
 
-    function gasMeter() public view returns (address) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.gasMeter;
-    }
-
     /*//////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -135,7 +134,9 @@ contract SyndicateSequencingChain is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
-    constructor() {
+    constructor(address _gasMeter) {
+        if (_gasMeter == address(0)) revert ZeroAddress();
+        gasMeter = _gasMeter;
         _disableInitializers();
     }
 
@@ -149,7 +150,7 @@ contract SyndicateSequencingChain is
     /// @param admin The address to be set as the contract owner (receives DEFAULT_ADMIN_ROLE)
     /// @param _permissionRequirementModule The address of the permission requirement module or address(0) to allow all transactions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
-    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId, address _gasMeter)
+    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
         external
         initializer
     {
@@ -161,11 +162,10 @@ contract SyndicateSequencingChain is
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
         $.version = 1_000_000; // 1.0.0
-        $.gasMeter = _gasMeter;
     }
 
     modifier onlyGasMeter() {
-        require(msg.sender == gasMeter(), NotGasMeterContract());
+        require(msg.sender == gasMeter, NotGasMeterContract());
         _;
     }
 
@@ -187,8 +187,7 @@ contract SyndicateSequencingChain is
     /// @dev Requires that the transaction data is not empty. Delegates the call to processTransactionImpl on the configured gas meter contract.
     /// @param data The transaction data to process (must not be empty).
     function processTransaction(bytes calldata data) external {
-        require(data.length > 0, NoTxData());
-        SyndicateSequencingChain(gasMeter()).processTransactionImpl(msg.sender, data);
+        GasMeter(gasMeter).meterCall(abi.encodeCall(SyndicateSequencingChain._processTransaction, (msg.sender, data)));
     }
 
     /// @notice Process a single signed transaction
@@ -197,7 +196,9 @@ contract SyndicateSequencingChain is
     /// @param sequencer The address of original sequencer that is processing the transaction
     /// @param data The transaction data to process (must not be empty)
     //#olympix-ignore-required-tx-origin
-    function processTransactionImpl(address sequencer, bytes calldata data) external onlyGasMeter {
+    function _processTransaction(address sequencer, bytes calldata data) external onlyGasMeter {
+        require(data.length > 0, NoTxData());
+
         // Encode transaction with L2 message type for off-chain processing
         bytes memory transaction = encodeTransaction(data);
 
@@ -212,8 +213,9 @@ contract SyndicateSequencingChain is
     /// @dev Each transaction in the array must be non-empty. This function delegates processing to the configured gas meter contract for each transaction.
     /// @param data An array of transaction data to process (must not be empty).
     function processTransactionsBulk(bytes[] calldata data) external {
-        require(data.length > 0, NoTxData());
-        SyndicateSequencingChain(gasMeter()).processTransactionsBulkImpl(msg.sender, data);
+        GasMeter(gasMeter).meterCall(
+            abi.encodeCall(SyndicateSequencingChain._processTransactionsBulk, (msg.sender, data))
+        );
     }
 
     /// @notice Processes multiple signed transactions in bulk for gas efficiency
@@ -223,9 +225,11 @@ contract SyndicateSequencingChain is
     /// @param sequencer The address of original sequencer that is processing the transactions.
     /// @param data An array of transaction data to process (must not be empty)
     //#olympix-ignore
-    function processTransactionsBulkImpl(address sequencer, bytes[] calldata data) external onlyGasMeter {
-        // Process all transactions individually
+    function _processTransactionsBulk(address sequencer, bytes[] calldata data) external onlyGasMeter {
         uint256 dataCount = data.length;
+        require(dataCount > 0, NoTxData());
+
+        // Process all transactions individually
         for (uint256 i = 0; i < dataCount; i++) {
             require(data[i].length > 0, NoTxData());
 

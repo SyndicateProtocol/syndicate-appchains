@@ -58,7 +58,8 @@ contract AtomicSequencerTest is Test {
 
         GasMeter gasMeterImpl = new GasMeter();
         address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
-        factory.setGasMeter(gasMeter);
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);

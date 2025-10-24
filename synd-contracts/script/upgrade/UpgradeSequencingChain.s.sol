@@ -5,6 +5,8 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title UpgradeSequencingChain
@@ -42,9 +44,13 @@ contract UpgradeSequencingChain is Script {
 
         vm.startBroadcast();
 
+        // Deploy GasMeter
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+
         // Deploy new implementation
         console2.log("Deploying new implementation...");
-        SyndicateSequencingChain newImplementation = new SyndicateSequencingChain();
+        SyndicateSequencingChain newImplementation = new SyndicateSequencingChain(gasMeter);
         console2.log("New implementation:", address(newImplementation));
         console2.log("");
 

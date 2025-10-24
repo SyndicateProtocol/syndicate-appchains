@@ -58,11 +58,11 @@ contract StorageUpgradeTest is Test {
     function setUp() public {
         vm.startPrank(address(factory));
         // Deploy V1 implementation
-        syndicateV1 = new SyndicateSequencingChain();
+        syndicateV1 = new SyndicateSequencingChain(GAS_METER);
 
         // Deploy proxy pointing to V1
         bytes memory initData =
-            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID, GAS_METER));
+            abi.encodeCall(SyndicateSequencingChain.initialize, (ADMIN, PERMISSION_MODULE, TEST_APPCHAIN_ID));
 
         proxy = new ERC1967Proxy(address(syndicateV1), initData);
         syndicateV1 = SyndicateSequencingChain(address(proxy));

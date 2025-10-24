@@ -9,6 +9,8 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 ///      - Traditional storage: New variables appended at end
 ///      - Namespaced storage: New fields in ERC-7201 namespace
 contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain {
+    constructor(address _gasMeter) SyndicateSequencingChain(_gasMeter) {}
+
     /*//////////////////////////////////////////////////////////////
                     NEW V2 STORAGE - APPENDED SAFELY
     //////////////////////////////////////////////////////////////*/

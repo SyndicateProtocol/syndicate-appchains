@@ -56,14 +56,16 @@ contract SyndicateSequencingChainTestSetUp is Test {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
 
+        GasMeter gasMeterImpl = new GasMeter();
+        gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+
         SyndicateFactory implementation = new SyndicateFactory();
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
 
-        GasMeter gasMeterImpl = new GasMeter();
-        gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
-        factory.setGasMeter(gasMeter);
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
@@ -172,17 +174,17 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testConstructorWithZeroAppChainId() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0, gasMeter);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
     }
 
     function testUpgradeBadguy() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1, gasMeter);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
         address badguy = makeAddr("badguy");
         vm.prank(badguy);
@@ -191,16 +193,16 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeOwner() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
-        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1, gasMeter);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
         vm.prank(admin);
         UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
     }
 
     function testUpgradeAuthorizationOnlyOwner() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain(gasMeter);
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
@@ -210,6 +212,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
+        testFactory.setSyndicateSequencingChainImplementation(address(newImpl));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
@@ -229,15 +232,17 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+        SyndicateSequencingChain impl0 = new SyndicateSequencingChain(gasMeter);
 
         vm.startPrank(admin);
+        testFactory.setSyndicateSequencingChainImplementation(address(impl0));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Create two different implementations
-        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
-        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain(gasMeter);
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain(gasMeter);
 
         // allow only impl1
         vm.prank(admin);
