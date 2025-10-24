@@ -79,12 +79,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         .reconcile_mchain_with_source_chains(
             &sequencing_client,
             &settlement_client,
-            config.migrated_batch_acc,
-            config.migrated_batch_count,
-            config.migrated_delayed_msgs_acc,
-            config.migrated_delayed_msgs_count,
-            config.migrated_appchain_block_hash,
-            config.appchain_rpc_url.clone(),
+            config.migration_config(),
         )
         .await?;
 

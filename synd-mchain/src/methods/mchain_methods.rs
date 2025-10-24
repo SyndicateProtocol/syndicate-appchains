@@ -132,11 +132,16 @@ pub fn rollback_to_block(
     Ok(())
 }
 
+/// `mchain_appchainMigration` params
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MigrationParams {
+    /// The batch accumulator at point of migration
     pub batch_acc: B256,
+    /// The batch count at point of migration
     pub batch_count: u64,
+    /// The delayed message accumulator at point of migration
     pub delayed_msgs_acc: B256,
+    /// The delayed message count at point of migration
     pub delayed_msgs_count: u64,
 }
 

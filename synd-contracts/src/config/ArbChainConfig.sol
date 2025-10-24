@@ -20,7 +20,9 @@ contract ArbChainConfig is Initializable {
         uint256 setStartBlock,
         uint256 seqStartBlock,
         uint256 batchAcc,
+        uint256 batchCount,
         uint256 delayedMsgsAcc,
+        uint256 delayedMsgsCount,
         uint256 indexed appchainBlockHash
     );
 
@@ -46,7 +48,9 @@ contract ArbChainConfig is Initializable {
 
     // Migration-only data
     uint256 public MIGRATED_BATCH_ACC;
+    uint256 public MIGRATED_BATCH_COUNT;
     uint256 public MIGRATED_DELAYED_MSGS_ACC;
+    uint256 public MIGRATED_DELAYED_MSGS_COUNT;
     uint256 public MIGRATED_APPCHAIN_BLOCK_HASH; // migrated
 
     /**
@@ -127,19 +131,25 @@ contract ArbChainConfig is Initializable {
         uint256 _set_start_block,
         uint256 _seq_start_block,
         uint256 _batch_acc,
+        uint256 _batch_count,
         uint256 _delayed_msgs_acc,
+        uint256 _delayed_msgs_count,
         uint256 _appchain_block_hash
     ) external onlyOwner {
         SETTLEMENT_START_BLOCK = _set_start_block;
         SEQUENCING_START_BLOCK = _seq_start_block;
         MIGRATED_BATCH_ACC = _batch_acc;
+        MIGRATED_BATCH_COUNT = _batch_count;
         MIGRATED_DELAYED_MSGS_ACC = _delayed_msgs_acc;
+        MIGRATED_DELAYED_MSGS_COUNT = _delayed_msgs_count;
         MIGRATED_APPCHAIN_BLOCK_HASH = _appchain_block_hash;
         emit Migration(
             SETTLEMENT_START_BLOCK,
             SEQUENCING_START_BLOCK,
             MIGRATED_BATCH_ACC,
+            MIGRATED_BATCH_COUNT,
             MIGRATED_DELAYED_MSGS_ACC,
+            MIGRATED_DELAYED_MSGS_COUNT,
             MIGRATED_APPCHAIN_BLOCK_HASH
         );
     }

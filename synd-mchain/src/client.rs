@@ -92,12 +92,7 @@ pub trait MchainProvider: Send + Sync {
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
         settlement_client: &impl synd_chain_ingestor::client::Provider,
-        migrated_batch_acc: Option<B256>,
-        migrated_batch_count: Option<u64>,
-        migrated_delayed_msgs_acc: Option<B256>,
-        migrated_delayed_msgs_count: Option<u64>,
-        migrated_appchain_block_hash: Option<B256>,
-        appchain_rpc_url: Option<Url>,
+        migration: Option<MigrationConfig>,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -110,20 +105,15 @@ pub trait MchainProvider: Send + Sync {
                 mchain_block_before, safe_state, mchain_block_after
             );
         }
+        if safe_state.is_some() {
+            return Ok(safe_state);
+        }
 
-        if safe_state.is_none() && migrated_batch_acc.is_some() {
-            // mchain is empty, and there is migration data, proceed with migration
-
-            let batch_acc = migrated_batch_acc.unwrap_or_else(|| panic!("batch acc is none"));
-            let delayed_msgs_acc =
-                migrated_delayed_msgs_acc.unwrap_or_else(|| panic!("delayed msgs acc is none"));
-            let delayed_msgs_count =
-                migrated_delayed_msgs_count.unwrap_or_else(|| panic!("delayed msgs count is none"));
-            let batch_count = migrated_batch_count.unwrap_or_else(|| panic!("batch count is none"));
-
+        // mchain is empty, if there is migration data, proceed with migration
+        if let Some(migration) = migration {
             // assert that the appchain block hash matches the rpc node
-            if let Some(appchain_block_hash) = migrated_appchain_block_hash {
-                let rpc_url = appchain_rpc_url.unwrap_or_else(|| {
+            if let Some(appchain_block_hash) = migration.migrated_appchain_block_hash {
+                let rpc_url = migration.appchain_rpc_url.unwrap_or_else(|| {
                     panic!(" migrated appchain block hash was provided but rpc url is none")
                 });
                 let appchain_provider =
@@ -141,10 +131,10 @@ pub trait MchainProvider: Send + Sync {
                 warn!("migration is taking place, but no appchain block hash was provided, so the rpc node state check will be skipped");
             }
 
-            self.appchain_migration(batch_acc, batch_count, delayed_msgs_acc, delayed_msgs_count)
-                .await?;
+            self.appchain_migration(migration.migration_params).await?;
         }
-        Ok(safe_state)
+
+        Ok(None)
     }
 
     /// `get_safe_state` gets the processed blocks from the appchain contract and validates them
@@ -200,20 +190,21 @@ pub trait MchainProvider: Send + Sync {
 
     /// Applies a migration to the mchain
     #[instrument(skip_all, err, fields(otel.kind = ?SpanKind::Client))]
-    async fn appchain_migration(
-        &self,
-        batch_acc: B256,
-        batch_count: u64,
-        delayed_msgs_acc: B256,
-        delayed_msgs_count: u64,
-    ) -> eyre::Result<()> {
-        Ok(self
-            .request(
-                "mchain_appchainMigration",
-                [MigrationParams { batch_acc, batch_count, delayed_msgs_acc, delayed_msgs_count }],
-            )
-            .await?)
+    async fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
+        Ok(self.request("mchain_appchainMigration", [params]).await?)
     }
+}
+
+/// The config for and appchain migration
+#[derive(Debug, Clone)]
+pub struct MigrationConfig {
+    /// migration params, inclue the batch and delayed msgs acc and count
+    pub migration_params: MigrationParams,
+    /// The appchain block hash at the point of migration
+    pub migrated_appchain_block_hash: Option<B256>,
+    /// The rpc url (it's only used to check the appchain block hash if a migration is taking
+    /// place)
+    pub appchain_rpc_url: Option<Url>,
 }
 
 async fn validate_block_add_timestamp(
@@ -411,18 +402,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain
-                .reconcile_mchain_with_source_chains(
-                    &seq_client,
-                    &set_client,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None
-                )
-                .await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None,).await?,
             state
         );
         // check safe state again
@@ -466,18 +446,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain
-                .reconcile_mchain_with_source_chains(
-                    &seq_client,
-                    &set_client,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None
-                )
-                .await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None).await?,
             state
         );
         // check safe state again
@@ -512,18 +481,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain
-                .reconcile_mchain_with_source_chains(
-                    &seq_client,
-                    &set_client,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None
-                )
-                .await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None).await?,
             None
         );
         // check safe state again

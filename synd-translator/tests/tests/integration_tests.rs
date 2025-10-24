@@ -13,7 +13,7 @@ use eyre::{Ok, Result};
 use std::{str::FromStr as _, time::Duration};
 use synd_block_builder::appchains::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use synd_mchain::{
-    client::Provider as _,
+    client::MchainProvider as _,
     db::{ArbitrumBatch, DelayedMessage, MBlock, Slot},
     methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
 };

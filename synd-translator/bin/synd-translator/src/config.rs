@@ -10,6 +10,7 @@ use eyre::Result;
 use shared::parse::{parse_address, parse_hash, parse_url};
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
+use synd_mchain::{client::MigrationConfig, methods::mchain_methods::MigrationParams};
 use thiserror::Error;
 use tracing::{debug, error};
 use url::Url;
@@ -291,6 +292,30 @@ impl TranslatorConfig {
         // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{cmd}");
+    }
+
+    pub fn migration_config(&self) -> Option<MigrationConfig> {
+        self.migrated_batch_acc?;
+
+        let batch_acc = self.migrated_batch_acc.unwrap_or_else(|| panic!("batch acc is none"));
+        let batch_count =
+            self.migrated_batch_count.unwrap_or_else(|| panic!("batch count is none"));
+        let delayed_msgs_acc =
+            self.migrated_delayed_msgs_acc.unwrap_or_else(|| panic!("delayed msgs acc is none"));
+        let delayed_msgs_count = self
+            .migrated_delayed_msgs_count
+            .unwrap_or_else(|| panic!("delayed msgs count is none"));
+
+        Some(MigrationConfig {
+            migration_params: MigrationParams {
+                batch_acc,
+                batch_count,
+                delayed_msgs_acc,
+                delayed_msgs_count,
+            },
+            migrated_appchain_block_hash: self.migrated_appchain_block_hash,
+            appchain_rpc_url: self.appchain_rpc_url.clone(),
+        })
     }
 }
 

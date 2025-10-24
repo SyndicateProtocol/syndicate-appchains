@@ -13,7 +13,7 @@ use eyre::Result;
 use std::time::Duration;
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
-use synd_mchain::client::Provider as _;
+use synd_mchain::client::MchainProvider as _;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::{TestComponents, SETTLEMENT_CHAIN_ID},
@@ -805,16 +805,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         components
             .mchain_provider
-            .reconcile_mchain_with_source_chains(
-                &seq_mchain_client,
-                &settlement_client,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            )
+            .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client, None)
             .await?;
 
         // synd-mchain should be on the same block since no reorgs occurred
