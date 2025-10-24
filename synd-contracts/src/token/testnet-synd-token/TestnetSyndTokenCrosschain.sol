@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {SyndicateTokenCrosschain, IBridgeRateLimiter, IERC7802} from "../SyndicateTokenCrosschain.sol";
