@@ -71,7 +71,7 @@ rule onlyAllowedCanProcess(address sequencer, bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    require msg.sender == gasMeter();
+    require e.msg.sender == gasMeter();
     // Use address(1) as permission module to allow all transactions
     require permissionRequirementModule() == 1;
     // Try to process a transaction
@@ -90,7 +90,7 @@ rule processConsistencyNoPermissions(address sequencer, bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    require msg.sender == gasMeter();
+    require e.msg.sender == gasMeter();
     // Use address(1) as permission module (allows all)
     require permissionRequirementModule() == 1;
     // Record both outcomes
@@ -112,7 +112,7 @@ rule permissionModuleRequired(address sequencer, bytes data) {
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    require msg.sender == gasMeter();
+    require e.msg.sender == gasMeter();
     // Compare behavior with and without permission module
     // First test with address(1) permission module (allows all)
     require permissionRequirementModule() == 1;
@@ -155,7 +155,7 @@ rule moduleUpdateChangesState(address newModule) {
 rule stateConsistencyAfterProcessing(address sequencer, bytes data) {
     env e;
     require getInitializedVersion() > 0;
-    require msg.sender == gasMeter();
+    require e.msg.sender == gasMeter();
     address oldProposerModule = permissionRequirementModule();
     // Process transaction
     processTransaction@withrevert(e, sequencer, data);
