@@ -24,6 +24,7 @@ use url::Url;
 
 // Legacy interface for Sequencing Chain
 sol! {
+    #[sol(rpc)]
     contract ILegacySequencingChain {
         function getTokensForEpoch(uint256 epoch) external view returns (uint256);
     }
