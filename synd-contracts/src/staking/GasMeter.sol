@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {EpochTracker} from "./EpochTracker.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 
 struct GasMeterStorage {
     /// @notice Mapping of epoch to gas data
@@ -16,7 +16,7 @@ struct GasMeterStorage {
 /// @title GasMeter
 /// @notice Tracks gas usage for sequencing chains
 /// @dev This contract is used to track gas usage for sequencing chains per epoch
-contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, EpochTracker {
+contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardTransientUpgradeable, EpochTracker {
     uint256 public constant VERSION = 1_000_000; // 1.0.0
 
     /*//////////////////////////////////////////////////////////////

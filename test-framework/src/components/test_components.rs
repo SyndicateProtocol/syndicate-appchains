@@ -20,6 +20,7 @@ use alloy::{
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster,
     erc1967_proxy::ERC1967Proxy,
+    gas_meter::GasMeter,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
     r#always_allowed_module::AlwaysAllowedModule,
@@ -243,8 +244,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    seq_chain_info.provider.get_balance(test_account1().address).await? >=
-                        parse_ether("10")?,
+                    seq_chain_info.provider.get_balance(test_account1().address).await?
+                        >= parse_ether("10")?,
                     Duration::from_secs(10)
                 );
 
@@ -255,8 +256,18 @@ impl TestComponents {
 
         info!("Sequencing chain Nitro URL: {}", seq_rpc_ws_url);
 
-        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
-        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
+        let _ = GasMeter::deploy_builder(&seq_provider).send().await?;
+        let gas_meter_address_impl = seq_provider.default_signer_address().create(0);
+
+        let _ = ERC1967Proxy::deploy_builder(&seq_provider, gas_meter_address_impl, Bytes::new())
+            .send()
+            .await?;
+        let gas_meter_address = seq_provider.default_signer_address().create(1);
+
+        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider, gas_meter_address)
+            .send()
+            .await?;
+        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(2);
 
         let _ = ERC1967Proxy::deploy_builder(
             &seq_provider,
@@ -265,10 +276,10 @@ impl TestComponents {
         )
         .send()
         .await?;
-        let sequencing_contract_address = seq_provider.default_signer_address().create(1);
+        let sequencing_contract_address = seq_provider.default_signer_address().create(3);
 
         let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        let always_allowed_module_address = seq_provider.default_signer_address().create(2);
+        let always_allowed_module_address = seq_provider.default_signer_address().create(4);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
@@ -283,18 +294,7 @@ impl TestComponents {
             .send()
             .await?;
 
-        match options.base_chains_type {
-            BaseChainsType::Anvil => {
-                mine_block(&seq_provider, 0).await?;
-            }
-            BaseChainsType::PreLoaded(_) => {
-                // disable gas tracking, otherwise there will be an underflow error with anvil
-                // timstamp 0
-                let _ = sequencing_contract.disableGasTracking().send().await?;
-                mine_block(&seq_provider, 0).await?;
-            }
-            _ => {}
-        };
+        mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
@@ -374,8 +374,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    set_chain_info.provider.get_balance(test_account1().address).await? >=
-                        parse_ether("10")?,
+                    set_chain_info.provider.get_balance(test_account1().address).await?
+                        >= parse_ether("10")?,
                     Duration::from_secs(10)
                 );
                 settlement_deployment = Some(set_deployment);
