@@ -94,7 +94,7 @@ rule processConsistencyNoPermissions(address sequencer, bytes data) {
     // Use address(1) as permission module (allows all)
     require permissionRequirementModule() == 1;
     // Record both outcomes
-    _processTransaction@withrevert(e, data);
+    _processTransaction@withrevert(e, sequencer, data);
     bool txSuccess = !lastReverted;
     _processTransactionsBulk@withrevert(e, sequencer, [data]);
     bool bulkSuccess = !lastReverted;
