@@ -63,7 +63,9 @@ contract GasMeter is Initializable, OwnableUpgradeable, UUPSUpgradeable, Reentra
         uint256 startGas = gasleft();
         (bool success, bytes memory result) = address(msg.sender).call(meteredCall);
         if (!success) {
-            revert(string(result));
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
         }
 
         uint256 gasPrice = tx.gasprice == 0 ? 1 : tx.gasprice;
