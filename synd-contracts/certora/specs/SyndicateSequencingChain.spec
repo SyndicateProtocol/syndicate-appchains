@@ -7,9 +7,6 @@ methods {
     function isAllowed(address, address, bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
     function getInitializedVersion() external returns (uint64) envfree;
-    function gasTrackingEnabled() external returns (bool) envfree;
-    function disableGasTracking() external;
-    function enableGasTracking() external;
     function encodeTransaction(bytes) external returns (bytes) envfree;
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
@@ -44,7 +41,6 @@ rule initializationCorrect(address admin, address module, uint256 appchainId) {
     assert permissionRequirementModule() == module, "Permission module not set correctly";
     assert owner() == admin, "Admin not set correctly";
     assert appchainId() == appchainId, "AppchainId not set correctly";
-    assert gasTrackingEnabled(), "Gas tracking not enabled after init";
 }
 
 /*
