@@ -25,7 +25,7 @@ use jsonrpsee::RpcModule;
 #[cfg(not(test))]
 use std::time::SystemTime;
 use std::{collections::VecDeque, sync::Mutex, time::UNIX_EPOCH};
-use tracing::{error, info};
+use tracing::error;
 
 // 000b00800203 corresponds to a batch containing a single delayed message
 const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("000b00800203"));
