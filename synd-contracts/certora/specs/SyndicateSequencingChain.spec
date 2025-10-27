@@ -8,6 +8,7 @@ methods {
     function owner() external returns (address) envfree;
     function getInitializedVersion() external returns (uint64) envfree;
     function encodeTransaction(bytes) external returns (bytes) envfree;
+    function gasMeter() external returns (address) envfree;
     // Permission module envfree view functions
     function permissionModule.isAllowed(address, address, bytes) external returns (bool) envfree;
     function permissionModule.setAllowed(address, bool) external;
@@ -64,18 +65,17 @@ rule appchainIdSetAfterInit(address admin, address module, uint256 chainId) {
 /*
  * Rule: Only allowed addresses can process transactions
  */
-rule onlyAllowedCanProcess(bytes data) {
+rule onlyAllowedCanProcess(address sequencer, bytes data) {
     env e;
     require getInitializedVersion() > 0;
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // Disable gas tracking
-    require !gasTrackingEnabled();
+    require msg.sender == gasMeter();
     // Use address(1) as permission module to allow all transactions
     require permissionRequirementModule() == 1;
     // Try to process a transaction
-    processTransaction@withrevert(e, data);
+    _processTransaction@withrevert(e, sequencer, data);
     // With no permission module, all transactions should succeed
     bool success = !lastReverted;
     assert success, "Transaction failed with no permission restrictions";
@@ -84,20 +84,19 @@ rule onlyAllowedCanProcess(bytes data) {
 /*
  * Rule: Test bulk processing with no permission restrictions
  */
-rule processConsistencyNoPermissions(bytes data) {
+rule processConsistencyNoPermissions(address sequencer, bytes data) {
     env e;
     require getInitializedVersion() > 0;
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // Disable gas tracking
-    require !gasTrackingEnabled();
+    require msg.sender == gasMeter();
     // Use address(1) as permission module (allows all)
     require permissionRequirementModule() == 1;
     // Record both outcomes
     processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
-    processTransactionsBulk@withrevert(e, [data]);
+    processTransactionsBulk@withrevert(e, sequencer, [data]);
     bool bulkSuccess = !lastReverted;
     // With no permissions, both should succeed
     assert txSuccess, "processTransaction failed with no permissions";
@@ -107,18 +106,17 @@ rule processConsistencyNoPermissions(bytes data) {
 /*
  * Rule: Test that permission module address matters
  */
-rule permissionModuleRequired(bytes data) {
+rule permissionModuleRequired(address sequencer, bytes data) {
     env e;
     require getInitializedVersion() > 0;
     require data.length > 0;
     require data.length <= 1024;
     require e.msg.value == 0;
-    // Disable gas tracking
-    require !gasTrackingEnabled();
+    require msg.sender == gasMeter();
     // Compare behavior with and without permission module
     // First test with address(1) permission module (allows all)
     require permissionRequirementModule() == 1;
-    processTransaction@withrevert(e, data);
+    processTransaction@withrevert(e, sequencer, data);
     bool successNoPermissions = !lastReverted;
     // This should succeed since no permissions are required
     assert successNoPermissions, "Transaction failed with no permission module";
@@ -154,12 +152,13 @@ rule moduleUpdateChangesState(address newModule) {
 /*
  * Rule: State consistency after transaction processing
  */
-rule stateConsistencyAfterProcessing(bytes data) {
+rule stateConsistencyAfterProcessing(address sequencer, bytes data) {
     env e;
     require getInitializedVersion() > 0;
+    require msg.sender == gasMeter();
     address oldProposerModule = permissionRequirementModule();
     // Process transaction
-    processTransaction@withrevert(e, data);
+    processTransaction@withrevert(e, sequencer, data);
     // Verify requirement modules haven't changed
     assert permissionRequirementModule() == oldProposerModule, "Transaction processing modified proposer module state";
 }
