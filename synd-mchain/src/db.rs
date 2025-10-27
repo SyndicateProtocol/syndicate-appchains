@@ -9,7 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-
+use tracing::info;
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
 
@@ -146,6 +146,8 @@ pub enum DBKey {
     MessageAcc(u64),
     /// DB schema version
     Version,
+    /// Offset for the initial set block number
+    Offset,
 }
 
 impl fmt::Display for DBKey {
@@ -155,6 +157,7 @@ impl fmt::Display for DBKey {
             Self::State => write!(f, "s"),
             Self::MessageAcc(num) => write!(f, "m{num}"),
             Self::Version => write!(f, "v"),
+            Self::Offset => write!(f, "o"),
         }
     }
 }
@@ -228,6 +231,21 @@ pub trait ArbitrumDB {
             DBKey::State.to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
+    }
+
+    /// Puts the offset for the initial set block number
+    fn put_offset(&self, value: u64) {
+        self.put(
+            DBKey::Offset.to_string(),
+            bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
+        );
+    }
+
+    /// Gets the offset for the initial set block number
+    fn get_offset(&self) -> u64 {
+        self.get(DBKey::Offset.to_string())
+            .map(|x| bincode::serde::decode_from_slice(&x, bincode::config::standard()).unwrap().0)
+            .unwrap_or(0)
     }
     /// Checks the version of the chain
     fn check_version(&self) {
@@ -366,12 +384,35 @@ pub trait ArbitrumDB {
         delayed_msgs_acc: B256,
         delayed_msgs_count: u64,
     ) -> eyre::Result<()> {
-        if self.get_state().batch_count != 0 {
-            return Err(to_err("cannot apply migration: chain is not empty").into());
-        }
-        self.put_message_acc(delayed_msgs_count, &delayed_msgs_acc);
+        info!("Applying appchain migration");
+        info!("Batch count: {}", batch_count);
+        info!("Batch acc: {}", batch_acc);
+        info!("Delayed msgs acc: {}", delayed_msgs_acc);
+        info!("Delayed msgs count: {}", delayed_msgs_count);
+        let initial_set_block_number = 32895718u64;
+        let offset = initial_set_block_number - batch_count;
+        self.put_offset(offset);
+        self.put_block(
+            initial_set_block_number,
+            &Block {
+                timestamp: 0u64,
+                batch: Bytes::new(),
+                slot: Slot {
+                    seq_block_number: 0u64,
+                    seq_block_hash: B256::ZERO,
+                    set_block_number: 0u64,
+                    set_block_hash: B256::ZERO,
+                },
+                after_batch_acc: batch_acc,
+                messages: vec![],
+                before_batch_acc: batch_acc,
+                before_message_acc: delayed_msgs_acc,
+                before_message_count: delayed_msgs_count,
+            },
+        );
+        self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
         self.put_state(&State {
-            batch_count,
+            batch_count: initial_set_block_number,
             batch_acc,
             message_count: delayed_msgs_count,
             message_acc: delayed_msgs_acc,

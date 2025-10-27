@@ -187,7 +187,7 @@ pub struct TranslatorConfig {
     pub migrated_batch_acc: Option<B256>,
 
     /// The batch accumulator at the point of migration
-    #[arg(long, env = "MIGRATED_BATCH_COUNT", value_parser = parse_hash)]
+    #[arg(long, env = "MIGRATED_BATCH_COUNT")]
     pub migrated_batch_count: Option<u64>,
 
     /// The delayed messages accumulator at the point of migration
@@ -195,7 +195,7 @@ pub struct TranslatorConfig {
     pub migrated_delayed_msgs_acc: Option<B256>,
 
     /// The delayed messages count at the point of migration
-    #[arg(long, env = "MIGRATED_DELAYED_MSGS_COUNT", value_parser = parse_hash)]
+    #[arg(long, env = "MIGRATED_DELAYED_MSGS_COUNT")]
     pub migrated_delayed_msgs_count: Option<u64>,
 
     /// The appchain block hash at the point of migration

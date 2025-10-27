@@ -254,7 +254,8 @@ pub fn eth_call(
             Ok(db.get_state().message_count.abi_encode().into())
         }
         ISequencerInbox::batchCountCall::SELECTOR => {
-            Ok(db.get_state().batch_count.abi_encode().into())
+            let offset = db.get_offset();
+            Ok((db.get_state().batch_count - offset).abi_encode().into())
         }
         IBridge::delayedInboxAccsCall::SELECTOR => {
             let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
@@ -265,7 +266,9 @@ pub fn eth_call(
             let data =
                 ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index: u64 = data.index.try_into().map_err(to_err)?;
-            Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
+            // TODO: keep this in memory to avoid reading from disk
+            let offset = db.get_offset();
+            Ok(db.get_block(index + offset + 1)?.after_batch_acc.abi_encode().into())
         }
         _ => Err(err("unknown selector")),
     }

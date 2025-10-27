@@ -1,18 +1,23 @@
 services:
   mchain:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
-    platform: linux/amd64
-    # build:
-    #   context: ../../
-    #   target: synd-mchain
-    #   dockerfile: Dockerfile
+    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
+    # platform: linux/amd64
+    build:
+      context: ../../
+      target: synd-mchain
+      dockerfile: Dockerfile
+    # image: local-mchain:latest
+    env_file: .env
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
+      LOG_LEVEL: trace
+      DATADIR: /datadir
     ports:
       - "8545"
       - "8546"
     volumes:
       - ./datadir:/datadir
+      # - ./bin:/usr/local/bin
     networks:
       - appchains-network
 
@@ -25,9 +30,10 @@ services:
     #   dockerfile: Dockerfile
     volumes:
       - ./:/chains
+    env_file: .env
     environment:
-      DB_FILE: /chains/ingestor.db
-      START_BLOCK: 0
+      DB_FILE: /chains/seq-ingestor.db
+      START_BLOCK: ${SEQUENCING_START_BLOCK}
       WS_URLS: ${SEQUENCING_WS_URLS}
     ports:
       - "8545"
@@ -44,9 +50,10 @@ services:
     #   dockerfile: Dockerfile
     volumes:
       - ./:/chains
+    env_file: .env
     environment:
-      DB_FILE: /chains/ingestor.db
-      START_BLOCK: 20000000
+      DB_FILE: /chains/set-ingestor.db
+      START_BLOCK: ${SETTLEMENT_START_BLOCK}
       WS_URLS: ${SETTLEMENT_WS_URLS}
     ports:
       - "8545"
@@ -65,12 +72,13 @@ services:
       - appchains-network
 
   translator:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
-    platform: linux/amd64
-    # build:
-    #   context: ../../
-    #   target: synd-translator
-    #   dockerfile: Dockerfile
+    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
+    # platform: linux/amd64
+    build:
+      context: ../../
+      target: synd-translator
+      dockerfile: Dockerfile
+    env_file: .env
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
       SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
@@ -82,6 +90,7 @@ services:
       SETTLEMENT_START_BLOCK: ${SETTLEMENT_START_BLOCK}
       MCHAIN_WS_URL: "ws://mchain:8545"
       SETTLEMENT_DELAY: "60"
+      APPCHAIN_RPC_URL: "http://nitro:8547"
     depends_on:
       healthcheck:
         condition: service_healthy
@@ -93,22 +102,30 @@ services:
     command:
       - "--parent-chain.connection.url=ws://mchain:8545"
       - "--http.api=arb,eth,net,web3,txpool,arbtrace,synd"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8547"
+      - "--ws.api=arb,eth,net,web3,txpool,arbtrace,synd"
       - "--node.dangerous.disable-blob-reader=true"
       - "--node.inbox-reader.check-delay=100ms"
       - "--node.staker.enable=false"
+      - "--node.data-availability.enable=true"
       - "--node.parent-chain-reader.poll-interval=100ms"
       - "--node.parent-chain-reader.old-header-timeout=2540400h"
       - "--execution.parent-chain-reader.old-header-timeout=2540400h"
       - "--execution.caching.archive=true"
+      - "--execution.forwarding-target=null"
       - "--ensure-rollup-deployment=false"
-      - "--chain.info-files=/config/chain_info.json"
+      - "--node.data-availability.rest-aggregator.urls=<DA_MIRROR_URL>"
+      - "--node.data-availability.rest-aggregator.enable=true"
+      - '--chain.info-json= [{"chain-id":888991,"parent-chain-id":511000,"parent-chain-is-arbitrum":false,"chain-name":"unite-testnet","chain-config":{"homesteadBlock":0,"daoForkBlock":null,"daoForkSupport":true,"eip150Block":0,"eip150Hash":"0x0000000000000000000000000000000000000000000000000000000000000000","eip155Block":0,"eip158Block":0,"byzantiumBlock":0,"constantinopleBlock":0,"petersburgBlock":0,"istanbulBlock":0,"muirGlacierBlock":0,"berlinBlock":0,"londonBlock":0,"clique":{"period":0,"epoch":0},"arbitrum":{"EnableArbOS":true,"AllowDebugPrecompiles":false,"DataAvailabilityCommittee":true,"InitialArbOSVersion":32,"GenesisBlockNum":0,"MaxCodeSize":24576,"MaxInitCodeSize":49152,"InitialChainOwner":"0x6dedc20540fd54348fa0d7b0af2378f5494ab240"},"chainId":888991},"rollup":{"bridge":"0x0000000000000000000000000000000000511000","inbox":"0x0000000000000000000000000000000000511000","sequencer-inbox":"0x0000000000000000000000000000000000511000","rollup":"0x0000000000000000000000000000000000511000","validator-utils":"0x0000000000000000000000000000000000511000","validator-wallet-creator":"0x0000000000000000000000000000000000511000","deployed-at":0}}]'
+      - "--init.url=<INIT_URL>"
+      - "--init.validate-checksum=false"
       - "--metrics"
-      - "--log-level=error"    
+      - "--log-level=debug"
     depends_on:
       healthcheck:
         condition: service_healthy
     volumes:
-      - ./config:/cfg:ro
       - ./data:/home/user/.arbitrum
     ports:
       - "8547"

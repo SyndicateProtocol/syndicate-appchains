@@ -94,6 +94,7 @@ pub trait MchainProvider: Send + Sync {
         settlement_client: &impl synd_chain_ingestor::client::Provider,
         migration: Option<MigrationConfig>,
     ) -> eyre::Result<Option<KnownState>> {
+        info!("reconciling mchain with source chains");
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
         if let Some(mchain_block_number) = mchain_block_number {
@@ -106,11 +107,16 @@ pub trait MchainProvider: Send + Sync {
             );
         }
         if safe_state.is_some() {
+            info!("safe state found, returning");
             return Ok(safe_state);
         }
+        info!("no safe state found, checking for migration");
+        let migration = migration.clone();
+        info!("migration: {:?}", migration);
 
         // mchain is empty, if there is migration data, proceed with migration
         if let Some(migration) = migration {
+            info!("migration is taking place, proceeding with migration");
             // assert that the appchain block hash matches the rpc node
             if let Some(appchain_block_hash) = migration.migrated_appchain_block_hash {
                 let rpc_url = migration.appchain_rpc_url.unwrap_or_else(|| {
