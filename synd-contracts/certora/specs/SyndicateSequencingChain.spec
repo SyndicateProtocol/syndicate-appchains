@@ -94,13 +94,13 @@ rule processConsistencyNoPermissions(address sequencer, bytes data) {
     // Use address(1) as permission module (allows all)
     require permissionRequirementModule() == 1;
     // Record both outcomes
-    processTransaction@withrevert(e, data);
+    _processTransaction@withrevert(e, data);
     bool txSuccess = !lastReverted;
-    processTransactionsBulk@withrevert(e, sequencer, [data]);
+    _processTransactionsBulk@withrevert(e, sequencer, [data]);
     bool bulkSuccess = !lastReverted;
     // With no permissions, both should succeed
-    assert txSuccess, "processTransaction failed with no permissions";
-    assert bulkSuccess, "processTransactionsBulk should not revert";
+    assert txSuccess, "_processTransaction failed with no permissions";
+    assert bulkSuccess, "_processTransactionsBulk should not revert";
 }
 
 /*
@@ -116,7 +116,7 @@ rule permissionModuleRequired(address sequencer, bytes data) {
     // Compare behavior with and without permission module
     // First test with address(1) permission module (allows all)
     require permissionRequirementModule() == 1;
-    processTransaction@withrevert(e, sequencer, data);
+    _processTransaction@withrevert(e, sequencer, data);
     bool successNoPermissions = !lastReverted;
     // This should succeed since no permissions are required
     assert successNoPermissions, "Transaction failed with no permission module";
@@ -158,7 +158,7 @@ rule stateConsistencyAfterProcessing(address sequencer, bytes data) {
     require e.msg.sender == gasMeter();
     address oldProposerModule = permissionRequirementModule();
     // Process transaction
-    processTransaction@withrevert(e, sequencer, data);
+    _processTransaction@withrevert(e, sequencer, data);
     // Verify requirement modules haven't changed
     assert permissionRequirementModule() == oldProposerModule, "Transaction processing modified proposer module state";
 }

@@ -14,7 +14,6 @@ use contract_bindings::synd::{
     block_hash_relayer::BlockHashRelayer,
     gas_aggregator::GasAggregator::{self, GasAggregatorInstance},
     gas_archive::GasArchive::{self, GasArchiveInstance},
-    syndicate_sequencing_chain::SyndicateSequencingChain,
 };
 use shared::{
     parse::{parse_address, parse_url},
@@ -22,6 +21,13 @@ use shared::{
 };
 use tracing::{debug, info};
 use url::Url;
+
+// Legacy interface for Sequencing Chain
+sol! {
+    interface ILegacySequencingChain {
+        function getTokensForEpoch(uint256 epoch) external view returns (uint256);
+    }
+}
 
 /// Arguments for updating base and ethereum block hashes
 #[derive(Args, Debug)]
@@ -373,8 +379,9 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
                 panic!("failed to get appchain contract override for {chain_id}: {e}")
             });
 
+        // TODO: Handle legacy and new sequencing chain implementations
         let appchain =
-            SyndicateSequencingChain::new(appchain_addr, gas_aggregator.provider().clone());
+            ILegacySequencingChain::new(appchain_addr, gas_aggregator.provider().clone());
         tokens.push(
             appchain
                 .getTokensForEpoch(epoch)

@@ -74,7 +74,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public {
-        // Skip test in CI since the RPC is flaky 
+        // Skip test in CI since the RPC is flaky
         vm.skip(true);
 
         // Create fork from risa_devnet
