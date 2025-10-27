@@ -67,6 +67,9 @@ contract SyndicateSequencingChainTestSetUp is Test {
         address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
         factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
 
+        address syndicateChainImpl = factory.syndicateChainImpl();
+        assertEq(syndicateChainImpl, address(sequencingChainImpl));
+
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
         vm.stopPrank();

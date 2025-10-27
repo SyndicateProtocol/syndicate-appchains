@@ -135,6 +135,10 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // Set initial version
         $.version = 1_000_000; // 1.0.0
+
+        // Deploy minimal stub implementation using CREATE2 for deterministic address
+        bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
+        $.stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
     }
 
     /*//////////////////////////////////////////////////////////////
