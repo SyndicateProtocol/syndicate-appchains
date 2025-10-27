@@ -344,7 +344,8 @@ impl Batcher {
                 .sequencing_contract_instance
                 .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.0.clone())).collect())
                 .into_transaction_request(),
-        };
+        }
+        .max_fee_per_gas(self.config.max_fee_per_gas);
 
         let pending_tx = self
             .sequencing_contract_instance
