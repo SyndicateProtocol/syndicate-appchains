@@ -10,7 +10,7 @@ use eyre::Result;
 use shared::parse::{parse_address, parse_hash, parse_url};
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
-use synd_mchain::{client::MigrationConfig, methods::mchain_methods::MigrationParams};
+use synd_mchain::methods::mchain_methods::MigrationParams;
 use thiserror::Error;
 use tracing::{debug, error};
 use url::Url;
@@ -294,7 +294,7 @@ impl TranslatorConfig {
         println!("{cmd}");
     }
 
-    pub fn migration_config(&self) -> Option<MigrationConfig> {
+    pub fn migration_config(&self) -> Option<MigrationParams> {
         self.migrated_batch_acc?;
 
         let settlement_start_block = self
@@ -310,16 +310,12 @@ impl TranslatorConfig {
             .migrated_delayed_msgs_count
             .unwrap_or_else(|| panic!("delayed msgs count is none"));
 
-        Some(MigrationConfig {
-            migration_params: MigrationParams {
-                settlement_start_block,
-                batch_acc,
-                batch_count,
-                delayed_msgs_acc,
-                delayed_msgs_count,
-            },
-            migrated_appchain_block_hash: self.migrated_appchain_block_hash,
-            appchain_rpc_url: self.appchain_rpc_url.clone(),
+        Some(MigrationParams {
+            settlement_start_block,
+            batch_acc,
+            batch_count,
+            delayed_msgs_acc,
+            delayed_msgs_count,
         })
     }
 }

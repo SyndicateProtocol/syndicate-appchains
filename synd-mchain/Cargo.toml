@@ -28,7 +28,6 @@ synd-chain-ingestor = { workspace = true }
 tokio               = { workspace = true, features = ["signal"] }
 tower               = { workspace = true }
 tracing             = { workspace = true }
-url                 = { workspace = true }
 
 [dev-dependencies]
 ctor       = { workspace = true }

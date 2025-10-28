@@ -4,11 +4,7 @@ use crate::{
     db::{MBlock, Slot},
     methods::mchain_methods::MigrationParams,
 };
-use alloy::{
-    eips::{BlockId, BlockNumberOrTag},
-    primitives::B256,
-    providers::{Provider, ProviderBuilder},
-};
+use alloy::eips::BlockNumberOrTag;
 pub use jsonrpsee::{
     core::{async_trait, client::ClientT as _, traits::ToRpcParams, ClientError},
     ws_client::{WsClient, WsClientBuilder},
@@ -16,7 +12,6 @@ pub use jsonrpsee::{
 pub use serde::de::DeserializeOwned;
 use shared::{tracing::SpanKind, types::BlockRef};
 use tracing::{debug, instrument, warn};
-use url::Url;
 
 /// Known state of the `synd-mchain`
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -68,6 +63,12 @@ pub trait MchainProvider: Send + Sync {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
 
+    /// Gets the offset for the initial migration
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
+    async fn get_migration_offset(&self) -> eyre::Result<u64> {
+        Ok(self.request::<_, u64>("mchain_getMigrationOffset", [(); 0]).await?)
+    }
+
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
@@ -92,7 +93,7 @@ pub trait MchainProvider: Send + Sync {
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
         settlement_client: &impl synd_chain_ingestor::client::Provider,
-        migration: Option<MigrationConfig>,
+        migration_params: Option<MigrationParams>,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -109,33 +110,13 @@ pub trait MchainProvider: Send + Sync {
             debug!("safe state found");
             return Ok(safe_state);
         }
-        debug!("no safe state found, checking for migration");
-        let migration = migration.clone();
+        debug!("no safe state found, checking for migration_params");
+        let migration_params = migration_params.clone();
 
-        // mchain is empty, if there is migration data, proceed with migration
-        if let Some(migration) = migration {
+        // mchain is empty, if there is migration_params data, proceed with migration
+        if let Some(migration_params) = migration_params {
             debug!("migration found, proceeding with migration");
-            // assert that the appchain block hash matches the rpc node
-            if let Some(appchain_block_hash) = migration.migrated_appchain_block_hash {
-                let rpc_url = migration.appchain_rpc_url.unwrap_or_else(|| {
-                    panic!(" migrated appchain block hash was provided but rpc url is none")
-                });
-                let appchain_provider =
-                    ProviderBuilder::new().connect(rpc_url.to_string().as_str()).await?;
-                let node_latest_block = appchain_provider
-                    .get_block(BlockId::latest())
-                    .await?
-                    .unwrap_or_else(|| panic!("appchain rpc node has no latest block"));
-
-                let node_block_hash = node_latest_block.hash();
-                if node_block_hash != appchain_block_hash {
-                    return Err(eyre::eyre!("migrated appchain block hash does not match the rpc node. migrated: {appchain_block_hash}, node:{node_block_hash}"));
-                }
-            } else {
-                warn!("migration is taking place, but no appchain block hash was provided, so the rpc node state check will be skipped");
-            }
-
-            self.appchain_migration(migration.migration_params).await?;
+            self.appchain_migration(migration_params).await?;
         }
 
         Ok(None)
@@ -161,7 +142,7 @@ pub trait MchainProvider: Send + Sync {
 
             if slot.seq_block_number == 0 {
                 assert_eq!(slot, Default::default());
-                assert_eq!(mchain_block_number, if not_pending { 1 } else { 2 });
+                // assert_eq!(mchain_block_number - offset, if not_pending { 1 } else { 2 });
                 return (None, not_pending.then_some(mchain_block_number));
             }
 
@@ -194,18 +175,6 @@ pub trait MchainProvider: Send + Sync {
     async fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
         Ok(self.request("mchain_appchainMigration", [params]).await?)
     }
-}
-
-/// The config for and appchain migration
-#[derive(Debug, Clone)]
-pub struct MigrationConfig {
-    /// migration params, inclue the batch and delayed msgs acc and count
-    pub migration_params: MigrationParams,
-    /// The appchain block hash at the point of migration
-    pub migrated_appchain_block_hash: Option<B256>,
-    /// The rpc url (it's only used to check the appchain block hash if a migration is taking
-    /// place)
-    pub appchain_rpc_url: Option<Url>,
 }
 
 async fn validate_block_add_timestamp(

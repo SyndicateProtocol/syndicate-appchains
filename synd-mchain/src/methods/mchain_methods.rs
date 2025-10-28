@@ -186,6 +186,15 @@ pub fn get_source_chains_processed_blocks(
     }
 }
 
+/// `mchain_getMigrationOffset`
+pub fn get_migration_offset(
+    _params: Params<'_>,
+    (db, _, _): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
+    _: &Extensions,
+) -> Result<u64, ErrorObjectOwned> {
+    Ok(db.get_migration_offset())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
