@@ -136,7 +136,7 @@ pub fn rollback_to_block(
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MigrationParams {
     /// The initial settlement block number at point of migration
-    pub initial_settlement_block: u64,
+    pub settlement_start_block: u64,
     /// The batch accumulator at point of migration
     pub batch_acc: B256,
     /// The batch count at point of migration
@@ -156,7 +156,7 @@ pub fn appchain_migration(
     let (migration_params,): (MigrationParams,) = params.parse()?;
     debug!("appchain migration starting with params: {:?}", migration_params);
     db.appchain_migration(
-        migration_params.initial_settlement_block,
+        migration_params.settlement_start_block,
         migration_params.batch_acc,
         migration_params.batch_count,
         migration_params.delayed_msgs_acc,

@@ -15,7 +15,7 @@ pub use jsonrpsee::{
 };
 pub use serde::de::DeserializeOwned;
 use shared::{tracing::SpanKind, types::BlockRef};
-use tracing::{info, instrument, warn};
+use tracing::{debug, instrument, warn};
 use url::Url;
 
 /// Known state of the `synd-mchain`
@@ -94,29 +94,27 @@ pub trait MchainProvider: Send + Sync {
         settlement_client: &impl synd_chain_ingestor::client::Provider,
         migration: Option<MigrationConfig>,
     ) -> eyre::Result<Option<KnownState>> {
-        info!("reconciling mchain with source chains");
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
         if let Some(mchain_block_number) = mchain_block_number {
             let mchain_block_before = self.get_block_number().await;
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
-            info!(
-                "reconciliation complete: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
-                mchain_block_before, safe_state, mchain_block_after
+            debug!(
+                "rolled back to block {:?}, before: {:?}, after: {:?}",
+                mchain_block_number, mchain_block_before, mchain_block_after
             );
         }
         if safe_state.is_some() {
-            info!("safe state found, returning");
+            debug!("safe state found");
             return Ok(safe_state);
         }
-        info!("no safe state found, checking for migration");
+        debug!("no safe state found, checking for migration");
         let migration = migration.clone();
-        info!("migration: {:?}", migration);
 
         // mchain is empty, if there is migration data, proceed with migration
         if let Some(migration) = migration {
-            info!("migration is taking place, proceeding with migration");
+            debug!("migration found, proceeding with migration");
             // assert that the appchain block hash matches the rpc node
             if let Some(appchain_block_hash) = migration.migrated_appchain_block_hash {
                 let rpc_url = migration.appchain_rpc_url.unwrap_or_else(|| {
@@ -152,7 +150,6 @@ pub trait MchainProvider: Send + Sync {
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
         settlement_client: &impl synd_chain_ingestor::client::Provider,
     ) -> (Option<KnownState>, Option<u64>) {
-        info!("getting safe state");
         let mut current_block = BlockNumberOrTag::Pending;
         loop {
             #[allow(clippy::unwrap_used)]
@@ -168,7 +165,6 @@ pub trait MchainProvider: Send + Sync {
                 return (None, not_pending.then_some(mchain_block_number));
             }
 
-            info!("checking slot {:?}", slot);
             let mut state = KnownState {
                 sequencing_block: BlockRef {
                     number: slot.seq_block_number,
@@ -185,9 +181,8 @@ pub trait MchainProvider: Send + Sync {
                 validate_block_add_timestamp(sequencing_client, &mut state.sequencing_block).await;
             let set_valid =
                 validate_block_add_timestamp(settlement_client, &mut state.settlement_block).await;
-            info!("seq valid: {}, set valid: {}", seq_valid, set_valid);
             if seq_valid && set_valid {
-                info!("found safe state {:?} current block {:?}", state, current_block);
+                debug!("found safe state {:?}, current block {:?}", state, current_block);
                 return (Some(state), not_pending.then_some(mchain_block_number));
             }
             current_block = BlockNumberOrTag::Number(mchain_block_number - 1);

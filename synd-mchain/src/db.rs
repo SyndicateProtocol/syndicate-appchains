@@ -379,17 +379,17 @@ pub trait ArbitrumDB {
     /// Applies a custom batch with appchain migration information
     fn appchain_migration(
         &self,
-        initial_settlement_block: u64,
+        settlement_start_block: u64,
         batch_acc: B256,
         batch_count: u64,
         delayed_msgs_acc: B256,
         delayed_msgs_count: u64,
     ) -> eyre::Result<()> {
         // the offset is the difference between the initial settlement block and the batch count
-        let offset = initial_settlement_block - batch_count;
+        let offset = settlement_start_block - batch_count;
         self.put_offset(offset);
         self.put_block(
-            initial_settlement_block,
+            settlement_start_block,
             &Block {
                 timestamp: 0u64,
                 batch: Bytes::new(),
@@ -408,7 +408,7 @@ pub trait ArbitrumDB {
         );
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
         self.put_state(&State {
-            batch_count: initial_settlement_block,
+            batch_count: settlement_start_block,
             batch_acc,
             message_count: delayed_msgs_count,
             message_acc: delayed_msgs_acc,
