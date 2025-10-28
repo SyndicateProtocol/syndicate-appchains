@@ -13,7 +13,7 @@ use jsonrpsee::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tracing::{error, info};
+use tracing::{debug, error};
 
 /// `mchain_addBatch`
 #[allow(clippy::unwrap_used)]
@@ -135,6 +135,8 @@ pub fn rollback_to_block(
 /// `mchain_appchainMigration` params
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MigrationParams {
+    /// The initial settlement block number at point of migration
+    pub initial_settlement_block: u64,
     /// The batch accumulator at point of migration
     pub batch_acc: B256,
     /// The batch count at point of migration
@@ -151,16 +153,17 @@ pub fn appchain_migration(
     (db, _metrics, _mutex): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> Result<(), ErrorObjectOwned> {
-    info!("appchain migration started");
     let (migration_params,): (MigrationParams,) = params.parse()?;
+    debug!("appchain migration starting with params: {:?}", migration_params);
     db.appchain_migration(
+        migration_params.initial_settlement_block,
         migration_params.batch_acc,
         migration_params.batch_count,
         migration_params.delayed_msgs_acc,
         migration_params.delayed_msgs_count,
     )
     .map_err(to_err)?;
-    info!("appchain migration completed");
+    debug!("appchain migration completed");
     Ok(())
 }
 /// `mchain_getSourceChainsProcessedBlocks`
