@@ -100,7 +100,7 @@ pub trait MchainProvider: Send + Sync {
             let mchain_block_before = self.get_block_number().await;
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
-            debug!(
+            warn!(
                 "rolled back to block {:?}, before: {:?}, after: {:?}",
                 mchain_block_number, mchain_block_before, mchain_block_after
             );
