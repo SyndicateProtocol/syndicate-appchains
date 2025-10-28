@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -488,14 +488,14 @@ library GasAggregatorUtils {
      * @param begin Pointer to the start value to partition
      * @param end Pointer past the end value to partition
      * @param offset Memory offset of the keys array from the values one
-     * @return The partition index in range [begin + 0x20, end)
+     * @return index The partition index in range [begin + 0x20, end)
      *         such that the ranges [begin, index) and [index, end) are partially sorted
      *         and each range contains at least one element.
      * @dev This function handles duplicate elements well - the pivot is selected
      *         near the middle of the range when duplicates are present.
      *         It makes a single pass through the data and does n/6 swaps on average.
      */
-    function _partition(uint256 begin, uint256 end, uint256 offset) private pure returns (uint256) {
+    function _partition(uint256 begin, uint256 end, uint256 offset) private pure returns (uint256 index) {
         unchecked {
             // the midpoint rounds up and is always greater than begin
             // this ensures an index greater than begin will be returned
