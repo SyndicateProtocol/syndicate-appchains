@@ -505,6 +505,9 @@ mod tests {
             private_key: test_account1().private_key.to_string(),
             sequencing_rpc_urls: vec![Url::parse("http://localhost:8545").unwrap()],
             wait_for_receipt_timeout: Some(Duration::from_secs(1)),
+            // Anvil provider default gas limit is 1_000_000, while wallet has 100 ETH.
+            // Wallet balance >= max_fee_per_gas * gas_limit
+            max_fee_per_gas: 100_000_000_000,
             ..Default::default()
         }
     }
