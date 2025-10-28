@@ -38,8 +38,8 @@ type Config struct {
 	EnclaveTLSConfig tls.Config      `json:"EnclaveTLSConfig"`
 
 	// Max Fee Per Gas in wei for Proposer transactions
-	// uint64 max here is equivalent to 18.446 ETH, which is sufficient
-	MaxFeePerGas uint64 `json:"MaxFeePerGas"`
+	// int64 max here is equivalent to 9.22 ETH, which is sufficient
+	MaxFeePerGas int64 `json:"MaxFeePerGas"`
 }
 
 var Keys = map[string]struct {
@@ -108,6 +108,11 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid private-key: %w", err)
 	}
 
+	maxFeePerGas := viper.GetInt64("max-fee-per-gas")
+	if maxFeePerGas < 0 {
+		return nil, fmt.Errorf("max-fee-per-gas must be greater than or equal to 0")
+	}
+
 	return &Config{
 		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
 		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
@@ -132,7 +137,7 @@ func LoadConfig() (*Config, error) {
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
-		MaxFeePerGas: viper.GetUint64("max-fee-per-gas"),
+		MaxFeePerGas: maxFeePerGas,
 	}, nil
 }
 
