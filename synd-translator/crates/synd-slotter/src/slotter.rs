@@ -72,8 +72,8 @@ pub async fn run(
                 .recv(slot_end_ts)
                 .await
                 .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
-            metrics.record_last_processed_block(set_block.block_ref.number, Chain::Sequencing);
-            metrics.update_chain_timestamp_lag(set_block.block_ref.timestamp, Chain::Sequencing);
+            metrics.record_last_processed_block(set_block.block_ref.number, Chain::Settlement);
+            metrics.update_chain_timestamp_lag(set_block.block_ref.timestamp, Chain::Settlement);
         }
 
         if seq_block.tx_count > 0 || !messages.is_empty() {
