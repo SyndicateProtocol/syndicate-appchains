@@ -146,8 +146,8 @@ pub enum DBKey {
     MessageAcc(u64),
     /// DB schema version
     Version,
-    /// Offset for the initial set block number
-    Offset,
+    /// Offset for the initial migration settlement start block number
+    MigrationOffset,
 }
 
 impl fmt::Display for DBKey {
@@ -157,7 +157,7 @@ impl fmt::Display for DBKey {
             Self::State => write!(f, "s"),
             Self::MessageAcc(num) => write!(f, "m{num}"),
             Self::Version => write!(f, "v"),
-            Self::Offset => write!(f, "o"),
+            Self::MigrationOffset => write!(f, "o"),
         }
     }
 }
@@ -233,17 +233,17 @@ pub trait ArbitrumDB {
         );
     }
 
-    /// Puts the offset for the initial set block number
-    fn put_offset(&self, value: u64) {
+    /// Puts the offset for the initial migration
+    fn put_migration_offset(&self, value: u64) {
         self.put(
-            DBKey::Offset.to_string(),
+            DBKey::MigrationOffset.to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
     }
 
-    /// Gets the offset for the initial set block number
-    fn get_offset(&self) -> u64 {
-        self.get(DBKey::Offset.to_string()).map_or(0, |x| {
+    /// Gets the offset for the initial migration
+    fn get_migration_offset(&self) -> u64 {
+        self.get(DBKey::MigrationOffset.to_string()).map_or(0, |x| {
             bincode::serde::decode_from_slice(&x, bincode::config::standard()).unwrap().0
         })
     }
@@ -387,7 +387,11 @@ pub trait ArbitrumDB {
     ) -> eyre::Result<()> {
         // the offset is the difference between the initial settlement block and the batch count
         let offset = settlement_start_block - batch_count;
-        self.put_offset(offset);
+        self.put_migration_offset(offset);
+        // NOTE: We use settlement_start_block as the block number as the batch count because that's
+        // what Nitro expects. Because mchain is designed so that block number = batch count
+        // we need to have an offset in order to get the correct block from a given batch
+        // count.
         self.put_block(
             settlement_start_block,
             &Block {
