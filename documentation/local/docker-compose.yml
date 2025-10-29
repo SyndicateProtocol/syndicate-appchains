@@ -16,20 +16,20 @@ services:
       - "8545"
       - "8546"
     volumes:
-      - ./datadir:/datadir
+      - ./data/mchain:/datadir
       # - ./bin:/usr/local/bin
     networks:
       - appchains-network
 
   seq-ingestor:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    platform: linux/amd64
-    # build:
-    #   context: ../../
-    #   target: synd-chain-ingestor
-    #   dockerfile: Dockerfile
+    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    # platform: linux/amd64
+    build:
+      context: ../../
+      target: synd-chain-ingestor
+      dockerfile: Dockerfile
     volumes:
-      - ./:/chains
+      - .data/seq-ingestor:/chains
     env_file: .env
     environment:
       DB_FILE: /chains/seq-ingestor.db
@@ -42,14 +42,14 @@ services:
       - appchains-network
 
   set-ingestor:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    platform: linux/amd64
-    # build:
-    #   context: ../../
-    #   target: synd-chain-ingestor
-    #   dockerfile: Dockerfile
+    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    # platform: linux/amd64
+    build:
+      context: ../../
+      target: synd-chain-ingestor
+      dockerfile: Dockerfile
     volumes:
-      - ./:/chains
+      - .data/set-ingestor:/chains
     env_file: .env
     environment:
       DB_FILE: /chains/set-ingestor.db
@@ -126,7 +126,7 @@ services:
       healthcheck:
         condition: service_healthy
     volumes:
-      - ./data:/home/user/.arbitrum
+      - ./data/nitro:/home/user/.arbitrum
     ports:
       - "8547"
       - "6070"
