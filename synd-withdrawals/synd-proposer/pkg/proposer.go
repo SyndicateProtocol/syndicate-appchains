@@ -232,11 +232,11 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
 
-			// Estimate gas with buffer to handle volatile gas conditions
-			gasWithBuffer, err := p.estimateGasWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress)
-
 			// Create transaction options with buffered gas estimate
 			opts := p.makeTransactOptsCopy(ctx)
+
+			// Estimate gas with buffer to handle volatile gas conditions
+			gasWithBuffer, err := p.estimateGasWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress, 2)
 			if err == nil && gasWithBuffer > 0 {
 				opts.GasLimit = gasWithBuffer
 			}
@@ -598,13 +598,14 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	return nil
 }
 
-// estimateGasWithBuffer estimates gas for the SubmitAssertion transaction and doubles it
-// to handle volatile gas conditions. Returns an error if estimation fails.
+// estimateGasWithBuffer estimates gas for the SubmitAssertion transaction and multiplies it
+// by the bufferFactor to handle volatile gas conditions. Returns an error if estimation fails.
 func (p *Proposer) estimateGasWithBuffer(
 	ctx context.Context,
 	assertion teemodule.PendingAssertion,
 	signature []byte,
 	keyAddress common.Address,
+	bufferFactor uint64,
 ) (uint64, error) {
 	// Create a copy of TransactOpts for gas estimation
 	opts := p.makeTransactOptsCopy(ctx)
@@ -626,10 +627,11 @@ func (p *Proposer) estimateGasWithBuffer(
 		return 0, errors.New("gas estimation returned 0")
 	}
 
-	// Double the gas estimate to handle spikes
-	bufferedGas := estimatedGas * 2
+	// Apply buffer factor to the gas estimate to handle spikes
+	bufferedGas := estimatedGas * bufferFactor
 	log.Debug().
 		Uint64("estimatedGas", estimatedGas).
+		Uint64("bufferFactor", bufferFactor).
 		Uint64("bufferedGas", bufferedGas).
 		Msg("Gas estimation with buffer applied")
 
