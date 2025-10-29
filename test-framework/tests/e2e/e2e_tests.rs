@@ -515,8 +515,8 @@ async fn e2e_settlement_reorg() -> Result<()> {
 
             // Wait for deposit1 to be processed
             wait_until!(
-                components.appchain_provider.get_balance(wallet_address).await?
-                    == parse_ether("1")?,
+                components.appchain_provider.get_balance(wallet_address).await? ==
+                    parse_ether("1")?,
                 Duration::from_secs(10)
             );
 
@@ -532,8 +532,8 @@ async fn e2e_settlement_reorg() -> Result<()> {
 
             // Wait for deposit2 to be processed
             wait_until!(
-                components.appchain_provider.get_balance(wallet_address).await?
-                    == parse_ether("2")?,
+                components.appchain_provider.get_balance(wallet_address).await? ==
+                    parse_ether("2")?,
                 Duration::from_secs(10)
             );
             assert_eq!(components.mchain_provider.get_block_number().await, 4);
@@ -674,8 +674,8 @@ async fn e2e_sequencing_reorg() -> Result<()> {
                 Duration::from_secs(10)
             );
             wait_until!(
-                components.appchain_provider.get_balance(wallet_address).await?
-                    == parse_ether("10")?,
+                components.appchain_provider.get_balance(wallet_address).await? ==
+                    parse_ether("10")?,
                 Duration::from_secs(10)
             );
 
@@ -871,8 +871,8 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
             let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
-                components.appchain_provider.get_transaction_count(wallet_address).await?
-                    == nonce + 1,
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
                 Duration::from_secs(10)
             );
 
