@@ -47,3 +47,9 @@ pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
         .unwrap();
     Ok(())
 }
+
+/// mine a block at a specific timestamp
+pub async fn mine_block_at_ts(provider: &FilledProvider, absolute_ts: u64) -> Result<()> {
+    provider.evm_mine(Some(MineOptions::Timestamp(Some(absolute_ts)))).await.unwrap();
+    Ok(())
+}

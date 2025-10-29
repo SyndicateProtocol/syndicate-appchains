@@ -20,6 +20,7 @@ use alloy::{
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster,
     erc1967_proxy::ERC1967Proxy,
+    gas_meter::GasMeter,
     i_inbox::IInbox,
     i_upgrade_executor::IUpgradeExecutor,
     r#always_allowed_module::AlwaysAllowedModule,
@@ -44,7 +45,7 @@ use synd_mchain::{
     methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
 };
 use test_utils::{
-    anvil::{mine_block, start_anvil, start_anvil_with_args},
+    anvil::{mine_block, mine_block_at_ts, start_anvil, start_anvil_with_args},
     chain_info::{
         test_account1, test_account3, test_account8, test_account9, ChainInfo, ProcessInstance,
         PRIVATE_KEY, PRIVATE_KEY8, PRIVATE_KEY9,
@@ -192,15 +193,12 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil => {
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
                 start_anvil_with_args(
                     SEQUENCING_CHAIN_ID,
                     &["--timestamp", 1756209109.to_string().as_str()],
                 )
                 .await?
-            }
-            BaseChainsType::PreLoaded(_) => {
-                start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
@@ -255,8 +253,18 @@ impl TestComponents {
 
         info!("Sequencing chain Nitro URL: {}", seq_rpc_ws_url);
 
-        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider).send().await?;
-        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(0);
+        let _ = GasMeter::deploy_builder(&seq_provider).send().await?;
+        let gas_meter_address_impl = seq_provider.default_signer_address().create(0);
+
+        let _ = ERC1967Proxy::deploy_builder(&seq_provider, gas_meter_address_impl, Bytes::new())
+            .send()
+            .await?;
+        let gas_meter_address = seq_provider.default_signer_address().create(1);
+
+        let _ = SyndicateSequencingChain::deploy_builder(&seq_provider, gas_meter_address)
+            .send()
+            .await?;
+        let sequencing_contract_address_impl = seq_provider.default_signer_address().create(2);
 
         let _ = ERC1967Proxy::deploy_builder(
             &seq_provider,
@@ -265,10 +273,14 @@ impl TestComponents {
         )
         .send()
         .await?;
-        let sequencing_contract_address = seq_provider.default_signer_address().create(1);
+        let sequencing_contract_address = seq_provider.default_signer_address().create(3);
 
         let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        let always_allowed_module_address = seq_provider.default_signer_address().create(2);
+        let always_allowed_module_address = seq_provider.default_signer_address().create(4);
+
+        // Setup Gas Meter
+        let gas_meter = GasMeter::new(gas_meter_address, &seq_provider);
+        let _ = gas_meter.initialize().send().await?;
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
@@ -284,13 +296,7 @@ impl TestComponents {
             .await?;
 
         match options.base_chains_type {
-            BaseChainsType::Anvil => {
-                mine_block(&seq_provider, 0).await?;
-            }
-            BaseChainsType::PreLoaded(_) => {
-                // disable gas tracking, otherwise there will be an underflow error with anvil
-                // timstamp 0
-                let _ = sequencing_contract.disableGasTracking().send().await?;
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
                 mine_block(&seq_provider, 0).await?;
             }
             _ => {}
@@ -388,11 +394,16 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                start_anvil_with_args(
+                let chain_info = start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
                     &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
-                .await?
+                .await?;
+
+                // set timestamp to epoch start time
+                mine_block_at_ts(&chain_info.provider, 1756209109).await?;
+
+                chain_info
             }
         };
 

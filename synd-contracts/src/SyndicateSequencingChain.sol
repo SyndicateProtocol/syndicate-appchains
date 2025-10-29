@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
-import {GasCounter} from "./staking/GasCounter.sol";
+import {GasMeter} from "./staking/GasMeter.sol";
 import {ISyndicateSequencingChain} from "./interfaces/ISyndicateSequencingChain.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -20,6 +20,9 @@ struct SyndicateSequencingChainStorage {
     /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
     /// @dev Version number to track implementation upgrades
     uint256 version;
+    /// @notice The address of the GasMeter contract
+    /// @dev This is set during initialization and never changes
+    address gasMeter;
 }
 
 /// @title SyndicateSequencingChain
@@ -61,9 +64,12 @@ contract SyndicateSequencingChain is
     Initializable,
     SequencingModuleChecker,
     ISyndicateSequencingChain,
-    GasCounter,
     UUPSUpgradeable
 {
+    /// @notice The address of the GasMeter contract
+    /// @dev This is set during initialization and never changes
+    address public immutable gasMeter;
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -111,6 +117,9 @@ contract SyndicateSequencingChain is
     /// @notice Thrown when a zero address is provided where a valid address is required
     error ZeroAddress();
 
+    /// @notice Thrown when the caller of a function is not the GasMeter
+    error NotGasMeterContract();
+
     /*//////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -125,7 +134,9 @@ contract SyndicateSequencingChain is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent the implementation contract from being initialized
-    constructor() {
+    constructor(address _gasMeter) {
+        if (_gasMeter == address(0)) revert ZeroAddress();
+        gasMeter = _gasMeter;
         _disableInitializers();
     }
 
@@ -147,21 +158,21 @@ contract SyndicateSequencingChain is
         require(_appchainId != 0, "App chain ID cannot be 0");
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
         __UUPSUpgradeable_init();
-        _enableGasTracking();
 
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
         $.version = 1_000_000; // 1.0.0
     }
 
+    modifier onlyGasMeter() {
+        require(msg.sender == gasMeter, NotGasMeterContract());
+        _;
+    }
+
     /// @notice Authorizes contract upgrades. Only callable by the contract owner.
     /// @dev Required by UUPSUpgradeable to restrict upgradeability to the owner.
     /// @param _newImplementation The address of the new implementation contract.
-    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {
-        // Note: GasAggregator no longer tracks allowed implementations or bans chains
-        // The allowGasTrackingBanOnUpgrade setting is kept for backwards compatibility but has no effect
-        // SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-    }
+    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
 
     /// @notice Encode transaction data with L2 message type prefix
     /// @dev Prepends the transaction data with the L2MessageType_SignedTx identifier
@@ -172,54 +183,71 @@ contract SyndicateSequencingChain is
         return abi.encodePacked(L2MessageType_SignedTx, data);
     }
 
+    /// @notice Processes a single signed transaction by forwarding it to the gas meter contract for gas accounting and validation.
+    /// @dev Requires that the transaction data is not empty. Delegates the call to processTransactionImpl on the configured gas meter contract.
+    /// @param data The transaction data to process (must not be empty).
+    function processTransaction(bytes calldata data) external {
+        GasMeter(gasMeter).meterCall(abi.encodeCall(SyndicateSequencingChain._processTransaction, (msg.sender, data)));
+    }
+
     /// @notice Process a single signed transaction
     /// @dev Validates the transaction through the permission module and emits an event if authorized.
     ///      The tx.origin is intentionally used as part of the security model - see contract-level documentation.
+    /// @param sequencer The address of original sequencer that is processing the transaction
     /// @param data The transaction data to process (must not be empty)
     //#olympix-ignore-required-tx-origin
-    function processTransaction(bytes calldata data) external trackGasUsage {
+    function _processTransaction(address sequencer, bytes calldata data) external onlyGasMeter {
         require(data.length > 0, NoTxData());
 
         // Encode transaction with L2 message type for off-chain processing
         bytes memory transaction = encodeTransaction(data);
 
-        // Check authorization through permission module (considers both msg.sender and tx.origin)
-        require(isAllowed(msg.sender, tx.origin, transaction), TransactionOrSenderNotAllowed());
+        // Check authorization through permission module (considers both sequencer and tx.origin)
+        require(isAllowed(sequencer, tx.origin, transaction), TransactionOrSenderNotAllowed());
 
         // Emit event for off-chain systems to execute on application chain
-        emit TransactionProcessed(msg.sender, transaction);
+        emit TransactionProcessed(sequencer, transaction);
+    }
+
+    /// @notice Processes multiple signed transactions in a single call by forwarding them to the gas meter contract for gas accounting and validation.
+    /// @dev Each transaction in the array must be non-empty. This function delegates processing to the configured gas meter contract for each transaction.
+    /// @param data An array of transaction data to process (must not be empty).
+    function processTransactionsBulk(bytes[] calldata data) external {
+        GasMeter(gasMeter).meterCall(
+            abi.encodeCall(SyndicateSequencingChain._processTransactionsBulk, (msg.sender, data))
+        );
     }
 
     /// @notice Processes multiple signed transactions in bulk for gas efficiency
     /// @dev Each transaction is individually validated through the permission module.
     ///      Only authorized transactions emit events, unauthorized ones are silently skipped.
     ///      The tx.origin is intentionally used as part of the security model.
+    /// @param sequencer The address of original sequencer that is processing the transactions.
     /// @param data An array of transaction data to process (must not be empty)
     //#olympix-ignore
-    function processTransactionsBulk(bytes[] calldata data) external trackGasUsage {
+    function _processTransactionsBulk(address sequencer, bytes[] calldata data) external onlyGasMeter {
         uint256 dataCount = data.length;
         require(dataCount > 0, NoTxData());
 
         // Process all transactions individually
-        uint256 i;
-        for (i = 0; i < dataCount; i++) {
+        for (uint256 i = 0; i < dataCount; i++) {
             require(data[i].length > 0, NoTxData());
 
             // Encode transaction with L2 message type
             bytes memory transaction = encodeTransaction(data[i]);
 
-            // Check authorization (considers both msg.sender and tx.origin)
-            bool allowed = isAllowed(msg.sender, tx.origin, transaction); //#olympix-ignore-any-tx-origin
+            // Check authorization (considers both sequencer and tx.origin)
+            bool allowed = isAllowed(sequencer, tx.origin, transaction); //#olympix-ignore-any-tx-origin
 
             if (allowed) {
                 // Only emit event for authorized transactions
-                emit TransactionProcessed(msg.sender, transaction);
+                emit TransactionProcessed(sequencer, transaction);
             }
         }
     }
 
     /*//////////////////////////////////////////////////////////////
-                         EMISSIONS RECEIVER ADMIN FUNCTIONS
+                         ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Updates the contract version (owner only, typically called during upgrades)
@@ -228,21 +256,5 @@ contract SyndicateSequencingChain is
     function updateVersion(uint256 newVersion) external onlyOwner {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.version = newVersion;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                         GAS TRACKING ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Disable gas tracking if needed
-    /// @dev Only callable by the contract owner
-    function disableGasTracking() external onlyOwner {
-        _disableGasTracking();
-    }
-
-    /// @notice Enable gas tracking
-    /// @dev Only callable by the contract owner
-    function enableGasTracking() external onlyOwner {
-        _enableGasTracking();
     }
 }

@@ -9,6 +9,8 @@ import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 ///      - Traditional storage: New variables appended at end
 ///      - Namespaced storage: New fields in ERC-7201 namespace
 contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain {
+    constructor(address _gasMeter) SyndicateSequencingChain(_gasMeter) {}
+
     /*//////////////////////////////////////////////////////////////
                     NEW V2 STORAGE - APPENDED SAFELY
     //////////////////////////////////////////////////////////////*/
@@ -49,7 +51,7 @@ contract SyndicateSequencingChainUpgradeV2 is SyndicateSequencingChain {
 
     /// @notice Process transaction with fee (new V2 functionality)
     /// @dev Adds fee collection to existing functionality
-    function processTransactionWithFee(bytes calldata data) external payable trackGasUsage {
+    function processTransactionWithFee(bytes calldata data) external payable {
         require(data.length > 0, NoTxData());
 
         // Encode transaction

@@ -12,6 +12,7 @@ import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {IGasAggregator} from "src/interfaces/IGasAggregator.sol";
 import {MinimalUUPSStub} from "src/factory/MinimalUUPSStub.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -34,6 +35,14 @@ contract DeploySyndicateFactory is Script {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         syndicateFactory = SyndicateFactory(address(proxy));
         console.log("Deployed SyndicateFactory", address(syndicateFactory));
+
+        // Deploy GasMeter
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        syndicateFactory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
+        console.log("Set SyndicateSequencingChain implementation", sequencingChainImpl);
 
         requireAndModuleFactory = new RequireAndModuleFactory(admin);
         console.log("Deployed RequireAndModuleFactory", address(requireAndModuleFactory));
@@ -68,8 +77,12 @@ contract DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule is Script 
         permissionModule = new RequireAndModule(admin);
         console.log("Deployed RequireAndModule", address(permissionModule));
 
+        // Deploy GasMeter
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+
         // Deploy sequencer with permission module
-        sequencingChain = new SyndicateSequencingChain();
+        sequencingChain = new SyndicateSequencingChain(gasMeter);
         sequencingChain.initialize(admin, address(permissionModule), appchainId);
         console.log("Deployed SyndicateSequencingChain", address(sequencingChain));
 

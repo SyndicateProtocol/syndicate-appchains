@@ -212,7 +212,7 @@ impl Batcher {
             Ok(instance) => instance,
             Err(e) => {
                 error!("Failed to reset sequencing contract instance: {:?}", e);
-                return
+                return;
             }
         };
 

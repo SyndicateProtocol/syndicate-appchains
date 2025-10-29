@@ -52,6 +52,10 @@ contract SyndicateFactoryWrapperTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         syndicateFactory = SyndicateFactory(address(proxy));
 
+        SyndicateSequencingChain sequencingChainImpl = new SyndicateSequencingChain(address(1));
+        vm.prank(admin);
+        syndicateFactory.setSyndicateSequencingChainImplementation(address(sequencingChainImpl));
+
         // Deploy module factories
         andFactory = new RequireAndModuleFactory(admin);
         orFactory = new RequireOrModuleFactory(admin);

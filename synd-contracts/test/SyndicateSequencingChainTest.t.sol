@@ -9,6 +9,7 @@ import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -47,16 +48,27 @@ contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
+
     address public admin;
+    address public gasMeter;
 
     function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
 
+        GasMeter gasMeterImpl = new GasMeter();
+        gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+
         SyndicateFactory implementation = new SyndicateFactory();
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         factory = SyndicateFactory(address(proxy));
+
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
+
+        address syndicateChainImpl = factory.syndicateChainImpl();
+        assertEq(syndicateChainImpl, address(sequencingChainImpl));
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
@@ -128,7 +140,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessTransaction() public {
+    function testProcessTransaction_blah() public {
         bytes memory data = abi.encode("raw transaction");
 
         vm.startPrank(admin);
@@ -165,7 +177,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testConstructorWithZeroAppChainId() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
 
         vm.expectRevert("App chain ID cannot be 0");
@@ -173,7 +185,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeBadguy() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
@@ -184,7 +196,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeOwner() public {
-        address chainImpl = address(new SyndicateSequencingChain());
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
         address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
         SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
 
@@ -193,7 +205,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testUpgradeAuthorizationOnlyOwner() public {
-        SyndicateSequencingChain newImpl = new SyndicateSequencingChain();
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain(gasMeter);
 
         // Deploy chain through factory
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
@@ -203,6 +215,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
         vm.startPrank(admin);
+        testFactory.setSyndicateSequencingChainImplementation(address(newImpl));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
@@ -222,15 +235,17 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
         SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
+        SyndicateSequencingChain impl0 = new SyndicateSequencingChain(gasMeter);
 
         vm.startPrank(admin);
+        testFactory.setSyndicateSequencingChainImplementation(address(impl0));
 
         (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
         vm.stopPrank();
 
         // Create two different implementations
-        SyndicateSequencingChain impl1 = new SyndicateSequencingChain();
-        SyndicateSequencingChain impl2 = new SyndicateSequencingChain();
+        SyndicateSequencingChain impl1 = new SyndicateSequencingChain(gasMeter);
+        SyndicateSequencingChain impl2 = new SyndicateSequencingChain(gasMeter);
 
         // allow only impl1
         vm.prank(admin);

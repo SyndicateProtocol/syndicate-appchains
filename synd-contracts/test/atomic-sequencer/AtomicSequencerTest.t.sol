@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -54,6 +55,11 @@ contract AtomicSequencerTest is Test {
         bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         SyndicateFactory factory = SyndicateFactory(address(proxy));
+
+        GasMeter gasMeterImpl = new GasMeter();
+        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
 
         (address chainAddress,) =
             factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
-import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -9,6 +8,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 
 /// @notice Storage struct for SyndicateFactory using ERC-7201 namespaced storage pattern
 /// @dev This struct contains all the state variables for the factory contract.
@@ -82,6 +82,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @notice Thrown when the proxy upgrade to the latest implementation fails
     error FailedToInitializeSyndicateSequencingChain();
 
+    /// @notice Thrown when the syndicate chain implementation is not set
+    error SyndicateChainImplementationNotSet();
+
     /*//////////////////////////////////////////////////////////////
                              EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -113,7 +116,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     }
 
     /// @notice Initializes the upgradeable factory
-    /// @dev MUST setup gasAggregator separately after initialization
     /// @dev This function can only be called once and sets up the entire factory infrastructure including:
     ///      - Role-based access control with the provided admin
     ///      - Deterministic stub implementation deployment
@@ -137,10 +139,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
         $.stubImplementation = Create2.deploy(0, bytes32("SYNDICATE_STUB_V1"), stubBytecode);
-
-        // Deploy the real implementation and make it the default for new appchains
-        $.syndicateChainImpl = address(new SyndicateSequencingChain());
-        emit ImplementationAdded($.syndicateChainImpl);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -241,7 +239,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         internal
         returns (address sequencingChain)
     {
-        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        address syndicateChainImpl = syndicateChainImpl();
+        if (syndicateChainImpl == address(0)) revert SyndicateChainImplementationNotSet();
 
         // Deploy the sequencing chain using consistent proxy bytecode for deterministic addresses
         bytes memory consistentBytecode = getProxyBytecode();
@@ -249,9 +248,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
         // Upgrade the proxy to use the latest implementation (instead of the stub)
         bytes memory initData =
-            abi.encodeWithSignature("initialize(address,address,uint256)", admin, address(permissionModule), chainId);
+            abi.encodeCall(SyndicateSequencingChain.initialize, (admin, address(permissionModule), chainId));
         (bool upgradeSuccess,) = sequencingChain.call(
-            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", $.syndicateChainImpl, initData)
+            abi.encodeWithSignature("upgradeToAndCall(address,bytes)", syndicateChainImpl, initData)
         );
         if (!upgradeSuccess) {
             revert FailedToInitializeSyndicateSequencingChain();
