@@ -23,7 +23,7 @@ exo = "${EXO_RPC_URL}"
 holesky = "https://ethereum-holesky-rpc.publicnode.com"
 localhost = "http://localhost:8545"
 mainnet = "${ETH_MAINNET_RPC_URL}"
-risa_devnet = "https://risa-testnet.g.alchemy.com/public"
+risa_devnet = "${RISA_DEVNET_RPC_URL}"
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 syndicate_frame = "https://rpc-frame.syndicate.io"
 
