@@ -51,7 +51,7 @@ contract ArbChainConfig is Initializable {
     uint256 public MIGRATED_BATCH_COUNT;
     uint256 public MIGRATED_DELAYED_MSGS_ACC;
     uint256 public MIGRATED_DELAYED_MSGS_COUNT;
-    uint256 public MIGRATED_APPCHAIN_BLOCK_HASH; // migrated
+    uint256 public MIGRATED_APPCHAIN_BLOCK_HASH;
 
     /**
      * @dev Constructor for the implementation contract

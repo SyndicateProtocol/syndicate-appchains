@@ -7,13 +7,12 @@ use alloy::primitives::{Address, B256};
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
-use shared::parse::{parse_address, parse_hash, parse_url};
+use shared::parse::{parse_address, parse_hash};
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
 use synd_mchain::methods::mchain_methods::MigrationParams;
 use thiserror::Error;
 use tracing::{debug, error};
-use url::Url;
 
 /// Configuration for a generic chain ingestor
 #[allow(missing_docs)]
@@ -197,15 +196,6 @@ pub struct TranslatorConfig {
     /// The delayed messages count at the point of migration
     #[arg(long, env = "MIGRATED_DELAYED_MSGS_COUNT")]
     pub migrated_delayed_msgs_count: Option<u64>,
-
-    /// The appchain block hash at the point of migration
-    #[arg(long, env = "MIGRATED_APPCHAIN_BLOCK_HASH", value_parser = parse_hash)]
-    pub migrated_appchain_block_hash: Option<B256>,
-
-    // The appchain rpc url (it's only used to check the appchain block hash if a migration is
-    // taking place)
-    #[arg(long, env = "APPCHAIN_RPC_URL", value_parser = parse_url)]
-    pub appchain_rpc_url: Option<Url>,
 
     /// The address of the ConfigManager contract on the settlement chain
     #[arg(

@@ -90,12 +90,11 @@ fn override_with_onchain_config(
 
     if config.migrated_batch_acc.is_none() && onchain.migrated_batch_acc != U256::ZERO {
         info!(
-            "using migration data from on-chain config: {} {} {} {} {}",
+            "using migration data from on-chain config: {} {} {} {}",
             onchain.migrated_batch_acc,
             onchain.migrated_batch_count,
             onchain.migrated_delayed_msgs_acc,
             onchain.migrated_batch_count,
-            onchain.migrated_appchain_block_hash
         );
         config.migrated_batch_acc = Some(onchain.migrated_batch_acc.into());
         config.migrated_batch_count = Some(
@@ -111,7 +110,6 @@ fn override_with_onchain_config(
                 .try_into()
                 .unwrap_or_else(|e| panic!("migrated_batch_count u64 overflow {e}")),
         );
-        config.migrated_appchain_block_hash = Some(onchain.migrated_appchain_block_hash.into());
     }
 
     config
@@ -178,8 +176,6 @@ async fn get_config<T: Provider + Clone>(
     let migrated_batch_count_call = arb_chain_config_contract.MIGRATED_BATCH_COUNT();
     let migrated_delayed_msgs_acc_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_ACC();
     let migrated_delayed_msgs_count_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_COUNT();
-    let migrated_appchain_block_hash_call =
-        arb_chain_config_contract.MIGRATED_APPCHAIN_BLOCK_HASH();
 
     let (
         arbitrum_bridge_address,
@@ -193,7 +189,6 @@ async fn get_config<T: Provider + Clone>(
         migrated_batch_count,
         migrated_delayed_msgs_acc,
         migrated_delayed_msgs_count,
-        migrated_appchain_block_hash,
     ) = tokio::try_join!(
         arbitrum_bridge_address_call.call(),
         arbitrum_inbox_address_call.call(),
@@ -206,7 +201,6 @@ async fn get_config<T: Provider + Clone>(
         migrated_batch_count_call.call(),
         migrated_delayed_msgs_acc_call.call(),
         migrated_delayed_msgs_count_call.call(),
-        migrated_appchain_block_hash_call.call(),
     )?;
 
     Ok(ChainConfig {
@@ -221,7 +215,6 @@ async fn get_config<T: Provider + Clone>(
         migrated_batch_count,
         migrated_delayed_msgs_acc,
         migrated_delayed_msgs_count,
-        migrated_appchain_block_hash,
     })
 }
 
@@ -240,7 +233,6 @@ struct ChainConfig {
     migrated_batch_count: U256,
     migrated_delayed_msgs_acc: U256,
     migrated_delayed_msgs_count: U256,
-    migrated_appchain_block_hash: U256,
 }
 
 #[cfg(test)]
@@ -265,7 +257,6 @@ mod test {
             migrated_batch_count: U256::ZERO,
             migrated_delayed_msgs_acc: U256::ZERO,
             migrated_delayed_msgs_count: U256::ZERO,
-            migrated_appchain_block_hash: U256::ZERO,
         };
 
         // Apply overrides
@@ -321,7 +312,6 @@ mod test {
             migrated_batch_count: U256::ZERO,
             migrated_delayed_msgs_acc: U256::ZERO,
             migrated_delayed_msgs_count: U256::ZERO,
-            migrated_appchain_block_hash: U256::ZERO,
         };
 
         // Apply overrides
@@ -374,7 +364,6 @@ mod test {
             migrated_batch_count: U256::from(42),
             migrated_delayed_msgs_acc: U256::from(0xfedcba9876543210u64),
             migrated_delayed_msgs_count: U256::from(99),
-            migrated_appchain_block_hash: U256::from(0xdeadbeefcafebabeu64),
         };
 
         // Apply overrides
@@ -394,10 +383,6 @@ mod test {
             config.migrated_delayed_msgs_count,
             Some(onchain.migrated_delayed_msgs_count.try_into().unwrap())
         );
-        assert_eq!(
-            config.migrated_appchain_block_hash,
-            Some(onchain.migrated_appchain_block_hash.into())
-        );
     }
 
     #[test]
@@ -408,7 +393,6 @@ mod test {
             migrated_batch_count: Some(1000),
             migrated_delayed_msgs_acc: Some([0x88u8; 32].into()),
             migrated_delayed_msgs_count: Some(2000),
-            migrated_appchain_block_hash: Some([0x77u8; 32].into()),
             ..Default::default()
         };
 
@@ -425,7 +409,6 @@ mod test {
             migrated_batch_count: U256::from(42),
             migrated_delayed_msgs_acc: U256::from(0xfedcba9876543210u64),
             migrated_delayed_msgs_count: U256::from(99),
-            migrated_appchain_block_hash: U256::from(0xdeadbeefcafebabeu64),
         };
 
         // Apply overrides
@@ -436,6 +419,5 @@ mod test {
         assert_eq!(config.migrated_batch_count, Some(1000));
         assert_eq!(config.migrated_delayed_msgs_acc, Some([0x88u8; 32].into()));
         assert_eq!(config.migrated_delayed_msgs_count, Some(2000));
-        assert_eq!(config.migrated_appchain_block_hash, Some([0x77u8; 32].into()));
     }
 }
