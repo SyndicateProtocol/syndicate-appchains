@@ -212,7 +212,7 @@ impl Batcher {
             Ok(instance) => instance,
             Err(e) => {
                 error!("Failed to reset sequencing contract instance: {:?}", e);
-                return
+                return;
             }
         };
 
@@ -346,10 +346,20 @@ impl Batcher {
                 .into_transaction_request(),
         };
 
+        // TODO [ENG-2177]: Remove this if we can track down why new contracts gas estimations are
+        // so low
+        let gas = self
+            .sequencing_contract_instance
+            .provider()
+            .estimate_gas(transaction_request.clone())
+            .await
+            .unwrap();
+
         let pending_tx = self
             .sequencing_contract_instance
             .provider()
-            .send_transaction(transaction_request.clone())
+            // TODO [ENG-2177]: Remove 10% increase
+            .send_transaction(transaction_request.clone().gas_limit(gas * 110 / 100))
             .await
             .map_err(|e| {
                 BatchError::SendBatchFailed(format!("error: {e:?}, tx: {transaction_request:?}",))

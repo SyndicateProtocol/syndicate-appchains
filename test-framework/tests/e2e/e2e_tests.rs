@@ -94,11 +94,13 @@ async fn e2e_send_transaction() -> Result<()> {
         _ = components
             .sequencing_contract
             .processTransaction(tx.encoded_2718().into())
+            .gas(100_000)
             .send()
             .await?;
         _ = components
             .sequencing_contract
             .processTransaction(tx.encoded_2718().into())
+            .gas(100_000)
             .send()
             .await?;
         components.mine_seq_block(0).await?;

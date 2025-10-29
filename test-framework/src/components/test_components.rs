@@ -45,7 +45,7 @@ use synd_mchain::{
     methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
 };
 use test_utils::{
-    anvil::{mine_block, start_anvil, start_anvil_with_args},
+    anvil::{mine_block, mine_block_at_ts, start_anvil, start_anvil_with_args},
     chain_info::{
         test_account1, test_account3, test_account8, test_account9, ChainInfo, ProcessInstance,
         PRIVATE_KEY, PRIVATE_KEY8, PRIVATE_KEY9,
@@ -193,15 +193,12 @@ impl TestComponents {
             provider: seq_provider,
             http_url: _,
         } = match options.base_chains_type {
-            BaseChainsType::Anvil => {
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
                 start_anvil_with_args(
                     SEQUENCING_CHAIN_ID,
                     &["--timestamp", 1756209109.to_string().as_str()],
                 )
                 .await?
-            }
-            BaseChainsType::PreLoaded(_) => {
-                start_anvil_with_args(SEQUENCING_CHAIN_ID, &["--timestamp", "0"]).await?
             }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let chain_id = SEQUENCING_CHAIN_ID;
@@ -281,6 +278,10 @@ impl TestComponents {
         let _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(4);
 
+        // Setup Gas Meter
+        let gas_meter = GasMeter::new(gas_meter_address, &seq_provider);
+        let _ = gas_meter.initialize().send().await?;
+
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
@@ -294,7 +295,12 @@ impl TestComponents {
             .send()
             .await?;
 
-        mine_block(&seq_provider, 0).await?;
+        match options.base_chains_type {
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
+                mine_block(&seq_provider, 0).await?;
+            }
+            _ => {}
+        };
 
         // Launch mock settlement chain
         info!("Starting settlement chain...");
@@ -388,11 +394,16 @@ impl TestComponents {
                     .join("config")
                     .join(get_anvil_file(&version));
 
-                start_anvil_with_args(
+                let chain_info = start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
                     &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
                 )
-                .await?
+                .await?;
+
+                // set timestamp to epoch start time
+                mine_block_at_ts(&chain_info.provider, 1756209109).await?;
+
+                chain_info
             }
         };
 
