@@ -353,7 +353,9 @@ impl Batcher {
             .provider()
             .estimate_gas(transaction_request.clone())
             .await
-            .unwrap();
+            .map_err(|e| {
+                BatchError::SendBatchFailed(format!("error: {e:?}, tx: {transaction_request:?}",))
+            })?;
 
         let pending_tx = self
             .sequencing_contract_instance
