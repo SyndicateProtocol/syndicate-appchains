@@ -75,9 +75,13 @@ contract GasMeter is
             }
         }
 
+        uint256 gasPrice = tx.gasprice;
+
         // WORKAROUND: estimate gas will give a wrong value when called with tx.gasprice 0
         // Use minimum price of 1 wei to ensure calculation doesn't fail
-        uint256 gasPrice = tx.gasprice == 0 ? 1 : tx.gasprice;
+        if (gasPrice == 0) {
+            gasPrice = 1;
+        }
         _getGasMeterStorage().gasUsed[getCurrentEpoch()][msg.sender] += (startGas - gasleft()) * gasPrice;
     }
 
