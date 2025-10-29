@@ -882,49 +882,7 @@ contract SyndicateFactoryTest is Test {
 
     // ================== VERSION TRACKING TESTS ==================
 
-    function testInitialVersion() public view {
-        assertEq(factory.version(), 1_000_000, "Initial version should be 1.0.0");
-    }
-
-    function testUpdateVersion() public {
-        vm.prank(admin);
-        factory.updateVersion(11);
-
-        assertEq(factory.version(), 11, "Version should be updated to 11");
-    }
-
-    function testUpdateVersionOnlyAdmin() public {
-        vm.prank(nonAdmin);
-        vm.expectRevert();
-        factory.updateVersion(11);
-    }
-
-    function testUpdateVersionWithDifferentFormats() public {
-        uint256[] memory versions = new uint256[](5);
-        versions[0] = 11;
-        versions[1] = 22;
-        versions[2] = 23;
-        versions[3] = 31;
-        versions[4] = 102520;
-
-        for (uint256 i = 0; i < versions.length; i++) {
-            vm.prank(admin);
-            factory.updateVersion(versions[i]);
-            assertEq(factory.version(), versions[i], "Version should match updated value");
-        }
-    }
-
-    function testVersionPersistsAfterOperations() public {
-        // Update version
-        vm.prank(admin);
-        factory.updateVersion(15);
-
-        // Perform other operations
-        RequireAndModule permissionModule = new RequireAndModule(admin);
-        vm.prank(admin);
-        factory.createSyndicateSequencingChainWithCustomId(12345, admin, permissionModule);
-
-        // Version should still be the same
-        assertEq(factory.version(), 15, "Version should persist after operations");
+    function testVersion() public view {
+        assertEq(factory.VERSION(), 1_000_000, "Version should be 1.0.0");
     }
 }

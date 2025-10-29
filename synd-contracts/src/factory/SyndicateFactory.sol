@@ -21,9 +21,9 @@ struct SyndicateFactoryStorage {
     /// @notice Current implementation address used for new deployments
     /// @dev This can be updated by admins to use newer versions of SyndicateSequencingChain
     address syndicateChainImpl;
-    /// @notice Version of the SyndicateFactory contract
-    /// @dev Used to track the current version of the factory contract
-    uint256 version;
+    /// @notice Trusted forwarder address for cross-chain deployments from L1
+    /// @dev This is the SyndicateForwarder contract address on L2 that can trigger deployments
+    address trustedForwarder;
 }
 
 /// @title SyndicateFactory
@@ -38,6 +38,10 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @dev Generated using: cast index-erc7201 syndicate.storage.SyndicateFactory
     bytes32 public constant SYNDICATE_FACTORY_STORAGE_LOCATION =
         0x172dc7d0dcf94b29f0d6a133670a38a5db195bb2828e4d07ec71b370800c9300;
+
+    /// @notice Version of the SyndicateFactory contract
+    /// @dev Used to track the current version of the factory contract
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
 
     /// @notice Internal function to access the ERC-7201 namespaced storage
     /// @dev Uses inline assembly to access the specific storage slot for this contract's data
@@ -62,11 +66,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return $.syndicateChainImpl;
     }
 
-    /// @notice Get the current version of this contract implementation
-    /// @return The version number
-    function version() public view returns (uint256) {
+    /// @notice Get the trusted forwarder address
+    /// @return The trusted forwarder address
+    function trustedForwarder() public view returns (address) {
         SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
-        return $.version;
+        return $.trustedForwarder;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -81,6 +85,9 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
 
     /// @notice Thrown when the proxy upgrade to the latest implementation fails
     error FailedToInitializeSyndicateSequencingChain();
+
+    /// @notice Thrown when the caller is not the trusted forwarder
+    error NotTrustedForwarder();
 
     /*//////////////////////////////////////////////////////////////
                              EVENTS
@@ -103,6 +110,11 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     /// @param chainId The resulting deterministic chain ID
     event DeterministicChainIdGenerated(address indexed sender, uint256 indexed nonce, uint256 indexed chainId);
 
+    /// @notice Emitted when the trusted forwarder address is updated
+    /// @param oldForwarder The previous forwarder address
+    /// @param newForwarder The new forwarder address
+    event TrustedForwarderUpdated(address indexed oldForwarder, address indexed newForwarder);
+
     /*//////////////////////////////////////////////////////////////
                             INITIALIZER
     //////////////////////////////////////////////////////////////*/
@@ -118,7 +130,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     ///      - Role-based access control with the provided admin
     ///      - Deterministic stub implementation deployment
     ///      - Real SyndicateSequencingChain implementation deployment
-    ///      - Initial version setting
     /// @param admin The admin address that will have DEFAULT_ADMIN_ROLE and full control over the factory
     function initialize(address admin) external initializer {
         if (admin == address(0)) revert ZeroAddress();
@@ -130,9 +141,6 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
-
-        // Set initial version
-        $.version = 1_000_000; // 1.0.0
 
         // Deploy minimal stub implementation using CREATE2 for deterministic address
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
@@ -292,16 +300,42 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return (_doCreateChain(customChainId, admin, permissionModule), customChainId);
     }
 
+    /// @notice Creates a new SyndicateSequencingChain from trusted forwarder (cross-chain deployments)
+    /// @dev This function is called by the trusted forwarder contract when receiving cross-chain messages from L1
+    /// @param chainId The chain ID to use (must not be 0 or already used)
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @return sequencingChain The deployed sequencing chain address
+    function createFromForwarder(uint256 chainId, address admin, IRequirementModule permissionModule)
+        external
+        whenNotPaused
+        returns (address sequencingChain)
+    {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+
+        // Only trusted forwarder can call this function
+        if (msg.sender != $.trustedForwarder) {
+            revert NotTrustedForwarder();
+        }
+
+        if (admin == address(0) || address(permissionModule) == address(0)) {
+            revert ZeroAddress();
+        }
+        if (chainId == 0) {
+            revert ZeroAddress(); // Reusing this error for zero chainID
+        }
+
+        // Validate chain ID is not already used
+        if (isChainIdUsed(chainId)) {
+            revert ChainIdAlreadyExists();
+        }
+
+        return _doCreateChain(chainId, admin, permissionModule);
+    }
+
     /// @notice Authorizes upgrades to new implementations (admin only)
     /// @param newImplementation The address of the new implementation
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
-
-    /// @notice Updates the contract version (admin only, typically called during upgrades)
-    /// @param newVersion The new version number (e.g., 1)
-    function updateVersion(uint256 newVersion) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
-        $.version = newVersion;
-    }
 
     /// @notice Pause the factory (admin only)
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -322,5 +356,16 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     {
         SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
         $.syndicateChainImpl = newImplementation;
+    }
+
+    /// @notice Set the trusted forwarder address (admin only)
+    /// @dev Updates the trusted forwarder that can trigger cross-chain deployments
+    /// @param newForwarder The new trusted forwarder address
+    function setTrustedForwarder(address newForwarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
+        address oldForwarder = $.trustedForwarder;
+        $.trustedForwarder = newForwarder;
+
+        emit TrustedForwarderUpdated(oldForwarder, newForwarder);
     }
 }

@@ -45,7 +45,7 @@ contract UpgradeSyndicateFactory is Script {
         vm.stopBroadcast();
 
         // Verify upgrade
-        uint256 version = factory.version();
+        uint256 version = factory.VERSION();
         console2.log("=== Upgrade Complete ===");
         console2.log("Proxy:", factoryAddress);
         console2.log("Implementation:", address(newImplementation));

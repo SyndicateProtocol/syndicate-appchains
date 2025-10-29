@@ -122,7 +122,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_InitialDeployment() public view {
         // Verify factory
         assertTrue(address(factoryProxy) != address(0), "Factory should be deployed");
-        assertEq(factoryProxy.version(), 1_000_000, "Factory version should be 1.0.0");
+        assertEq(factoryProxy.VERSION(), 1_000_000, "Factory version should be 1.0.0");
 
         // Verify gas aggregator
         assertTrue(address(gasAggregator) != address(0), "GasAggregator should be deployed");
@@ -193,7 +193,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
     function test_UpgradeFactoryToV2() public {
         // Store pre-upgrade state
-        uint256 preUpgradeVersion = factoryProxy.version();
+        uint256 preUpgradeVersion = factoryProxy.VERSION();
 
         vm.startPrank(ADMIN);
 
@@ -211,7 +211,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.stopPrank();
 
         // Verify storage preserved
-        assertEq(factoryProxy.version(), preUpgradeVersion, "Version should be preserved");
+        assertEq(factoryProxy.VERSION(), preUpgradeVersion, "Version should be preserved");
         assertTrue(factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Admin role should be preserved");
 
         // Verify new V2 functionality
