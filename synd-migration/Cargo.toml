@@ -1,0 +1,25 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-migration"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy      = { workspace = true, features = ["k256", "rlp"] }
+alloy-rlp  = { workspace = true }
+clap       = { workspace = true, features = ["derive", "env"] }
+eyre       = { workspace = true }
+rlp        = { workspace = true }
+rocksdb    = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+shared     = { workspace = true }
+tokio      = { workspace = true, features = ["full"] }
+tracing    = { workspace = true }
+
+[lints]
+workspace = true
