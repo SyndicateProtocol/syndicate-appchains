@@ -232,10 +232,8 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
 
-			// Create transaction options with buffered gas estimate
 			opts := p.makeTransactOptsCopy(ctx)
 
-			// Estimate gas with buffer to handle volatile gas conditions
 			gasWithBuffer, err := p.estimateGasWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress, 2)
 			if err == nil && gasWithBuffer > 0 {
 				opts.GasLimit = gasWithBuffer
@@ -598,7 +596,7 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	return nil
 }
 
-// estimateGasWithBuffer estimates gas for the SubmitAssertion transaction and multiplies it
+// estimateGasWithBuffer estimates gas for the SubmitAssertion transaction without sending the transaction, and multiplies it
 // by the bufferFactor to handle volatile gas conditions. Returns an error if estimation fails.
 func (p *Proposer) estimateGasWithBuffer(
 	ctx context.Context,
@@ -607,14 +605,9 @@ func (p *Proposer) estimateGasWithBuffer(
 	keyAddress common.Address,
 	bufferFactor uint64,
 ) (uint64, error) {
-	// Create a copy of TransactOpts for gas estimation
 	opts := p.makeTransactOptsCopy(ctx)
-	// NoSend = true prevents the transaction from being broadcast to the network.
-	// The contract binding will build and prepare the transaction (allowing gas estimation)
-	// but will not send it. This ensures we don't double-send the assertion.
 	opts.NoSend = true
 
-	// Call the contract method to get gas estimate
 	tx, err := p.TeeModule.SubmitAssertion(opts, assertion, signature, keyAddress)
 	if err != nil {
 		log.Debug().Err(err).Msg("Gas estimation failed, will use default estimation")
@@ -627,7 +620,6 @@ func (p *Proposer) estimateGasWithBuffer(
 		return 0, errors.New("gas estimation returned 0")
 	}
 
-	// Apply buffer factor to the gas estimate to handle spikes
 	bufferedGas := estimatedGas * bufferFactor
 	log.Debug().
 		Uint64("estimatedGas", estimatedGas).
