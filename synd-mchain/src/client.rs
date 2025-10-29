@@ -142,7 +142,6 @@ pub trait MchainProvider: Send + Sync {
 
             if slot.seq_block_number == 0 {
                 assert_eq!(slot, Default::default());
-                // assert_eq!(mchain_block_number - offset, if not_pending { 1 } else { 2 });
                 return (None, not_pending.then_some(mchain_block_number));
             }
 
