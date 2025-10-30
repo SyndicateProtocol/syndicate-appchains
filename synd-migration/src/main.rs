@@ -1,7 +1,7 @@
 //! The `synd-migration` CLI tool for migrating Nitro appchain databases.
 //!
 //! This tool provides functionality to update chain configuration parameters
-//! in a Nitro node's database, such as the DataAvailabilityCommittee flag.
+//! in a Nitro node's database, such as the `DataAvailabilityCommittee` flag.
 
 use clap::Parser;
 use std::path::PathBuf;

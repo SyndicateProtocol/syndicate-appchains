@@ -1,4 +1,4 @@
-//! Module for migrating the DataAvailabilityCommittee flag in Nitro chain configs.
+//! Module for migrating the `DataAvailabilityCommittee` flag in Nitro chain configs.
 
 use alloy::{
     primitives::B256,
@@ -7,14 +7,14 @@ use alloy::{
 use eyre::{Context, Result};
 use rocksdb::{Options, DB};
 use serde::{Deserialize, Serialize};
-use std::{io::Read, path::Path};
-use tracing::{error, info, warn};
+use std::path::Path;
+use tracing::{debug, info};
 
 /// Arbitrum-specific chain configuration parameters
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct ArbitrumChainParams {
-    /// Whether ArbOS is enabled
+    /// Whether arbOS is enabled
     #[serde(default)]
     pub enable_arb_os: bool,
 
@@ -25,7 +25,7 @@ pub struct ArbitrumChainParams {
     /// Data Availability Committee flag - this is what we're migrating
     pub data_availability_committee: bool,
 
-    /// Initial ArbOS version
+    /// Initial arbOS version
     #[serde(default)]
     pub initial_arb_os_version: u64,
 
@@ -49,13 +49,13 @@ pub struct ArbitrumChainParams {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub syndicate: Option<bool>,
 
-    /// EigenDA flag
+    /// eigenDA flag
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub eigen_da: Option<bool>,
 }
 
 /// Ethereum chain configuration
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChainConfig {
     /// Chain ID
@@ -102,15 +102,13 @@ pub struct ChainConfig {
     pub london_block: u64,
 
     /// Arbitrum-specific parameters
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub arbitrum: Option<ArbitrumChainParams>,
+    #[serde(default)]
+    pub arbitrum: ArbitrumChainParams,
 }
-
-/// Database key prefixes used by Nitro
-const CHAIN_CONFIG_PREFIX: &[u8] = b"ethereum-config-";
 
 /// Rollup state information
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct RollupState {
     block_number: u64,
     block_hash: B256,
@@ -121,6 +119,9 @@ struct RollupState {
     delayed_msgs_acc: B256,
 }
 
+/// Migration command - it inspects a given Nitro database, extracts relevant information and sets
+/// `DataAvailabilityCommittee` to false in the chain config.
+#[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
 pub async fn migration(nitro_db_path: &Path) -> Result<()> {
     info!("Nitro DB path: {:?}", nitro_db_path);
     let chaindata_path = nitro_db_path.join("l2chaindata");
@@ -141,128 +142,76 @@ pub async fn migration(nitro_db_path: &Path) -> Result<()> {
     let rollup_state = get_rollup_state(&db, &arb_db);
 
     // Get the chain config
-    let (mut chain_config, genesis_hash, config_key) = get_chain_config(&db)?;
+    let (mut chain_config, config_key) = get_chain_config(&db)?;
 
-    error!("test: {:?}", rollup_state);
+    debug!("rollup state: {:#?}", rollup_state);
+    debug!("chain config: {:#?}", chain_config);
 
-    // Display comprehensive rollup state
-    // display_rollup_state(&rollup_state, &genesis_hash, &chain_config)?;
+    println!("\n---------------\n");
+    println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
+    println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
+    println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
+    println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
+    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
+    println!("\n---------------\n");
 
-    let current_dac_value = if let Some(ref arb_params) = chain_config.arbitrum {
-        arb_params.data_availability_committee
-    } else {
-        eyre::bail!("No Arbitrum chain parameters found in chain config");
-    };
-
-    if !current_dac_value {
+    if !chain_config.arbitrum.data_availability_committee {
         info!("DataAvailabilityCommittee is already set to false");
         return Ok(());
     }
 
-    if let Some(ref mut arb_params) = chain_config.arbitrum {
-        arb_params.data_availability_committee = false;
-    }
-
-    // Write the updated config
-    // update_chain_config(&db, &chain_config, &config_key)?;
+    chain_config.arbitrum.data_availability_committee = false;
+    update_chain_config(&db, &chain_config, &config_key)?;
     info!("Configuration updated successfully");
 
     Ok(())
 }
 
 /// Retrieves the chain config from the database.
+/// `DBkeys` used can be found in <https://github.com/SyndicateProtocol/go-ethereum/blob/HEAD/core/rawdb/schema.go>
 ///
-/// Returns the chain config, genesis hash, and the database key used.
-fn get_chain_config(db: &DB) -> Result<(ChainConfig, B256, Vec<u8>)> {
-    // In Nitro/Geth, chain configs are stored with the key "ethereum-config-<genesis_hash>"
-    // We need to find the genesis hash first by iterating over keys with the prefix
+/// Returns the chain config, and the database key used.
+#[allow(clippy::unwrap_used)]
+fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
+    // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
+    let genesis_hash = db
+        .get(make_numbered_key(b"h", 0, b"n"))
+        .unwrap()
+        .map(|bytes| B256::from_slice(&bytes[..32]))
+        .unwrap();
 
-    let prefix = CHAIN_CONFIG_PREFIX;
-    let mut found_key: Option<Vec<u8>> = None;
-    let mut found_value: Option<Vec<u8>> = None;
+    let config_key = make_key(b"ethereum-config-", genesis_hash.as_ref(), &[]);
+    let chain_config: ChainConfig = db
+        .get(config_key.clone())
+        .unwrap()
+        .map(|bytes| serde_json::from_slice(&bytes).unwrap())
+        .unwrap();
 
-    // Iterate through keys with the chain config prefix
-    let iter = db.prefix_iterator(prefix);
-    for item in iter {
-        let (key, value) = item.context("Failed to read from database iterator")?;
-
-        // Take the first match (there should only be one genesis)
-        if key.starts_with(prefix) {
-            found_key = Some(key.to_vec());
-            found_value = Some(value.to_vec());
-            break;
-        }
-    }
-
-    if found_key.is_none() || found_value.is_none() {
-        eyre::bail!("No chain config found in database. Is this a Nitro chaindata directory?");
-    }
-
-    let key = found_key.unwrap_or_default();
-    let value = found_value.unwrap_or_default();
-
-    // Extract genesis hash from key (remove prefix)
-    let genesis_hash_bytes = &key[prefix.len()..];
-    if genesis_hash_bytes.len() != 32 {
-        eyre::bail!("Invalid genesis hash length: {}", genesis_hash_bytes.len());
-    }
-    let genesis_hash = B256::from_slice(genesis_hash_bytes);
-
-    // Decode the chain config (stored as JSON in Nitro)
-    let chain_config: ChainConfig =
-        serde_json::from_slice(&value).context("Failed to deserialize chain config")?;
-
-    Ok((chain_config, genesis_hash, key))
+    Ok((chain_config, config_key))
 }
 
 /// Updates the chain config in the database.
 fn update_chain_config(db: &DB, config: &ChainConfig, key: &[u8]) -> Result<()> {
     let encoded = serde_json::to_vec(config).context("Failed to serialize chain config")?;
-
-    db.put(key, encoded).context("Failed to write chain config to database")?;
-
-    Ok(())
+    db.put(key, encoded).context("Failed to write chain config to database")
 }
 
-/// Decodes a big-endian encoded unsigned integer from bytes
-fn decode_uint(bytes: &[u8]) -> Option<u64> {
-    if bytes.is_empty() {
-        return None;
-    }
-
-    // Handle variable-length encoding used by Nitro
-    let mut result: u64 = 0;
-    for (i, &byte) in bytes.iter().enumerate() {
-        if i >= 8 {
-            // Would overflow u64
-            return None;
-        }
-        result = (result << 8) | u64::from(byte);
-    }
-    Some(result)
-}
-
-/// Encodes a u64 as an 8-byte big-endian value
-fn encode_uint64_be(value: u64) -> [u8; 8] {
-    value.to_be_bytes()
-}
-
-/// Constructs a database key with a single-byte prefix and 8-byte big-endian number
-fn make_key(prefix: u8, number: u64) -> Vec<u8> {
-    let mut key = Vec::with_capacity(9);
-    key.push(prefix);
-    key.extend_from_slice(&encode_uint64_be(number));
+fn make_numbered_key(prefix: &[u8], number: u64, suffix: &[u8]) -> Vec<u8> {
+    let mut key = prefix.to_vec();
+    key.extend_from_slice(&number.to_be_bytes());
+    key.extend_from_slice(suffix);
     key
 }
 
-// sequencerBatchCountKey         = []byte("_sequencerBatchCount")
-// delayedMessageCountKey         = []byte("_delayedMessageCount")
-// sequencerBatchMetaPrefix       = []byte("s")
-// rlpDelayedMessagePrefix        = []byte("e")
-// legacyDelayedMessagePrefix     = []byte("d")
-// parentChainBlockNumberPrefix   = []byte("p")
+fn make_key(prefix: &[u8], middle: &[u8], suffix: &[u8]) -> Vec<u8> {
+    let mut key = prefix.to_vec();
+    key.extend_from_slice(middle);
+    key.extend_from_slice(suffix);
+    key
+}
 
 #[derive(Debug, Clone, RlpDecodable)]
+#[allow(dead_code)]
 struct BatchMetadata {
     acc: B256,
     message_count: u64,
@@ -271,14 +220,14 @@ struct BatchMetadata {
 }
 
 /// Retrieves rollup state information from the database
+/// `DBkeys` used can be found in <https://github.com/SyndicateProtocol/go-ethereum/blob/HEAD/core/rawdb/schema.go>
 #[allow(clippy::unwrap_used)]
 fn get_rollup_state(db: &DB, arb_db: &DB) -> RollupState {
-    let block_hash =
-        db.get(b"LastBlock").unwrap().and_then(|bytes| Some(B256::from_slice(&bytes))).unwrap();
+    let block_hash = db.get(b"LastBlock").unwrap().map(|bytes| B256::from_slice(&bytes)).unwrap();
 
     let mut block_number_key = [0u8; 33];
     block_number_key[0] = b'H';
-    block_number_key[1..].copy_from_slice(&block_hash.as_ref());
+    block_number_key[1..].copy_from_slice(block_hash.as_ref());
 
     let block_number = db
         .get(block_number_key)
@@ -299,13 +248,13 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> RollupState {
         .unwrap();
     // ---
     let batch_data = arb_db
-        .get(make_key(b"s"[0], batch_count - 1))
+        .get(make_numbered_key(b"s", batch_count - 1, &[]))
         .unwrap()
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
         .unwrap();
 
     let delayed_msgs_acc = arb_db
-        .get(make_key(b"e"[0], batch_data.delayed_message_count - 1))
+        .get(make_numbered_key(b"e", batch_data.delayed_message_count - 1, &[]))
         .unwrap()
         .map(|bytes| B256::from_slice(&bytes[..32]))
         .unwrap();
