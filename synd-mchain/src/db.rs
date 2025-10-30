@@ -185,9 +185,13 @@ pub trait ArbitrumDB {
             )
     }
 
-    fn get_block_with_offset(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
-        let update_key = key - self.get_migration_offset();
-        self.get_block(update_key)
+    fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64), ErrorObjectOwned> {
+        let offset = self.get_migration_offset();
+        let mut batch_count = key;
+        if key >= offset {
+            batch_count = key - offset;
+        }
+        self.get_block(batch_count).map(|block| (block, batch_count))
     }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
