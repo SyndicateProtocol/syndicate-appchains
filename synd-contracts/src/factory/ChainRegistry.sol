@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
+import {SyndicateForwarder} from "./SyndicateForwarder.sol";
 
 /// @title ChainRegistry
 /// @notice Registry contract for managing chain registrations on L1
@@ -18,7 +19,7 @@ contract ChainRegistry is AccessControl, Pausable {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     /// @notice Address of the SyndicateForwarder contract that handles cross-chain messages
-    address public syndicateForwarder;
+    SyndicateForwarder public syndicateForwarder;
 
     /// @notice Mapping of chain IDs to their registration status
     mapping(uint256 chainId => bool isRegistered) public registeredChains;
@@ -39,9 +40,6 @@ contract ChainRegistry is AccessControl, Pausable {
     /// @notice Thrown when the forwarder is not set
     error ForwarderNotSet();
 
-    /// @notice Thrown when the forwarder call fails
-    error ForwarderCallFailed();
-
     /*//////////////////////////////////////////////////////////////
                              EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -51,8 +49,13 @@ contract ChainRegistry is AccessControl, Pausable {
     /// @param chainId The unique identifier for the chain
     /// @param admin The admin address for the new chain
     /// @param permissionModule The permission module address
+    /// @param ticketId The Arbitrum retryable ticket ID
     event ChainRegistered(
-        address indexed sender, uint256 indexed chainId, address indexed admin, address permissionModule
+        address indexed sender,
+        uint256 indexed chainId,
+        address indexed admin,
+        address permissionModule,
+        uint256 ticketId
     );
 
     /// @notice Emitted when a deterministic chainID is generated for a user
@@ -82,7 +85,7 @@ contract ChainRegistry is AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(MANAGER_ROLE, _manager);
 
-        syndicateForwarder = _syndicateForwarder;
+        syndicateForwarder = SyndicateForwarder(_syndicateForwarder);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -90,18 +93,19 @@ contract ChainRegistry is AccessControl, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Registers a new chain with deterministic chainID
-    /// @param admin The admin address for the new chain on L2 (should be aliased if from L1 contract)
+    /// @param admin The admin address for the new chain on L2
     /// @param permissionModule The pre-deployed permission module
     /// @return chainId The chain ID that was registered
     function registerChain(address admin, IRequirementModule permissionModule)
         external
+        payable
         whenNotPaused
         returns (uint256 chainId)
     {
         if (admin == address(0) || address(permissionModule) == address(0)) {
             revert ZeroAddress();
         }
-        if (syndicateForwarder == address(0)) revert ForwarderNotSet();
+        if (address(syndicateForwarder) == address(0)) revert ForwarderNotSet();
 
         // Get and increment nonce for this sender
         uint256 nonce = nonces[msg.sender]++;
@@ -117,21 +121,14 @@ contract ChainRegistry is AccessControl, Pausable {
         // Mark chain as registered
         registeredChains[chainId] = true;
 
-        // Emit events
+        // Emit deterministic chain ID generation event
         emit DeterministicChainIdGenerated(msg.sender, nonce, chainId);
-        emit ChainRegistered(msg.sender, chainId, admin, address(permissionModule));
 
         // Forward the deployment request to L2 via the forwarder
-        bytes memory deployData = abi.encodeWithSignature(
-            "createSyndicateSequencingChainWithCustomId(uint256,address,address)",
-            chainId,
-            admin,
-            address(permissionModule)
-        );
+        uint256 ticketId =
+            syndicateForwarder.forwardCreateChain{value: msg.value}(chainId, admin, address(permissionModule));
 
-        // Call the forwarder to send the message cross-chain
-        (bool success,) = syndicateForwarder.call(deployData);
-        if (!success) revert ForwarderCallFailed();
+        emit ChainRegistered(msg.sender, chainId, admin, address(permissionModule), ticketId);
 
         return chainId;
     }
@@ -143,6 +140,7 @@ contract ChainRegistry is AccessControl, Pausable {
     /// @return chainId The chain ID that was registered (same as customChainId)
     function registerChainWithCustomId(uint256 customChainId, address admin, IRequirementModule permissionModule)
         external
+        payable
         onlyRole(MANAGER_ROLE)
         whenNotPaused
         returns (uint256 chainId)
@@ -153,7 +151,7 @@ contract ChainRegistry is AccessControl, Pausable {
         if (customChainId == 0) {
             revert ZeroAddress(); // Reusing this error for zero chainID
         }
-        if (syndicateForwarder == address(0)) revert ForwarderNotSet();
+        if (address(syndicateForwarder) == address(0)) revert ForwarderNotSet();
 
         // Validate chain ID is not already registered
         if (registeredChains[customChainId]) {
@@ -163,18 +161,11 @@ contract ChainRegistry is AccessControl, Pausable {
         // Mark chain as registered
         registeredChains[customChainId] = true;
 
-        emit ChainRegistered(msg.sender, customChainId, admin, address(permissionModule));
-
         // Forward the deployment request to L2 via the forwarder
-        bytes memory deployData = abi.encodeWithSignature(
-            "createSyndicateSequencingChainWithCustomId(uint256,address,address)",
-            customChainId,
-            admin,
-            address(permissionModule)
-        );
+        uint256 ticketId =
+            syndicateForwarder.forwardCreateChain{value: msg.value}(customChainId, admin, address(permissionModule));
 
-        (bool success,) = syndicateForwarder.call(deployData);
-        if (!success) revert ForwarderCallFailed();
+        emit ChainRegistered(msg.sender, customChainId, admin, address(permissionModule), ticketId);
 
         return customChainId;
     }
@@ -207,8 +198,8 @@ contract ChainRegistry is AccessControl, Pausable {
     function setForwarder(address newForwarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newForwarder == address(0)) revert ZeroAddress();
 
-        address oldForwarder = syndicateForwarder;
-        syndicateForwarder = newForwarder;
+        address oldForwarder = address(syndicateForwarder);
+        syndicateForwarder = SyndicateForwarder(newForwarder);
 
         emit ForwarderUpdated(oldForwarder, newForwarder);
     }

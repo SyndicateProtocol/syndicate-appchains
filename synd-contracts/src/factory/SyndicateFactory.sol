@@ -155,7 +155,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
                             EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID to prevent squatting
+    /// @notice Creates a new SyndicateSequencingChain contract with deterministic chainID (admin only)
+    /// @dev This function is now restricted to admins. For cross-chain deployments, use ChainRegistry on L1
     /// @param nonce The user-specified nonce for chainID generation
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
@@ -164,6 +165,7 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     //#olympix-ignore-reentrancy-events
     function createSyndicateSequencingChain(uint256 nonce, address admin, IRequirementModule permissionModule)
         external
+        onlyRole(DEFAULT_ADMIN_ROLE)
         whenNotPaused
         returns (address sequencingChain, uint256 chainId)
     {
@@ -300,8 +302,10 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
         return (_doCreateChain(customChainId, admin, permissionModule), customChainId);
     }
 
-    /// @notice Creates a new SyndicateSequencingChain from trusted forwarder (cross-chain deployments)
-    /// @dev This function is called by the trusted forwarder contract when receiving cross-chain messages from L1
+    /// @notice Creates a new SyndicateSequencingChain from L1's SyndicateForwarder (cross-chain deployments)
+    /// @dev This function is called when receiving cross-chain messages from L1's SyndicateForwarder via Arbitrum Inbox
+    ///      The msg.sender will be the aliased address of the L1 SyndicateForwarder contract
+    ///      Aliasing: L2_address = L1_address + 0x1111000000000000000000000000000000001111
     /// @param chainId The chain ID to use (must not be 0 or already used)
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
@@ -313,7 +317,8 @@ contract SyndicateFactory is Initializable, AccessControlUpgradeable, PausableUp
     {
         SyndicateFactoryStorage storage $ = _getSyndicateFactoryStorage();
 
-        // Only trusted forwarder can call this function
+        // Only the aliased L1 SyndicateForwarder can call this function
+        // trustedForwarder should be set to: L1_SyndicateForwarder_address + 0x1111000000000000000000000000000000001111
         if (msg.sender != $.trustedForwarder) {
             revert NotTrustedForwarder();
         }
