@@ -184,6 +184,11 @@ pub trait ArbitrumDB {
                 },
             )
     }
+
+    fn get_block_with_offset(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
+        let update_key = key - self.get_migration_offset();
+        self.get_block(update_key)
+    }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
         self.put(
@@ -393,7 +398,7 @@ pub trait ArbitrumDB {
         // we need to have an offset in order to get the correct block from a given batch
         // count.
         self.put_block(
-            settlement_start_block,
+            batch_count,
             &Block {
                 timestamp: 0u64,
                 batch: Bytes::new(),
@@ -412,7 +417,7 @@ pub trait ArbitrumDB {
         );
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
         self.put_state(&State {
-            batch_count: settlement_start_block,
+            batch_count,
             batch_acc,
             message_count: delayed_msgs_count,
             message_acc: delayed_msgs_acc,

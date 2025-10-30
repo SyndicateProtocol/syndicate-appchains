@@ -64,7 +64,7 @@ async fn main() -> eyre::Result<()> {
     let db = sync_db(
         &provider,
         &cfg.db_file,
-        cfg.start_block,
+        cfg.start_block.saturating_sub(1),
         chain_id,
         cfg.parallel_sync_requests,
         &metrics,

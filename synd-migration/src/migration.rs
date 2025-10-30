@@ -136,7 +136,7 @@ pub async fn migration(nitro_db_path: &Path) -> Result<()> {
 
     // Also open the arbitrumdata database which contains Arbitrum-specific state
     let arb_db_path = nitro_db_path.join("arbitrumdata");
-    let arb_db = DB::open_for_read_only(&opts, &arb_db_path, false).unwrap();
+    let arb_db = DB::open(&opts, &arb_db_path).unwrap();
 
     // Get the rollup state
     let rollup_state = get_rollup_state(&db, &arb_db);
@@ -153,6 +153,7 @@ pub async fn migration(nitro_db_path: &Path) -> Result<()> {
     println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
     println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
     println!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
+    println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
     println!("\n---------------\n");
 
     if !chain_config.arbitrum.data_availability_committee {
@@ -160,8 +161,8 @@ pub async fn migration(nitro_db_path: &Path) -> Result<()> {
         return Ok(());
     }
 
-    chain_config.arbitrum.data_availability_committee = false;
-    update_chain_config(&db, &chain_config, &config_key)?;
+    // chain_config.arbitrum.data_availability_committee = false;
+    // update_chain_config(&db, &chain_config, &config_key)?;
     info!("Configuration updated successfully");
 
     Ok(())
@@ -193,7 +194,9 @@ fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
 /// Updates the chain config in the database.
 fn update_chain_config(db: &DB, config: &ChainConfig, key: &[u8]) -> Result<()> {
     let encoded = serde_json::to_vec(config).context("Failed to serialize chain config")?;
-    db.put(key, encoded).context("Failed to write chain config to database")
+    db.put(key, encoded).context("Failed to write chain config to database")?;
+    db.flush().context("Failed to flush database")?;
+    Ok(())
 }
 
 fn make_numbered_key(prefix: &[u8], number: u64, suffix: &[u8]) -> Vec<u8> {

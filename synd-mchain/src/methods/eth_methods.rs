@@ -89,7 +89,7 @@ pub fn eth_get_logs(
         if f.block_option != FilterBlockOption::AtBlockHash(U256::from(ind + 1).into()) {
             return Err(err("block hash and batch index mismatch"));
         }
-        let block = db.get_block(ind + 1)?;
+        let block = db.get_block_with_offset(ind + 1)?;
         if block.batch.is_empty() {
             return Err(err("batch is empty - SequencerBatchData event does not exist"));
         }
@@ -115,7 +115,7 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
+            let block = db.get_block_with_offset(i)?;
             let mut before_acc = block.before_message_acc;
             for (j, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
@@ -138,7 +138,7 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
+            let block = db.get_block_with_offset(i)?;
             events.push(create_log(
                 i,
                 ISequencerInbox::SequencerBatchDelivered {
@@ -165,7 +165,7 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
+            let block = db.get_block_with_offset(i)?;
             for (j, (msg, _)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     i,
@@ -191,7 +191,12 @@ pub fn eth_get_block_by_hash(
     let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
     let block = db.get_block(number)?;
     Ok(alloy::rpc::types::Block {
-        header: create_header(number, block.slot.seq_block_number, block.timestamp),
+        header: create_header(
+            number,
+            db.get_migration_offset(),
+            block.slot.seq_block_number,
+            block.timestamp,
+        ),
         ..Default::default()
     })
 }
@@ -229,7 +234,12 @@ pub fn eth_get_block_by_number(
     };
     let block = db.get_block(number).unwrap();
     Ok(alloy::rpc::types::Block {
-        header: create_header(number, block.slot.seq_block_number, block.timestamp),
+        header: create_header(
+            number,
+            db.get_migration_offset(),
+            block.slot.seq_block_number,
+            block.timestamp,
+        ),
         ..Default::default()
     })
 }
@@ -254,8 +264,7 @@ pub fn eth_call(
             Ok(db.get_state().message_count.abi_encode().into())
         }
         ISequencerInbox::batchCountCall::SELECTOR => {
-            let offset = db.get_migration_offset();
-            Ok((db.get_state().batch_count - offset).abi_encode().into())
+            Ok((db.get_state().batch_count).abi_encode().into())
         }
         IBridge::delayedInboxAccsCall::SELECTOR => {
             let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
@@ -266,9 +275,7 @@ pub fn eth_call(
             let data =
                 ISequencerInbox::inboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index: u64 = data.index.try_into().map_err(to_err)?;
-            // TODO (ENG-2166): keep this in memory to avoid reading from disk
-            let offset = db.get_migration_offset();
-            Ok(db.get_block(index + offset + 1)?.after_batch_acc.abi_encode().into())
+            Ok(db.get_block(index + 1)?.after_batch_acc.abi_encode().into())
         }
         _ => Err(err("unknown selector")),
     }

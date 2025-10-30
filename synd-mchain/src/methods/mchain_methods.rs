@@ -39,6 +39,7 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
                 sink.try_send(SubscriptionMessage::from(
                     serde_json::value::to_raw_value(&create_header(
                         block,
+                        db.get_migration_offset(),
                         seq_block_number,
                         timestamp,
                     ))
@@ -120,6 +121,7 @@ pub fn rollback_to_block(
             sink.try_send(SubscriptionMessage::from(
                 serde_json::value::to_raw_value(&create_header(
                     block_number,
+                    db.get_migration_offset(),
                     l1_block_number,
                     timestamp,
                 ))

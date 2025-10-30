@@ -31,13 +31,14 @@ pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rp
 
 /// Helper function to create a mock header object
 pub fn create_header(
-    block_num: u64,
+    batch_count: u64,
+    offset: u64,
     l1_block_num: u64,
     timestamp: u64,
 ) -> alloy::rpc::types::Header {
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
-            number: block_num,
+            number: batch_count + offset,
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
@@ -53,7 +54,7 @@ pub fn create_header(
             difficulty: U256::ONE,
             ..Default::default()
         },
-        hash: U256::from(block_num).into(),
+        hash: U256::from(batch_count).into(),
         ..Default::default()
     }
 }
