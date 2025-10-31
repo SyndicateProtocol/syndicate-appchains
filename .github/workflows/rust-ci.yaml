@@ -3,6 +3,7 @@ name: Rust Workspace CI
 on:
   # Mandatory checks - must run on all PRs
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
   # Run on main pushes only AFTER publish-images workflow completes successfully
   workflow_run:
@@ -18,7 +19,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IS_DRAFT_PR: ${{ github.event.pull_request.draft == true }}
   CARGO_TERM_COLOR: always
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
@@ -30,7 +30,7 @@ env:
 
 jobs:
   taplo:
-    if: env.IS_DRAFT_PR != 'true'
+    if: github.event.pull_request.draft == false
     name: Cargo.toml format validation
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +52,7 @@ jobs:
         run: taplo fmt --check "**/Cargo.toml" --verbose
 
   machete:
-    if: env.IS_DRAFT_PR != 'true'
+    if: github.event.pull_request.draft == false
     name: Machete
     runs-on: ubuntu-latest
     steps:
@@ -79,7 +79,7 @@ jobs:
             "test-framework"
 
   fmt:
-    if: env.IS_DRAFT_PR != 'true'
+    if: github.event.pull_request.draft == false
     name: Fmt
     runs-on: ubuntu-latest
     steps:
@@ -94,7 +94,7 @@ jobs:
         run: cargo +nightly fmt --all --check -- --unstable-features
 
   clippy:
-    if: env.IS_DRAFT_PR != 'true'
+    if: github.event.pull_request.draft == false
     name: Clippy
     runs-on: shared-large-01
     steps:
@@ -137,7 +137,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features
 
   test:
-    if: env.IS_DRAFT_PR != 'true'
+    if: github.event.pull_request.draft == false
     name: Tests
     runs-on: shared-large-02
     timeout-minutes: 45
