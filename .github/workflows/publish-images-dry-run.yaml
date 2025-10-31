@@ -5,6 +5,8 @@ name: Publish Service Images (Dry Run)
 
 on:
   pull_request:
+    types:
+      - ready_for_review
     branches: [main, staging]
 
 concurrency:

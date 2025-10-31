@@ -8,6 +8,8 @@ on:
       - main
       - staging
   pull_request:
+    types:
+      - ready_for_review
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}

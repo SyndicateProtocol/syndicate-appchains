@@ -11,6 +11,8 @@ on:
     paths:
       - "synd-contracts/src/**/*.sol"
       - "synd-contracts/certora/specs/**/*.spec"
+    types:
+      - ready_for_review
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}

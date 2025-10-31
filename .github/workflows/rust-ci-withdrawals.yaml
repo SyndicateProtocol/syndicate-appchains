@@ -2,6 +2,8 @@ name: Rust CI - Withdrawals-only
 
 on:
   pull_request:
+    types:
+      - ready_for_review
     branches:
       - main
       - staging

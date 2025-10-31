@@ -9,6 +9,8 @@ on:
       - "synd-withdrawals/synd-enclave/**"
       - "synd-withdrawals/synd-proposer/**"
   pull_request:
+    types:
+      - ready_for_review
     paths:
       - "synd-withdrawals/synd-enclave/**"
       - "synd-withdrawals/synd-proposer/**"
