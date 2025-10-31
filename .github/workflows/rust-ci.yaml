@@ -31,7 +31,7 @@ jobs:
     if: github.event.pull_request.draft == true
     runs-on: ubuntu-latest
     steps:
-      - name: Fails fast if this is a draft PR.
+      - name: Fails fast if this is a draft PR
         run: exit 1
 
   taplo:
