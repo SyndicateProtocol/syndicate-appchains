@@ -451,10 +451,10 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             // clear the verified data hash in case it is set
             epochVerifiedDataHash[epoch][chainID] = bytes32(0);
             epochRemainingChains--;
-            uint256 seqChainCount = seqChains.length();
-            if (seqChainCount > 0 && epochRemainingChains == 0) {
+            if (epochRemainingChains == 0) {
                 emit EpochCompleted(epoch);
                 epoch++;
+                uint256 seqChainCount = seqChains.length();
                 epochRemainingChains = seqChainCount;
             }
         }
