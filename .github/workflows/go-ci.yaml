@@ -9,8 +9,7 @@ on:
       - "synd-withdrawals/synd-enclave/**"
       - "synd-withdrawals/synd-proposer/**"
   pull_request:
-    types:
-      - ready_for_review
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
     paths:
       - "synd-withdrawals/synd-enclave/**"
       - "synd-withdrawals/synd-proposer/**"
@@ -24,6 +23,7 @@ env:
 
 jobs:
   enclave-build:
+    if: github.event.pull_request.draft == false
     name: build enclave
     runs-on: shared-large-01
     steps:
@@ -44,6 +44,7 @@ jobs:
           docker build --target eif-bin .
 
   proposer-test:
+    if: github.event.pull_request.draft == false
     name: test synd-proposer
     runs-on: shared-large-01
     permissions:

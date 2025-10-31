@@ -3,7 +3,8 @@ name: Rust Workspace CI
 on:
   # Mandatory checks - must run on all PRs
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
+
   # Run on main pushes only AFTER publish-images workflow completes successfully
   workflow_run:
     workflows: ["Publish Service Images"] # Run on `main` pushes only AFTER `publish-images` workflow completes successfully

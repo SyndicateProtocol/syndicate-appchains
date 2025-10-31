@@ -5,8 +5,7 @@ name: Publish Service Images (Dry Run)
 
 on:
   pull_request:
-    types:
-      - ready_for_review
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
     branches: [main, staging]
 
 concurrency:
@@ -20,6 +19,7 @@ permissions:
 
 jobs:
   docker:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/publish-images.yaml
     with:
       dry_run: true
