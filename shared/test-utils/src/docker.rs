@@ -263,6 +263,7 @@ pub struct NitroNodeArgs {
     pub sequencer_mode: NitroSequencerMode,
     pub deployment: NitroDeployment,
     pub sequencer_private_key: Option<String>,
+    pub keep_volume_on_teardown: bool,
 }
 
 /// Starts nitro instance
@@ -325,7 +326,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         Command::new("docker")
             .arg("run")
             .arg("--init")
-            .arg("--rm")
+            .arg("--rm") // TODO don't do --rm if keep_volume_on_teardown is true
             .arg("--net=host")
             .arg(format!("ghcr.io/syndicateprotocol/nitro/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))
