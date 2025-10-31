@@ -530,13 +530,13 @@ contract SyndicateFactoryTest is Test {
         address sender2 = address(0x222);
 
         // Both senders use nonce 0
-        vm.prank(sender1);
+        vm.prank(admin);
         (, uint256 chainId1) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
-        vm.prank(sender2);
-        (, uint256 chainId2) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
+        vm.prank(admin);
+        (, uint256 chainId2) = factory.createSyndicateSequencingChain(1, chainAdmin, permissionModule);
 
-        // Chain IDs should be different (because sender addresses are different)
+        // Chain IDs should be different (because nonces are different)
         assertTrue(chainId1 != chainId2);
     }
 
@@ -557,6 +557,7 @@ contract SyndicateFactoryTest is Test {
     function testCreateSequencingChainDeterministicRevertsOnZeroAdmin() public {
         RequireAndModule permissionModule = new RequireAndModule(admin);
 
+        vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChain(0, address(0), permissionModule);
     }
@@ -564,6 +565,7 @@ contract SyndicateFactoryTest is Test {
     function testCreateSequencingChainDeterministicRevertsOnZeroPermissionModule() public {
         address chainAdmin = address(0x789);
 
+        vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChain(0, chainAdmin, IRequirementModule(address(0)));
     }
@@ -653,25 +655,23 @@ contract SyndicateFactoryTest is Test {
         // This test demonstrates that the same sender will generate deterministic chainIDs
         // preventing squatting across different deployments
 
-        address sender = address(0x555);
-
-        // Deploy a chain - this will use nonce 0 for the sender
+        // Deploy a chain - this will use nonce 0 for the admin
         RequireAndModule permissionModule = new RequireAndModule(admin);
         address chainAdmin = address(0x789);
 
-        // Generate expected chainID for sender with nonce 0 (first deployment)
-        uint256 expectedChainId = factory.generateDeterministicChainId(sender, 0);
+        // Generate expected chainID for admin with nonce 0 (first deployment)
+        uint256 expectedChainId = factory.generateDeterministicChainId(admin, 0);
 
-        vm.prank(sender);
+        vm.prank(admin);
         (, uint256 actualChainId) = factory.createSyndicateSequencingChain(0, chainAdmin, permissionModule);
 
         // ChainID should match expected
         assertEq(actualChainId, expectedChainId);
 
-        // Now simulate trying to deploy again with the same sender
+        // Now simulate trying to deploy again with the same sender (admin)
         // This should generate a different chain ID (nonce 1) but should not revert
-        uint256 expectedChainId2 = factory.generateDeterministicChainId(sender, 1);
-        vm.prank(sender);
+        uint256 expectedChainId2 = factory.generateDeterministicChainId(admin, 1);
+        vm.prank(admin);
         (, uint256 actualChainId2) = factory.createSyndicateSequencingChain(1, chainAdmin, permissionModule);
 
         assertEq(actualChainId2, expectedChainId2);
@@ -704,7 +704,7 @@ contract SyndicateFactoryTest is Test {
 
         // Deploy 5 sequential chains using explicit nonces
         for (uint256 i = 0; i < 5; i++) {
-            vm.prank(sender);
+            vm.prank(admin);
             (, chainIds[i]) = factory.createSyndicateSequencingChain(i, chainAdmin, permissionModule);
         }
 
@@ -748,6 +748,7 @@ contract SyndicateFactoryTest is Test {
         assertEq(customChainId1, 6001);
 
         // Test 3: Deterministic chain creation
+        vm.prank(admin);
         (, uint256 detChainId) = factory.createSyndicateSequencingChain(0, admin, permissionModule);
         assertTrue(detChainId > 0);
 
@@ -802,6 +803,7 @@ contract SyndicateFactoryTest is Test {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChainWithCustomId(1001, address(0), permissionModule);
 
+        vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChain(0, address(0), permissionModule);
 
@@ -814,6 +816,7 @@ contract SyndicateFactoryTest is Test {
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChainWithCustomId(1003, admin, IRequirementModule(address(0)));
 
+        vm.prank(admin);
         vm.expectRevert(SyndicateFactory.ZeroAddress.selector);
         factory.createSyndicateSequencingChain(0, admin, IRequirementModule(address(0)));
 
