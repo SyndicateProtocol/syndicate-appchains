@@ -3,6 +3,7 @@ name: Rust Workspace CI
 on:
   # Mandatory checks - must run on all PRs
   pull_request:
+
   # Run on main pushes only AFTER publish-images workflow completes successfully
   workflow_run:
     workflows: ["Publish Service Images"] # Run on `main` pushes only AFTER `publish-images` workflow completes successfully
