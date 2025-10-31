@@ -21,15 +21,15 @@ impl TranslatorConfig {
     pub(crate) fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--mchain-ws-url".to_string(),
-            self.mchain_ws_url.to_string(),
+            self.mchain_ws_url.clone(),
             "--settlement-ws-url".to_string(),
-            self.settlement_ws_url.to_string(),
+            self.settlement_ws_url.clone(),
             "--port".to_string(),
             self.port.to_string(),
         ];
 
         if let Some(url) = &self.sequencing_ws_url {
-            args.extend(vec!["--sequencing-ws-url".to_string(), url.to_string()]);
+            args.extend(vec!["--sequencing-ws-url".to_string(), url.clone()]);
         }
 
         if let Some(addr) = self.arbitrum_bridge_address {

@@ -177,7 +177,7 @@ mod tests {
             method: &'static str,
             _params: Params,
         ) -> Result<T, ClientError> {
-            panic!("unexpected call to request: {}", method);
+            panic!("unexpected call to request: {method}");
         }
 
         async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
