@@ -5,7 +5,7 @@
 
 use clap::Parser;
 use std::path::PathBuf;
-use synd_migration::migration::migration;
+use synd_migration::migration::get_migration_data;
 use tracing::error;
 
 #[derive(Parser, Debug)]
@@ -29,7 +29,7 @@ async fn main() {
     shared::tracing::setup_global_logging()
         .unwrap_or_else(|e| panic!("failed to setup logging: {e}"));
 
-    if let Err(e) = migration(&args.nitro_db_path).await {
+    if let Err(e) = get_migration_data(&args.nitro_db_path).await {
         error!("\nMigration failed. {e}");
         std::process::exit(1);
     }

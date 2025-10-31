@@ -7920,6 +7920,7 @@ dependencies = [
  "synd-chain-ingestor",
  "synd-maestro",
  "synd-mchain",
+ "synd-migration",
  "test-utils",
  "tokio",
  "tracing",

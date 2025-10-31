@@ -232,6 +232,7 @@ impl TestComponents {
                     chain_name: "sequencing".to_string(),
                     deployment: seq_deployment.clone(),
                     sequencer_private_key: Some(PRIVATE_KEY8.to_string()),
+                    data_dir: None,
                 })
                 .await?;
 
@@ -344,6 +345,7 @@ impl TestComponents {
                     chain_name: "settlement".to_string(),
                     deployment: set_deployment.clone(),
                     sequencer_private_key: Some(PRIVATE_KEY9.to_string()),
+                    data_dir: None,
                 })
                 .await?;
 
@@ -432,6 +434,7 @@ impl TestComponents {
             appchain_deployment.inbox,
             seq_rpc_ws_url.clone(),
             "https://example.com/explorer".to_string(),
+            None,
         )
         .await?;
 
@@ -517,6 +520,7 @@ impl TestComponents {
                 ..Default::default()
             },
             sequencer_private_key: None,
+            data_dir: None,
         })
         .await?;
 

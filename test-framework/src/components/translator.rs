@@ -2,23 +2,23 @@
 use alloy::primitives::Address;
 
 #[derive(Debug, Default)]
-pub(super) struct TranslatorConfig {
-    pub(crate) arbitrum_bridge_address: Option<Address>,
-    pub(crate) arbitrum_inbox_address: Option<Address>,
-    pub(crate) sequencing_contract_address: Option<Address>,
-    pub(crate) config_manager_address: Option<Address>,
-    pub(crate) appchain_chain_id: Option<u64>,
-    pub(crate) mchain_ws_url: String,
-    pub(crate) sequencing_ws_url: Option<String>,
-    pub(crate) settlement_ws_url: String,
-    pub(crate) port: u16,
-    pub(crate) sequencing_start_block: Option<u64>,
-    pub(crate) settlement_start_block: Option<u64>,
-    pub(crate) settlement_delay: Option<u64>,
+pub struct TranslatorConfig {
+    pub arbitrum_bridge_address: Option<Address>,
+    pub arbitrum_inbox_address: Option<Address>,
+    pub sequencing_contract_address: Option<Address>,
+    pub config_manager_address: Option<Address>,
+    pub appchain_chain_id: Option<u64>,
+    pub mchain_ws_url: String,
+    pub sequencing_ws_url: Option<String>,
+    pub settlement_ws_url: String,
+    pub port: u16,
+    pub sequencing_start_block: Option<u64>,
+    pub settlement_start_block: Option<u64>,
+    pub settlement_delay: Option<u64>,
 }
 
 impl TranslatorConfig {
-    pub(crate) fn cli_args(&self) -> Vec<String> {
+    pub fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--mchain-ws-url".to_string(),
             self.mchain_ws_url.to_string(),

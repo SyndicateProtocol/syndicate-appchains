@@ -1,6 +1,6 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
-    primitives::{utils::parse_ether, U160, U256},
+    primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider},
 };
 use contract_bindings::synd::{
@@ -11,15 +11,32 @@ use contract_bindings::synd::{
     },
 };
 use eyre::Result;
-use std::time::Duration;
-use test_framework::components::test_components::{SEQUENCING_CHAIN_ID, SETTLEMENT_CHAIN_ID};
+use shared::types::FilledProvider;
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
+use synd_mchain::methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID};
+use synd_migration::migration::{get_migration_data, RollupState};
+use test_framework::components::{
+    chain_ingestor::ChainIngestorConfig,
+    configuration::{setup_config_manager, ConfigurationOptions},
+    test_components::{SEQUENCING_CHAIN_ID, SETTLEMENT_CHAIN_ID},
+    translator::TranslatorConfig,
+};
 use test_utils::{
     anvil::start_anvil_with_args,
     chain_info::{test_account1, test_account8, test_account9, ChainInfo},
-    docker::{launch_nitro_node, start_eigenda_proxy, NitroNodeArgs},
-    nitro_chain::deploy_nitro_rollup,
+    docker::{
+        launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, E2EProcess,
+        NitroNodeArgs, NitroSequencerMode,
+    },
+    nitro_chain::{deploy_nitro_rollup, NitroDeployment},
+    port_manager::PortManager,
+    utils::test_path,
     wait_until,
 };
+use tokio::time::sleep;
 
 async fn start_base_chain(chain_id: u64) -> Result<ChainInfo> {
     let chain_info = start_anvil_with_args(chain_id, &[]).await?;
@@ -40,6 +57,117 @@ async fn deploy_sequencing_contract<P: Provider>(
         .await?
         .status());
     Ok(contract_instance)
+}
+
+struct SyndicateStack {
+    mchain_rpc_url: String,
+    mchain: E2EProcess,
+    config_manager_address: Address,
+    sequencing_chain_ingestor: E2EProcess,
+    settlement_chain_ingestor: E2EProcess,
+    translator: E2EProcess,
+}
+
+async fn spin_up_syndicate_stack(
+    appchain_chain_id: u64,
+    set_provider: &FilledProvider,
+    sequencing_contract_address: Address,
+    appchain_deployment: NitroDeployment,
+    sequencing_rpc_url: String,
+    settlement_rpc_url: String,
+    migration_data: RollupState,
+) -> Result<SyndicateStack> {
+    let opt = ConfigurationOptions { appchain_chain_id, ..Default::default() };
+    let (mchain_rpc_url, mchain, mchain_provider) =
+        start_mchain(appchain_chain_id, opt.finality_delay).await?;
+
+    println!("mchain started");
+
+    // Setup config manager and get chain config address
+    let config_manager_address = setup_config_manager(
+        set_provider,
+        &opt,
+        sequencing_contract_address,
+        appchain_deployment.bridge,
+        appchain_deployment.inbox,
+        sequencing_rpc_url.clone(),
+        "https://example.com/explorer".to_string(),
+        Some(migration_data.clone()),
+    )
+    .await?;
+
+    println!("config manager address: {config_manager_address}");
+
+    let temp = test_path("chain_ingestor");
+    let seq_chain_ingestor_cfg = ChainIngestorConfig {
+        ws_urls: vec![sequencing_rpc_url.clone()],
+        db_file: temp.clone() + "/sequencing_chain.db",
+        start_block: 0,
+        port: PortManager::instance().next_port().await,
+        metrics_port: PortManager::instance().next_port().await,
+    };
+
+    let sequencing_chain_ingestor = start_component(
+        "synd-chain-ingestor",
+        seq_chain_ingestor_cfg.port,
+        seq_chain_ingestor_cfg.cli_args(),
+        Default::default(),
+    )
+    .await?;
+
+    let set_chain_ingestor_cfg = ChainIngestorConfig {
+        ws_urls: vec![settlement_rpc_url.clone()],
+        db_file: temp + "/settlement_chain.db",
+        start_block: migration_data.block_number,
+        port: PortManager::instance().next_port().await,
+        metrics_port: PortManager::instance().next_port().await,
+    };
+
+    let settlement_chain_ingestor = start_component(
+        "synd-chain-ingestor",
+        set_chain_ingestor_cfg.port,
+        set_chain_ingestor_cfg.cli_args(),
+        Default::default(),
+    )
+    .await?;
+
+    let sequencing_ingestor_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
+    let settlement_ingestor_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
+
+    println!("sequencing_ingestor_rpc_url: {sequencing_ingestor_rpc_url}");
+
+    let translator_config = TranslatorConfig {
+        settlement_ws_url: settlement_ingestor_rpc_url.clone(),
+        config_manager_address: Some(config_manager_address),
+        appchain_chain_id: Some(opt.appchain_chain_id),
+        mchain_ws_url: mchain_rpc_url.clone(),
+        port: PortManager::instance().next_port().await,
+        // Needs to be provided as it needs to be the ingestor's URL
+        sequencing_ws_url: Some(sequencing_ingestor_rpc_url.clone()),
+        // NOTE: do not fill the values that are meant to be filled by the config manager
+        // contract
+        ..Default::default()
+    };
+
+    let translator = start_component(
+        "synd-translator",
+        translator_config.port,
+        translator_config.cli_args(),
+        vec![],
+    )
+    .await?;
+
+    println!("translator started");
+
+    let syndicate_stack = SyndicateStack {
+        mchain_rpc_url,
+        mchain,
+        config_manager_address,
+        sequencing_chain_ingestor,
+        settlement_chain_ingestor,
+        translator,
+    };
+    Ok(syndicate_stack)
 }
 
 #[tokio::test]
@@ -66,6 +194,9 @@ async fn e2e_migration() -> Result<()> {
 
     let (_instance, eigenda_proxy_url) = start_eigenda_proxy().await?;
 
+    let data_dir = test_path("nitro");
+
+    // setup a normal arb rollup on an anvil chain
     let appchain = launch_nitro_node(NitroNodeArgs {
         chain_id: appchain_chain_id,
         chain_owner: appchain_owner.address,
@@ -77,6 +208,7 @@ async fn e2e_migration() -> Result<()> {
         chain_name: "appchain".to_string(),
         deployment: appchain_deployment.clone(),
         sequencer_private_key: Some(batch_poster.private_key.to_string()),
+        data_dir: Some(data_dir.clone()),
     })
     .await?;
 
@@ -92,31 +224,85 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
-    let storage_contract = Storage::deploy(appchain.provider.clone(), U256::from(42)).await?;
+    let storage_contract_address =
+        Storage::deploy(appchain.provider.clone(), U256::from(42)).await?.address().clone();
 
     let arb_sequencer_inbox =
-        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider);
-
-    wait_until!(arb_sequencer_inbox.batchCount().call().await? == 1, Duration::from_secs(10));
-
-    //tear nitro down
-    drop(appchain);
-
-    Ok(())
-
-    // setup a normal arb rollup on an anvil chain
-
-    // send a few txs / deposits
+        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
 
     // wait for a batch to be posted
+    wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
     // shutdown the nitro node
+    drop(appchain);
+
+    // sleep(Duration::from_secs(10)).await;
 
     // run the migration cli code to obtain migration data from the nitro node
+    let mut migration_data: RollupState = Default::default();
+    wait_until!(
+        {
+            match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await
+            {
+                Ok(data) => {
+                    migration_data = data;
+                    true
+                }
+                Err(e) => {
+                    println!("Failed to get migration data: {e}");
+                    false
+                }
+            }
+        },
+        Duration::from_secs(10),
+        Duration::from_secs(1) // Don't block nitro db
+    );
 
     // migrate the bridge contract
+    // - Remove validators and stakers
+    // - Set the upgradeExecutor role to the assertionPoster
 
     // spin up the syndicate stack
+    let syndicate_stack = spin_up_syndicate_stack(
+        appchain_chain_id,
+        &set_chain.provider.clone(),
+        *sequencing_contract.address(),
+        appchain_deployment.clone(),
+        seq_chain.ws_url.clone(),
+        set_chain.ws_url.clone(),
+        migration_data.clone(),
+    )
+    .await?;
+
+    let migrated_appchain_deployment = NitroDeployment {
+        bridge: APPCHAIN_CONTRACT,
+        inbox: APPCHAIN_CONTRACT,
+        sequencer_inbox: APPCHAIN_CONTRACT,
+        rollup: APPCHAIN_CONTRACT,
+        native_token: Address::ZERO,
+        upgrade_executor: APPCHAIN_CONTRACT,
+        validator_utils: APPCHAIN_CONTRACT,
+        validator_wallet_creator: APPCHAIN_CONTRACT,
+        deployed_at: 1,
+    };
+
+    // Wake nitro up
+    let migrated_appchain = launch_nitro_node(NitroNodeArgs {
+        chain_id: appchain_chain_id,
+        chain_owner: appchain_owner.address,
+        parent_chain_url: syndicate_stack.mchain_rpc_url.clone(),
+        parent_chain_id: MCHAIN_ID,
+        sequencer_mode: NitroSequencerMode::None,
+        chain_name: "appchain".to_string(),
+        deployment: migrated_appchain_deployment.clone(),
+        sequencer_private_key: None,
+        data_dir: Some(data_dir.clone()),
+    })
+    .await?;
+
+    let storage_contract = Storage::new(storage_contract_address, &migrated_appchain.provider);
+    let initial_value = storage_contract.get().call().await?;
+    assert_eq!(initial_value, U256::from(42));
 
     // assert new txs work
 
@@ -130,4 +316,6 @@ async fn e2e_migration() -> Result<()> {
 
     // TODO InboxMessageDeliveredFromOrigin needs to be handled in the enclave too... test an
     // withdrawal triggered this way
+
+    Ok(())
 }

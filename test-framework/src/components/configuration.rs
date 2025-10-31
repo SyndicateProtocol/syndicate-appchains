@@ -2,14 +2,19 @@
 
 use crate::components::test_components::SEQUENCING_CHAIN_ID;
 use alloy::{
-    primitives::{Address, U256},
+    primitives::{Address, B256, U256},
     providers::WalletProvider,
 };
-use contract_bindings::synd::arb_config_manager::ArbConfigManager;
+use contract_bindings::synd::{
+    arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
+};
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
+use synd_block_builder::config;
+use synd_migration::migration::RollupState;
 use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
+use tracing::info;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BaseChainsType {
@@ -58,8 +63,12 @@ impl Default for ConfigurationOptions {
 }
 
 /// Sets up the config manager and creates the chain configuration
+/// MIGRATED_BATCH_ACC: 0x7209353306f1c3d450e53594d31d38bbc8badd6037767ca24b753e90e662d0ea
+// MIGRATED_BATCH_COUNT: 7612
+// MIGRATED_DELAYED_MSGS_ACC: 0xe544ba45e8ae3da11ca56d10a5691d5d6e73fc09080df712999c9ebab87253f8
+// MIGRATED_DELAYED_MSGS_COUNT: 16
 #[allow(clippy::unwrap_used)]
-pub(super) async fn setup_config_manager(
+pub async fn setup_config_manager(
     set_provider: &FilledProvider,
     options: &ConfigurationOptions,
     sequencing_contract_address: Address,
@@ -67,6 +76,7 @@ pub(super) async fn setup_config_manager(
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: String,
     appchain_block_explorer_url: String,
+    migration_data: Option<RollupState>,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -100,6 +110,32 @@ pub(super) async fn setup_config_manager(
         )
         .send()
         .await?;
+
+    let config_address = config_manager
+        .getArbChainConfigAddress(options.appchain_chain_id.try_into().unwrap())
+        .call()
+        .await?;
+    let config = ArbChainConfig::new(config_address, set_provider.clone());
+
+    if let Some(migration_data) = migration_data {
+        info!("Migrating chain config with data: {:#?}", migration_data);
+        let receipt = config
+            .migration(
+                migration_data.parent_chain_block.try_into().unwrap(),
+                options.sequencing_start_block.try_into().unwrap(),
+                migration_data.batch_acc.try_into().unwrap(),
+                migration_data.batch_count.try_into().unwrap(),
+                migration_data.delayed_msgs_acc.try_into().unwrap(),
+                migration_data.delayed_msgs_count.try_into().unwrap(),
+                migration_data.block_hash.try_into().unwrap(),
+            )
+            .send()
+            .await?
+            .get_receipt()
+            .await?;
+        assert!(receipt.status());
+        info!("Migration transaction receipt: {:#?}", receipt);
+    }
 
     match options.base_chains_type {
         BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {

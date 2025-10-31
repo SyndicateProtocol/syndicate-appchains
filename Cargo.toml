@@ -55,6 +55,7 @@ synd-block-builder                        = { path = "synd-translator/crates/syn
 synd-chain-ingestor                       = { path = "synd-chain-ingestor" }
 synd-maestro                              = { path = "synd-maestro" }
 synd-mchain                               = { path = "synd-mchain" }
+synd-migration                            = { path = "synd-migration" }
 synd-slotter                              = { path = "synd-translator/crates/synd-slotter" }
 synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
