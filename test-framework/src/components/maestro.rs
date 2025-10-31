@@ -18,7 +18,7 @@ impl MaestroConfig {
             "--port".to_string(),
             self.port.to_string(),
             "--valkey-url".to_string(),
-            self.valkey_url.to_string(),
+            self.valkey_url.clone(),
             "--chain-rpc-urls".to_string(),
             serde_json::to_string(&self.chain_rpc_urls).unwrap(),
             "--metrics-port".to_string(),
