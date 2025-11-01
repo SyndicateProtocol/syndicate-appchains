@@ -235,10 +235,16 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			opts := p.makeTransactOptsCopy(ctx)
 
 			gasWithBuffer, err := p.estimateGasWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress, 2)
-			if err == nil && gasWithBuffer > 0 {
+			if err != nil {
+				msg, wrappedErr := logger.WrapErrorWithMsg("Gas estimation exceeds configured max fee per gas, skipping transaction submission", err)
+				log.Error().Stack().Err(wrappedErr).Msg(msg)
+				continue
+			}
+			if gasWithBuffer > 0 {
 				opts.GasLimit = gasWithBuffer
 			}
-			// If estimation failed (err != nil), GasLimit remains 0 which triggers default estimation
+
+			// If estimation returned 0, GasLimit remains 0 which triggers default estimation
 
 			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
 			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
@@ -597,7 +603,9 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 }
 
 // estimateGasWithBuffer estimates gas for the SubmitAssertion transaction without sending the transaction, and multiplies it
-// by the bufferFactor to handle volatile gas conditions. Returns an error if estimation fails.
+// by the bufferFactor to handle volatile gas conditions.
+// Returns 0 if estimation fails.
+// Returns an error if estimation succeeds and the configured transaction max fee per gas is exceeded
 func (p *Proposer) estimateGasWithBuffer(
 	ctx context.Context,
 	assertion teemodule.PendingAssertion,
@@ -611,13 +619,22 @@ func (p *Proposer) estimateGasWithBuffer(
 	tx, err := p.TeeModule.SubmitAssertion(opts, assertion, signature, keyAddress)
 	if err != nil {
 		log.Debug().Err(err).Msg("Gas estimation failed, will use default estimation")
-		return 0, err
+		return 0, nil
+	}
+
+	if tx == nil {
+		log.Debug().Msg("Gas estimation returned nil transaction, will use default estimation")
+		return 0, nil
+	}
+
+	if tx.GasFeeCap() != nil && tx.GasFeeCap().Cmp(big.NewInt(p.Config.MaxFeePerGas)) > 0 {
+		return 0, errors.New("gas estimation exceeds configured max fee per gas")
 	}
 
 	estimatedGas := tx.Gas()
 	if estimatedGas == 0 {
 		log.Debug().Msg("Gas estimation returned 0, will use default estimation")
-		return 0, errors.New("gas estimation returned 0")
+		return 0, nil
 	}
 
 	bufferedGas := estimatedGas * bufferFactor
