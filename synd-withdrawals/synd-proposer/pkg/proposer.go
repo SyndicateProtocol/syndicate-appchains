@@ -100,7 +100,6 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create settlement transactor", err)
 		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
-	settlementAuth.GasFeeCap = big.NewInt(cfg.MaxFeePerGas)
 	teeModule, err := teemodule.NewTeemodule(cfg.TeeModuleContractAddress, settlementClient)
 	if err != nil {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create TEE module", err)

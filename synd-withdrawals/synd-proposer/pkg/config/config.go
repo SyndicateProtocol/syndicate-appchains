@@ -36,10 +36,6 @@ type Config struct {
 
 	EnclaveConfig    teetypes.Config `json:"EnclaveConfig"`
 	EnclaveTLSConfig tls.Config      `json:"EnclaveTLSConfig"`
-
-	// Max Fee Per Gas in wei for Proposer transactions
-	// int64 max here is equivalent to 9.22 ETH, which is sufficient
-	MaxFeePerGas int64 `json:"MaxFeePerGas"`
 }
 
 var Keys = map[string]struct {
@@ -67,7 +63,6 @@ var Keys = map[string]struct {
 	"mtls-client-key-path":        {"mTLS client private key path", "/etc/tls/tls.key", false},
 	"mtls-enabled-enclave":        {"mTLS enabled for enclave", "true", false},
 	"log-level":                   {"Log Level", "info", false},
-	"max-fee-per-gas":             {"Max Fee Per Gas", "1000000000000000", false}, // 0.001 ETH or 1,000,000 gwei
 }
 
 func BindFlags(flags *pflag.FlagSet) {

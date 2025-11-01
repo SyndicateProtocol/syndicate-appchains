@@ -344,8 +344,18 @@ impl Batcher {
                 .sequencing_contract_instance
                 .processTransactionsBulk(batch.iter().map(|tx| Bytes::from(tx.0.clone())).collect())
                 .into_transaction_request(),
+        };
+
+        if let Some(txn_max_fee_per_gas) = transaction_request.max_fee_per_gas {
+            if txn_max_fee_per_gas > self.config.max_fee_per_gas {
+                let err_msg = "Batch txn not submitted because the network's current max fee per gas is above the configured threshold.";
+                error!(chain_id=%self.config.chain_id,
+                    %txn_max_fee_per_gas,
+                    config_max_fee_per_gas=%self.config.max_fee_per_gas,
+                    err_msg);
+                return Err(BatchError::SendBatchFailed(err_msg.to_string()));
+            }
         }
-        .max_fee_per_gas(self.config.max_fee_per_gas);
 
         let pending_tx = self
             .sequencing_contract_instance
@@ -505,9 +515,6 @@ mod tests {
             private_key: test_account1().private_key.to_string(),
             sequencing_rpc_urls: vec![Url::parse("http://localhost:8545").unwrap()],
             wait_for_receipt_timeout: Some(Duration::from_secs(1)),
-            // Anvil provider default gas limit is 1_000_000, while wallet has 100 ETH.
-            // Wallet balance >= max_fee_per_gas * gas_limit
-            max_fee_per_gas: 100_000_000_000,
             ..Default::default()
         }
     }
