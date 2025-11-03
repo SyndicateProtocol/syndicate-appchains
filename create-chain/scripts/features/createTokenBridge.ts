@@ -1,6 +1,7 @@
 import { createTokenBridgeEnoughCustomFeeTokenAllowance, CreateTokenBridgeEnoughCustomFeeTokenAllowanceParams, CreateTokenBridgeParams, createTokenBridgePrepareCustomFeeTokenApprovalTransactionRequest, createTokenBridgePrepareSetWethGatewayTransactionReceipt, createTokenBridgePrepareSetWethGatewayTransactionRequest, createTokenBridgePrepareTransactionReceipt, createTokenBridgePrepareTransactionRequest, isTokenBridgeDeployed } from "@arbitrum/orbit-sdk";
 import { Chain, zeroAddress } from "viem";
 import { getChainExplorerUrl } from "../utils/helpers";
+import { print } from "../utils/print";
 
 // Source: https://github.com/OffchainLabs/arbitrum-orbit-sdk/blob/7143a874a94dc0d59d076a0407319f4927f5f49d/src/createTokenBridge.ts#L171-L172
 export async function createTokenBridge<TParentChain extends Chain | undefined, TOrbitChain extends Chain | undefined>({
@@ -53,7 +54,7 @@ export async function createTokenBridge<TParentChain extends Chain | undefined, 
         hash: approvalTxHash,
       });
 
-      console.log(
+      print(
         `Tokens approved in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
           approvalTxReceipt.transactionHash
         }`,
@@ -76,7 +77,7 @@ export async function createTokenBridge<TParentChain extends Chain | undefined, 
   });
 
   // sign and send the transaction
-  console.log(`Deploying the TokenBridge...`);
+  print(`Deploying the TokenBridge...`);
   const txHash = await parentChainPublicClient.sendRawTransaction({
     serializedTransaction: await account.signTransaction(txRequest),
   });
@@ -90,23 +91,23 @@ export async function createTokenBridge<TParentChain extends Chain | undefined, 
   const txReceipt = createTokenBridgePrepareTransactionReceipt(
     receipt,
   );
-  console.log(
+  print(
     `Deployed in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
       txReceipt.transactionHash
     }`,
   );
 
   // wait for retryables to execute
-  console.log(`Waiting for retryable tickets to execute on the Orbit chain...`);
+  print(`Waiting for retryable tickets to execute on the Orbit chain...`);
   const orbitChainRetryableReceipts = await txReceipt.waitForRetryables({
     // @ts-ignore (todo: fix viem type issue)
     orbitPublicClient: orbitChainPublicClient,
   });
-  console.log(`Retryables executed`);
-  console.log(
+  print(`Retryables executed`);
+  print(
     `Transaction hash for first retryable is ${orbitChainRetryableReceipts[0].transactionHash}`,
   );
-  console.log(
+  print(
     `Transaction hash for second retryable is ${orbitChainRetryableReceipts[1].transactionHash}`,
   );
 
@@ -143,7 +144,7 @@ export async function createTokenBridge<TParentChain extends Chain | undefined, 
       await parentChainPublicClient.waitForTransactionReceipt({ hash: setWethGatewayTxHash }),
     );
 
-    console.log(
+    print(
       `Weth gateway set in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
         setWethGatewayTxReceipt.transactionHash
       }`,
@@ -155,8 +156,8 @@ export async function createTokenBridge<TParentChain extends Chain | undefined, 
         // @ts-ignore (todo: fix viem type issue)
         orbitPublicClient: orbitChainPublicClient,
       });
-    console.log(`Retryables executed`);
-    console.log(
+    print(`Retryables executed`);
+    print(
       `Transaction hash for retryable is ${orbitChainSetWethGatewayRetryableReceipt[0].transactionHash}`,
     );
 
