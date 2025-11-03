@@ -226,26 +226,33 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
     let block_number = db
         .get(block_number_key)?
         .map(|bytes| u64::from_be_bytes(bytes[..8].try_into().unwrap()))
-        .ok_or(eyre::eyre!("Failed to get block number"))?;
+        .ok_or_else(|| eyre::eyre!("Failed to get block number"))?;
 
-    let batch_count_bytes =
-        arb_db.get(b"_sequencerBatchCount")?.ok_or(eyre::eyre!("Failed to get batch count"))?;
+    let batch_count_bytes = arb_db
+        .get(b"_sequencerBatchCount")?
+        .ok_or_else(|| eyre::eyre!("Failed to get batch count"))?;
+
     let batch_count = u64::decode(&mut &batch_count_bytes[..])
         .map_err(|e| eyre::eyre!("Failed to decode batch count: {e}"))?;
 
     let delayed_msgs_count = arb_db
         .get(b"_delayedMessageCount")?
         .map(|bytes| u64::decode(&mut &bytes[..]).unwrap())
-        .ok_or(eyre::eyre!("Failed to get delayed message count"))?;
+        .ok_or_else(|| eyre::eyre!("Failed to get delayed message count"))?;
+
     let batch_data = arb_db
         .get(make_numbered_key(b"s", batch_count - 1, &[]))?
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
-        .ok_or(eyre::eyre!("Failed to get batch data"))?;
+        .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?;
 
     let delayed_msgs_acc = arb_db
-        .get(make_numbered_key(b"e", batch_data.delayed_message_count - 1, &[]))?
-        .map(|bytes| B256::from_slice(&bytes[..32]))
-        .ok_or(eyre::eyre!("Failed to get delayed message accumulator"))?;
+        .get(make_numbered_key(b"e", batch_data.delayed_message_count, &[]))?
+        .map(|bytes| {
+            println!("bytes: {}", alloy::hex::encode(&bytes));
+
+            return B256::from_slice(&bytes[..32]);
+        })
+        .ok_or_else(|| eyre::eyre!("Failed to get delayed message accumulator"))?;
 
     Ok(RollupState {
         block_number,

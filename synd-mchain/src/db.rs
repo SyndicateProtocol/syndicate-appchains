@@ -9,6 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tracing::trace;
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -185,12 +186,11 @@ pub trait ArbitrumDB {
             )
     }
 
+    /// gets the block associated with the given key using the migration offset
     fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64), ErrorObjectOwned> {
         let offset = self.get_migration_offset();
-        let mut batch_count = key;
-        if key >= offset {
-            batch_count = key - offset;
-        }
+        let batch_count = if key >= offset { key - offset } else { key };
+        trace!("get_block_with_offset: key: {key}, offset: {offset}");
         self.get_block(batch_count).map(|block| (block, batch_count))
     }
     /// Puts the block associated with the given key
@@ -217,10 +217,10 @@ pub trait ArbitrumDB {
                 },
             )
     }
-    /// Puts the message accumulator associated with the given key
-    fn put_message_acc(&self, key: u64, value: &FixedBytes<32>) {
+    /// Puts the message accumulator associated with the given sequence number
+    fn put_message_acc(&self, sequence_number: u64, value: &FixedBytes<32>) {
         self.put(
-            DBKey::MessageAcc(key).to_string(),
+            DBKey::MessageAcc(sequence_number).to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
     }
@@ -339,7 +339,7 @@ pub trait ArbitrumDB {
             messages: messages.iter().map(|x| (x.to_owned(), FixedBytes::ZERO)).collect(),
             after_batch_acc: Default::default(),
         };
-        let mut before_inbox_acc = block.before_message_acc;
+        let mut inbox_acc = block.before_message_acc;
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
             let message_hash = keccak256(
                 (
@@ -353,9 +353,9 @@ pub trait ArbitrumDB {
                 )
                     .abi_encode_packed(),
             );
-            before_inbox_acc = keccak256((before_inbox_acc, message_hash).abi_encode_packed());
-            *acc = before_inbox_acc;
-            self.put_message_acc(block.before_message_count + i as u64, &before_inbox_acc);
+            inbox_acc = keccak256((inbox_acc, message_hash).abi_encode_packed());
+            *acc = inbox_acc;
+            self.put_message_acc(block.before_message_count + i as u64, &inbox_acc);
         }
         let data_hash = keccak256(
             (

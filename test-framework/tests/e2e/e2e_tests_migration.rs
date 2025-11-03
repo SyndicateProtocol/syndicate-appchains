@@ -4,6 +4,7 @@ use alloy::{
     providers::{ext::AnvilApi, Provider},
 };
 use contract_bindings::synd::{
+    i_bridge::IBridge,
     i_inbox::IInbox,
     i_sequencer_inbox::ISequencerInbox,
     syndicate_sequencing_chain::SyndicateSequencingChain::{
@@ -12,10 +13,7 @@ use contract_bindings::synd::{
 };
 use eyre::Result;
 use shared::types::FilledProvider;
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::{path::PathBuf, time::Duration};
 use synd_mchain::methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID};
 use synd_migration::migration::{get_migration_data, RollupState};
 use test_framework::components::{
@@ -28,7 +26,7 @@ use test_utils::{
     anvil::start_anvil_with_args,
     chain_info::{test_account1, test_account8, test_account9, ChainInfo},
     docker::{
-        launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, E2EProcess,
+        self, launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, E2EProcess,
         NitroNodeArgs, NitroSequencerMode,
     },
     nitro_chain::{deploy_nitro_rollup, NitroDeployment},
@@ -36,7 +34,6 @@ use test_utils::{
     utils::test_path,
     wait_until,
 };
-use tokio::time::sleep;
 
 async fn start_base_chain(chain_id: u64) -> Result<ChainInfo> {
     let chain_info = start_anvil_with_args(chain_id, &[]).await?;
@@ -70,6 +67,7 @@ struct SyndicateStack {
 
 async fn spin_up_syndicate_stack(
     appchain_chain_id: u64,
+    appchain_owner: Address,
     set_provider: &FilledProvider,
     sequencing_contract_address: Address,
     appchain_deployment: NitroDeployment,
@@ -77,7 +75,12 @@ async fn spin_up_syndicate_stack(
     settlement_rpc_url: String,
     migration_data: RollupState,
 ) -> Result<SyndicateStack> {
-    let opt = ConfigurationOptions { appchain_chain_id, ..Default::default() };
+    let opt = ConfigurationOptions {
+        appchain_chain_id,
+        base_chains_type: test_framework::components::configuration::BaseChainsType::Nitro,
+        rollup_owner: appchain_owner,
+        ..Default::default()
+    };
     let (mchain_rpc_url, mchain, mchain_provider) =
         start_mchain(appchain_chain_id, opt.finality_delay).await?;
 
@@ -144,6 +147,7 @@ async fn spin_up_syndicate_stack(
         port: PortManager::instance().next_port().await,
         // Needs to be provided as it needs to be the ingestor's URL
         sequencing_ws_url: Some(sequencing_ingestor_rpc_url.clone()),
+        settlement_delay: Some(60),
         // NOTE: do not fill the values that are meant to be filled by the config manager
         // contract
         ..Default::default()
@@ -175,7 +179,7 @@ async fn e2e_migration() -> Result<()> {
     let appchain_chain_id = 15u64;
     let appchain_owner = test_account1();
     let batch_poster = test_account8();
-    let test_user = test_account9();
+    let test_user = test_account1(); // TODO try to use test_account9 instead
 
     let set_chain = start_base_chain(SETTLEMENT_CHAIN_ID).await?;
     let seq_chain = start_base_chain(SEQUENCING_CHAIN_ID).await?;
@@ -202,9 +206,7 @@ async fn e2e_migration() -> Result<()> {
         chain_owner: appchain_owner.address,
         parent_chain_url: set_chain.ws_url.clone(),
         parent_chain_id: SETTLEMENT_CHAIN_ID,
-        sequencer_mode: test_utils::docker::NitroSequencerMode::EigenDASequencer(
-            eigenda_proxy_url.clone(),
-        ),
+        sequencer_mode: NitroSequencerMode::EigenDASequencer(eigenda_proxy_url.clone()),
         chain_name: "appchain".to_string(),
         deployment: appchain_deployment.clone(),
         sequencer_private_key: Some(batch_poster.private_key.to_string()),
@@ -220,12 +222,12 @@ async fn e2e_migration() -> Result<()> {
 
     // wait until those funds arrive on the chain
     wait_until!(
-        appchain.provider.get_balance(test_account1().address).await? >= parse_ether("10")?,
+        appchain.provider.get_balance(test_user.address).await? >= parse_ether("10")?,
         Duration::from_secs(10)
     );
 
     let storage_contract_address =
-        Storage::deploy(appchain.provider.clone(), U256::from(42)).await?.address().clone();
+        *Storage::deploy(appchain.provider.clone(), U256::from(42)).await?.address();
 
     let arb_sequencer_inbox =
         ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
@@ -233,10 +235,14 @@ async fn e2e_migration() -> Result<()> {
     // wait for a batch to be posted
     wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
+    let bridge = IBridge::new(appchain_deployment.bridge, &set_chain.provider);
+    let delayed_msgs_count = bridge.delayedMessageCount().call().await?;
+    let delayed_msgs_acc =
+        bridge.delayedInboxAccs(delayed_msgs_count - U256::from(1)).call().await?;
+    let batch_acc = bridge.sequencerInboxAccs(U256::from(1)).call().await?;
+
     // shutdown the nitro node
     drop(appchain);
-
-    // sleep(Duration::from_secs(10)).await;
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut migration_data: RollupState = Default::default();
@@ -255,8 +261,13 @@ async fn e2e_migration() -> Result<()> {
             }
         },
         Duration::from_secs(10),
-        Duration::from_secs(1) // Don't block nitro db
+        Duration::from_secs(1)
     );
+
+    assert!(migration_data.batch_acc == batch_acc);
+    assert!(migration_data.batch_count == 2);
+    assert!(migration_data.delayed_msgs_acc == delayed_msgs_acc);
+    assert!(U256::from(migration_data.delayed_msgs_count) == delayed_msgs_count);
 
     // migrate the bridge contract
     // - Remove validators and stakers
@@ -265,6 +276,7 @@ async fn e2e_migration() -> Result<()> {
     // spin up the syndicate stack
     let syndicate_stack = spin_up_syndicate_stack(
         appchain_chain_id,
+        appchain_owner.address,
         &set_chain.provider.clone(),
         *sequencing_contract.address(),
         appchain_deployment.clone(),
@@ -300,11 +312,30 @@ async fn e2e_migration() -> Result<()> {
     })
     .await?;
 
-    let storage_contract = Storage::new(storage_contract_address, &migrated_appchain.provider);
+    let storage_contract =
+        Storage::new(storage_contract_address, migrated_appchain.provider.clone());
     let initial_value = storage_contract.get().call().await?;
     assert_eq!(initial_value, U256::from(42));
 
     // assert new txs work
+    //
+    let nonce = migrated_appchain.provider.get_transaction_count(test_user.address).await?;
+    let update_val_raw_tx = storage_contract
+        .set(U256::from(43))
+        .nonce(nonce)
+        .gas(100_000)
+        .max_fee_per_gas(100000000)
+        .max_priority_fee_per_gas(0)
+        .build_raw_transaction(test_user.signer.clone())
+        .await?;
+    assert!(sequencing_contract
+        .processTransaction(update_val_raw_tx.into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?
+        .status());
+    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
 
     // assert `arbOwner.setL1PricePerUnit(0) ` works
 

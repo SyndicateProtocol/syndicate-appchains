@@ -23,6 +23,7 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     _: &Extensions,
 ) -> Result<Option<u64>, ErrorObjectOwned> {
     let (batch,): (MBlock,) = p.parse()?;
+    debug!("add_batch: {batch:?}");
     let timestamp = batch.timestamp;
     let seq_block_number = batch.slot.seq_block_number;
     let block = db.add_batch(batch)?;

@@ -217,7 +217,7 @@ pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
 ) -> Result<(String, E2EProcess, MProvider)> {
-    let temp = test_path("synd-mchain");
+    let tmp_dir = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
@@ -232,9 +232,13 @@ pub async fn start_mchain(
         finality_delay.to_string(),
     ];
 
-    let docker =
-        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), temp.to_string()])
-            .await?;
+    let docker = start_component(
+        "synd-mchain",
+        port,
+        args,
+        vec!["--datadir".to_string(), tmp_dir.to_string()],
+    )
+    .await?;
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))
@@ -326,7 +330,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         Command::new("docker")
             .arg("run")
             .arg("--init")
-            // .arg("--rm")
+            .arg("--rm")
             .arg(if let Some(data_dir) = args.data_dir {
                 format!("--volume={data_dir}:/home/user/.arbitrum")
             } else {
