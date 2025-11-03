@@ -99,7 +99,7 @@ export async function createTokenBridge<
   })
 
   // sign and send the transaction
-  print(`Deploying the TokenBridge...`)
+  print(`🔎  Deploying the non-native token bridge...`)
   const txHash = await parentChainPublicClient.sendRawTransaction({
     serializedTransaction: await account.signTransaction(txRequest)
   })
@@ -116,23 +116,22 @@ export async function createTokenBridge<
   // get the transaction receipt after waiting for the transaction to complete
   const txReceipt = createTokenBridgePrepareTransactionReceipt(receipt)
   print(
-    `Deployed in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
+    `🔎  Token bridge deployed in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
       txReceipt.transactionHash
     }`
   )
 
   // wait for retryables to execute
-  print(`Waiting for retryable tickets to execute on the Orbit chain...`)
+  print(`🔎  Waiting for retryable tickets to execute on the appchain...`)
   const orbitChainRetryableReceipts = await txReceipt.waitForRetryables({
     // @ts-ignore (todo: fix viem type issue)
     orbitPublicClient: orbitChainPublicClient
   })
-  print(`Retryables executed`)
   print(
-    `Transaction hash for first retryable is ${orbitChainRetryableReceipts[0].transactionHash}`
+    `🔎  Transaction hash for first retryable is ${orbitChainRetryableReceipts[0].transactionHash}`
   )
   print(
-    `Transaction hash for second retryable is ${orbitChainRetryableReceipts[1].transactionHash}`
+    `🔎  Transaction hash for second retryable is ${orbitChainRetryableReceipts[1].transactionHash}`
   )
 
   // fetching the TokenBridge contracts
@@ -177,7 +176,7 @@ export async function createTokenBridge<
       )
 
     print(
-      `Weth gateway set in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
+      `🔎  Weth gateway set in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
         setWethGatewayTxReceipt.transactionHash
       }`
     )
@@ -188,14 +187,13 @@ export async function createTokenBridge<
         // @ts-ignore (todo: fix viem type issue)
         orbitPublicClient: orbitChainPublicClient
       })
-    print(`Retryables executed`)
     print(
-      `Transaction hash for retryable is ${orbitChainSetWethGatewayRetryableReceipt[0].transactionHash}`
+      `🔎  Transaction hash for retryable is ${orbitChainSetWethGatewayRetryableReceipt[0].transactionHash}`
     )
 
     if (orbitChainSetWethGatewayRetryableReceipt[0].status !== "success") {
       throw new Error(
-        `Retryable status is not success: ${orbitChainSetWethGatewayRetryableReceipt[0].status}. Aborting...`
+        `🚫  Retryable status is not success: ${orbitChainSetWethGatewayRetryableReceipt[0].status}. Aborting...`
       )
     }
 

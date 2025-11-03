@@ -98,14 +98,14 @@ async function main() {
         )
       }
 
-      print("💰 Funding owner from deployer...")
+      print("💰  Funding owner from deployer...")
       await fundAccount(
         deployerSettlementWalletClient,
         ownerSettlementWalletClient.account.address,
         estimatedCostOfRetryables
       )
       await sleep(1000)
-      print("✅ Owner funded successfully")
+      print("✅  Owner funded successfully")
     }
   } else {
     const nativeTokenBalance = await settlementPublicClient.readContract({
@@ -164,7 +164,7 @@ async function main() {
   })
 
   clearInterval(interval)
-  print("✅ Token bridge successfully created")
+  print("✅  Token bridge successfully created")
 
   await upsertToSyndObject(
     chainName,
@@ -197,8 +197,6 @@ async function main() {
       "bridge.tokenBridgeContracts.l3Contracts.multicall",
       multicall3Address
     )
-  } else {
-    print("🔎  Skipping multicall3 deployment")
   }
 
   const {
@@ -260,7 +258,8 @@ async function main() {
 
   print(
     `🏁  Features setup complete. Artifacts saved at:
-    - ./out/${chainName}/${environment}-proposer.${chainName}.json`
+    - ./out/${chainName}/${environment}.synd.${chainName}.json
+    - ./out/${chainName}/${environment}-eoaSecrets.${chainName}.json`
   )
 }
 

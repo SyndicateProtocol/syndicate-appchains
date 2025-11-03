@@ -218,7 +218,7 @@ async function main() {
 
   print(
     `🏁  Appchain setup complete. Artifacts saved at:
-    - ./out/${chainName}/${environment}.synd.config
+    - ./out/${chainName}/${environment}.synd.${chainName}.json
     - ./out/${chainName}/${environment}-eoaSecrets.${chainName}.json
     - ./out/${chainName}/${environment}-${chainName}-${chainId}-secret.json`
   )

@@ -14,7 +14,7 @@ export function pollEmptyTxs(
       data: "0x"
     })
     print(
-      `🔄 Sent empty transaction to sequencing chain at: ${getChainExplorerUrl(
+      `🔄  Sent empty transaction to sequencing chain at: ${getChainExplorerUrl(
         walletClient.chain
       )}/tx/${hash}`
     )
