@@ -37,7 +37,7 @@ COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
 # Build the Go image
 WORKDIR /synd-proposer
-RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+RUN CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static" -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
 # Run tests for synd-proposer
 FROM synd-proposer-build AS synd-proposer-test
