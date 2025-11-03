@@ -1,4 +1,3 @@
-import { createTokenBridge } from "@arbitrum/orbit-sdk"
 import { sleep } from "bun"
 import { erc20Abi, formatEther, parseEther, parseUnits } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
@@ -15,6 +14,7 @@ import {
   writeToFile
 } from "../utils/helpers"
 import { print } from "../utils/print"
+import { createTokenBridge } from "./createTokenBridge"
 import { canDeployMulticall3, deployMulticall3 } from "./deployMulticall3"
 import { deployTeeModule } from "./deployTeeModule"
 import { pollEmptyTxs } from "./pollEmptyTxs"
