@@ -35,7 +35,7 @@ type Config struct {
 	AppchainBridgeAddress common.Address `json:"AppchainBridgeAddress"`
 
 	EnclaveConfig    teetypes.Config `json:"EnclaveConfig"`
-	EnclaveTLSConfig tls.Config      `json:"EnclaveTLSConfig"`
+	EnclaveTLSConfig tls.Config     `json:"EnclaveTLSConfig"`
 }
 
 var Keys = map[string]struct {
@@ -103,11 +103,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid private-key: %w", err)
 	}
 
-	maxFeePerGas := viper.GetInt64("max-fee-per-gas")
-	if maxFeePerGas < 0 {
-		return nil, fmt.Errorf("max-fee-per-gas must be greater than or equal to 0")
-	}
-
 	return &Config{
 		EthereumRPCURL:           viper.GetString("ethereum-rpc-url"),
 		SettlementRPCURL:         viper.GetString("settlement-rpc-url"),
@@ -132,7 +127,6 @@ func LoadConfig() (*Config, error) {
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
-		MaxFeePerGas: maxFeePerGas,
 	}, nil
 }
 
