@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 # --- Go build stage for synd-proposer ---
 FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS nitro
 
-FROM golang:1.25.3 AS synd-proposer-build
+FROM golang:1.25.3-bookworm AS synd-proposer-build
 WORKDIR /
 COPY --from=nitro /workspace ./synd-enclave/nitro
 COPY ./synd-withdrawals/synd-enclave/enclave ./synd-enclave/enclave
@@ -37,7 +37,7 @@ COPY ./synd-withdrawals/synd-proposer ./synd-proposer
 
 # Build the Go image
 WORKDIR /synd-proposer
-RUN CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static" -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
+RUN CGO_ENABLED=1 go build -o /go/bin/synd-proposer ./cmd/synd-proposer/main.go
 
 # Run tests for synd-proposer
 FROM synd-proposer-build AS synd-proposer-test
