@@ -1,6 +1,6 @@
 module github.com/SyndicateProtocol/synd-appchains/synd-enclave
 
-go 1.23.1
+go 1.25.3
 
 require (
 	github.com/Layr-Labs/eigenda v0.9.1
