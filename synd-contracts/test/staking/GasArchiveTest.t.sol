@@ -1,10 +1,8 @@
 pragma solidity 0.8.28;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {GasArchive} from "../../src/staking/GasArchive.sol";
-import {MerklePatriciaProofVerifier} from "../../src/staking/lib/MerklePatriciaProofVerifier.sol";
 import {RLPReader} from "../../src/staking/lib/RLPReader.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract GasArchiveTestHelper is GasArchive {
@@ -231,7 +229,9 @@ contract GasArchiveTest is Test {
         uint256 newEpoch = EPOCH + 1;
 
         // Add verified data for SEQ_CHAIN_ID in the new epoch
-        gasArchive.setEpochDataHashForTesting(newEpoch, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.setEpochDataHashForTesting(
+            newEpoch, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts))
+        );
         gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
 
         // Epoch should NOT complete yet because we still have chain2 to submit
