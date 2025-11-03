@@ -382,7 +382,8 @@ pub trait ArbitrumDB {
             timestamp: block.timestamp,
             slot: block.slot,
         });
-        Ok(Some(block_number))
+        let offset = self.get_migration_offset();
+        Ok(Some(block_number + offset))
     }
 
     /// Applies a custom batch with appchain migration information

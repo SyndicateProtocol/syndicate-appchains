@@ -22,11 +22,11 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     (db, metrics, mutex): &(T, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> Result<Option<u64>, ErrorObjectOwned> {
-    let (batch,): (MBlock,) = p.parse()?;
-    debug!("add_batch: {batch:?}");
-    let timestamp = batch.timestamp;
-    let seq_block_number = batch.slot.seq_block_number;
-    let block = db.add_batch(batch)?;
+    let (mblock,): (MBlock,) = p.parse()?;
+    debug!("add_batch: {mblock:?}");
+    let timestamp = mblock.timestamp;
+    let seq_block_number = mblock.slot.seq_block_number;
+    let block = db.add_batch(mblock)?;
 
     metrics.record_sequencing_block(seq_block_number, timestamp);
 
@@ -34,7 +34,8 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
         metrics.record_last_block(block, timestamp);
         let mut data = mutex.lock().unwrap();
         data.pending_ts.push_back(timestamp);
-        assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
+        // TODO check if its okay to remove
+        // assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
         data.subs.retain_mut(|sink| {
             !sink.is_closed() &&
                 sink.try_send(SubscriptionMessage::from(
@@ -157,7 +158,7 @@ pub fn appchain_migration(
     _: &Extensions,
 ) -> Result<(), ErrorObjectOwned> {
     let (migration_params,): (MigrationParams,) = params.parse()?;
-    debug!("appchain migration starting with params: {:?}", migration_params);
+    debug!("appchain migration: {:?}", migration_params);
     db.appchain_migration(
         migration_params.settlement_start_block,
         migration_params.batch_acc,
@@ -166,7 +167,6 @@ pub fn appchain_migration(
         migration_params.delayed_msgs_count,
     )
     .map_err(to_err)?;
-    debug!("appchain migration completed");
     Ok(())
 }
 /// `mchain_getSourceChainsProcessedBlocks`

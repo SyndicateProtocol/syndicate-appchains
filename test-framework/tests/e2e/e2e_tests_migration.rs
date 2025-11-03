@@ -1,9 +1,12 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
+    eips::BlockId,
     primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider},
+    rpc::types::TransactionRequest,
 };
 use contract_bindings::synd::{
+    arb_owner::ArbOwner,
     i_bridge::IBridge,
     i_inbox::IInbox,
     i_sequencer_inbox::ISequencerInbox,
@@ -24,12 +27,12 @@ use test_framework::components::{
 };
 use test_utils::{
     anvil::start_anvil_with_args,
-    chain_info::{test_account1, test_account8, test_account9, ChainInfo},
+    chain_info::{test_account1, test_account8, ChainInfo},
     docker::{
-        self, launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, E2EProcess,
+        launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, E2EProcess,
         NitroNodeArgs, NitroSequencerMode,
     },
-    nitro_chain::{deploy_nitro_rollup, NitroDeployment},
+    nitro_chain::{deploy_nitro_rollup, NitroDeployment, ARB_OWNER_PRECOMPILE_ADDRESS},
     port_manager::PortManager,
     utils::test_path,
     wait_until,
@@ -56,6 +59,7 @@ async fn deploy_sequencing_contract<P: Provider>(
     Ok(contract_instance)
 }
 
+#[allow(dead_code)]
 struct SyndicateStack {
     mchain_rpc_url: String,
     mchain: E2EProcess,
@@ -318,7 +322,6 @@ async fn e2e_migration() -> Result<()> {
     assert_eq!(initial_value, U256::from(42));
 
     // assert new txs work
-    //
     let nonce = migrated_appchain.provider.get_transaction_count(test_user.address).await?;
     let update_val_raw_tx = storage_contract
         .set(U256::from(43))
@@ -326,6 +329,7 @@ async fn e2e_migration() -> Result<()> {
         .gas(100_000)
         .max_fee_per_gas(100000000)
         .max_priority_fee_per_gas(0)
+        .chain_id(appchain_chain_id)
         .build_raw_transaction(test_user.signer.clone())
         .await?;
     assert!(sequencing_contract
@@ -337,12 +341,65 @@ async fn e2e_migration() -> Result<()> {
         .status());
     wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
 
+    // TODO ^ this sometimes fails, look for `reorgingSequencer=true`... needs to be investigated
+
+    // deposit again, assert it works
+    let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+
+    // we need to produce an extra tx to seal the slot with the deposit
+    let cur_ts = set_chain.provider.get_block(BlockId::latest()).await?.unwrap().header.timestamp;
+    set_chain.provider.anvil_set_next_block_timestamp(cur_ts + 100).await?; // set_delay is 60
+    assert!(set_chain
+        .provider
+        .send_transaction(TransactionRequest::default().to(Address::ZERO).value(U256::from(0u64)))
+        .await?
+        .get_receipt()
+        .await?
+        .status());
+
+    wait_until!(
+        // 10 + 10 - gas fees
+        migrated_appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?,
+        Duration::from_secs(10)
+    );
+
     // assert `arbOwner.setL1PricePerUnit(0) ` works
+    assert!(ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &migrated_appchain.provider)
+        .setL1PricePerUnit(U256::ZERO)
+        .send()
+        .await?
+        .get_receipt()
+        .await?
+        .status());
 
     // assert new txs work after setPricePerUnit is called
+    // (also assert the standard nitro -> sequencer flow works)
+    assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
+    assert!(storage_contract.get().call().await? == U256::from(44));
+    // TODO ^ this will not pass until we setup the sequencer (it's sending directly to nitro)
 
     // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
-    //
+    let nonce = migrated_appchain.provider.get_transaction_count(test_user.address).await?;
+    let update_val_raw_tx = storage_contract
+        .set(U256::from(45))
+        .nonce(nonce)
+        .gas(100_000)
+        .max_fee_per_gas(100000000)
+        .max_priority_fee_per_gas(0)
+        .chain_id(appchain_chain_id)
+        .build_raw_transaction(test_user.signer.clone())
+        .await?;
+
+    // TODO this is not expected to pass yet
+    assert!(inbox
+        .sendL2MessageFromOrigin(update_val_raw_tx.into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?
+        .status());
+    wait_until!(storage_contract.get().call().await? == U256::from(45), Duration::from_secs(10));
+
     // assert withdrawals work (TBD)
 
     // TODO InboxMessageDeliveredFromOrigin needs to be handled in the enclave too... test an

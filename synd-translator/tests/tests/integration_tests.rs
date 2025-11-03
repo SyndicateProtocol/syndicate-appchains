@@ -19,7 +19,7 @@ use synd_mchain::{
 };
 use test_utils::{
     docker::{launch_nitro_node, start_mchain, NitroNodeArgs, NitroSequencerMode},
-    nitro_chain::NitroDeployment,
+    nitro_chain::{NitroDeployment, ARB_OWNER_PRECOMPILE_ADDRESS},
     wait_until,
 };
 
@@ -53,9 +53,6 @@ fn deposit_eth(src: Address, dest: Address, value: U256) -> DelayedMessage {
 
 #[tokio::test]
 async fn arb_owner_test() -> Result<()> {
-    const ARB_OWNER_CONTRACT_ADDRESS: Address =
-        address!("0x000000000000000000000000000000000000006b");
-
     // Start the appchain's node
     let appchain_owner = address!("0x0000000000000000000000000000000000000001");
     let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0).await?;
@@ -75,7 +72,7 @@ async fn arb_owner_test() -> Result<()> {
         sequencer_private_key: None,
     })
     .await?;
-    let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &chain_info.provider);
+    let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_PRECOMPILE_ADDRESS, &chain_info.provider);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?, [appchain_owner]);
     Ok(())
 }

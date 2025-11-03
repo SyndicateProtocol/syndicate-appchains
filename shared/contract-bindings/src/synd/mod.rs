@@ -7,6 +7,7 @@ pub mod r#arb_chain_config;
 pub mod r#arb_config_manager;
 pub mod r#arb_config_manager_factory;
 pub mod r#arb_gas_info;
+pub mod r#arb_owner;
 pub mod r#arb_owner_public;
 pub mod r#arb_sys;
 pub mod r#assertion_poster;
