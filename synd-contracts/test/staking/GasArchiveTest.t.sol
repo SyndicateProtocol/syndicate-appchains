@@ -183,6 +183,70 @@ contract GasArchiveTest is Test {
         gasArchive.removeSequencingChain(SEQ_CHAIN_ID);
     }
 
+    function testRemoveSequencingChainTriggersEpochCompletionWithCorrectChainCount() public {
+        uint256 chain2 = 888;
+        uint256 chain3 = 999;
+
+        vm.startPrank(admin);
+        gasArchive.addSequencingChain(chain2, address(3), address(4), false);
+        gasArchive.addSequencingChain(chain3, address(5), address(6), false);
+        vm.stopPrank();
+
+        // At this point:
+        // - epoch = EPOCH (10)
+        // - epochRemainingChains = 3 (SEQ_CHAIN_ID, chain2, chain3)
+        // - None of the chains have submitted data
+
+        // Setup verified data and submit pre-image for SEQ_CHAIN_ID
+        uint256[] memory appchainIds = new uint256[](1);
+        appchainIds[0] = APPCHAIN_ID_1;
+        uint256[] memory gasUsageAmounts = new uint256[](1);
+        gasUsageAmounts[0] = 100;
+
+        gasArchive.setEpochDataHashForTesting(EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
+
+        // Setup verified data and submit pre-image for chain2
+        gasArchive.setEpochDataHashForTesting(EPOCH, chain2, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(chain2, appchainIds, gasUsageAmounts);
+
+        // At this point:
+        // - SEQ_CHAIN_ID has submitted data
+        // - chain2 has submitted data
+        // - chain3 has NOT submitted data (epochRemainingChains should be 1)
+
+        // Now remove chain3 which hasn't submitted data
+        // This should trigger epoch completion because it's the last remaining chain
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit EpochCompleted(EPOCH);
+        gasArchive.removeSequencingChain(chain3);
+
+        // Verify epoch has incremented
+        assertEq(gasArchive.epoch(), EPOCH + 1, "Epoch should have incremented");
+
+        // Verify chain3 was removed
+        assertEq(gasArchive.seqChainGasAggregator(chain3), address(0), "Chain3 should be removed");
+
+        uint256 newEpoch = EPOCH + 1;
+
+        // Add verified data for SEQ_CHAIN_ID in the new epoch
+        gasArchive.setEpochDataHashForTesting(newEpoch, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
+
+        // Epoch should NOT complete yet because we still have chain2 to submit
+        assertEq(gasArchive.epoch(), newEpoch, "Epoch should not complete after first submission");
+
+        // Now submit for chain2 - this should complete the epoch
+        gasArchive.setEpochDataHashForTesting(newEpoch, chain2, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        vm.expectEmit(true, false, false, false);
+        emit EpochCompleted(newEpoch);
+        gasArchive.submitEpochPreImageData(chain2, appchainIds, gasUsageAmounts);
+
+        // Epoch should now be incremented and NOT REVERT
+        assertEq(gasArchive.epoch(), newEpoch + 1, "Epoch should complete after all chains submit");
+    }
+
     /*//////////////////////////////////////////////////////////////
                     EPOCH DATA VALIDATION TESTS
     //////////////////////////////////////////////////////////////*/
