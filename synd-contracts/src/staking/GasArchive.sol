@@ -454,8 +454,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             if (epochRemainingChains == 0) {
                 emit EpochCompleted(epoch);
                 epoch++;
-                uint256 seqChainCount = seqChains.length();
-                epochRemainingChains = seqChainCount;
+                epochRemainingChains = seqChains.length();
             }
         }
         emit ChainRemoved(epoch, chainID);
