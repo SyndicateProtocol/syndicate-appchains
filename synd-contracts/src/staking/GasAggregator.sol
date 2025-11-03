@@ -8,8 +8,12 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {EpochTracker} from "./EpochTracker.sol";
 
 interface ISyndicateProxy {
-    // This function exists in both the new proxy and legacy implementation contract
+    // This function exists in legacy contracts
     function tokensUsedPerEpoch(uint256 epoch) external view returns (uint256);
+}
+
+interface IGasMeter {
+    function gasUsed(uint256 epoch, address chainAddress) external view returns (uint256);
 }
 
 /// @notice Storage struct for GasAggregator using ERC-7201 namespaced storage pattern
@@ -36,13 +40,17 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
                             CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Version of the GasAggregator contract (updatable during upgrades)
+    /// @notice Version of the GasAggregator contract
     /// @dev Semantic version string to track contract upgrades and compatibility
-    uint256 public constant VERSION = 1_000_000; // 1.0.0 (major * 1_000_000 + minor * 1_000 + patch)
+    uint256 public constant VERSION = 1_001_000; // 1.1.0 (major * 1_000_000 + minor * 1_000 + patch)
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Address of the gas meter contract
+    /// @dev Used to get the gas used for each appchain
+    address public immutable gasMeterContract;
 
     /// @notice Factory contract address to determine create2 addresses
     address public factory;
@@ -74,6 +82,10 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
 
     /// @notice appchain contract addresses mapping
     mapping(uint256 chainId => address) public appchainContract;
+
+    /// @notice Legacy appchain contract addresses mapping
+    /// @dev Used to track legacy appchain contracts
+    mapping(uint256 chainId => bool) public isLegacyAppchainContract;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -142,11 +154,14 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     /// @dev The epoch is the first epoch to start from
     /// @dev The addChainFee is the fee to add a chain (setting it to 0 will default to 5 ether)
     /// @dev The maxAppchainsToQuery is the maximum number of appchains to query (setting it to 0 will default to 100)
+    /// @param _gasMeterContract The address of the gas meter contract
     /// @param _epoch The epoch to start from
     /// @param _addChainFee The fee to add a chain
     /// @param _maxAppchainsToQuery The maximum number of appchains to query
-    constructor(uint256 _epoch, uint256 _addChainFee, uint256 _maxAppchainsToQuery) {
+    constructor(address _gasMeterContract, uint256 _epoch, uint256 _addChainFee, uint256 _maxAppchainsToQuery) {
         require(_epoch != 0);
+        gasMeterContract = _gasMeterContract;
+
         currentEpoch = _epoch;
         addChainFee = _addChainFee;
         if (addChainFee == 0) {
@@ -247,7 +262,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
 
         for (uint256 i = 0; i < appchainToQuery; i++) {
             uint256 chainId = _appchains.at(aggregateIndex + i);
-            uint256 gasUsed = ISyndicateProxy(appchainContract[chainId]).tokensUsedPerEpoch(currentEpoch);
+            uint256 gasUsed = getAppchainGasUsed(currentEpoch, chainId);
             // ignore appchains with no gas usage in the epoch
             if (gasUsed > 0) {
                 chainIds[chainIdCount] = chainId;
@@ -291,18 +306,28 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         return _appchains.at(index);
     }
 
+    /// @notice Get the gas used for a given appchain
+    /// @param chainId The chain ID to get the gas used for
+    /// @return The gas used for the given appchain for the current epoch
+    function getAppchainGasUsed(uint256 epoch, uint256 chainId) public view returns (uint256) {
+        if (isLegacyAppchainContract[chainId]) {
+            return ISyndicateProxy(appchainContract[chainId]).tokensUsedPerEpoch(epoch);
+        }
+
+        return IGasMeter(gasMeterContract).gasUsed(epoch, appchainContract[chainId]);
+    }
+
     /*//////////////////////////////////////////////////////////////
                          ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Adds a chain to the gas tracking registry with a chainContract override.
-    /// This legacy function is deactivated once the factory is set.
-    function addLegacyChain(uint256 chainId, address chainContract) external onlyOwner whenNotPaused {
-        require(factory == address(0), FactoryAlreadySet());
+    /// @notice Manually adds a chain to the gas tracking registry with a chainContract override.
+    function adminAddChain(uint256 chainId, address chainContract, bool isLegacy) external onlyOwner whenNotPaused {
         require(chainId > 0, ZeroChainId());
-        require(_appchains.add(chainId), ChainAlreadyTracked(chainId));
         require(chainContract.code.length > 0, ChainNotFound(chainId));
+        require(_appchains.add(chainId), ChainAlreadyTracked(chainId));
         appchainContract[chainId] = chainContract;
+        isLegacyAppchainContract[chainId] = isLegacy;
         emit ChainAdded(currentEpoch, chainId, chainContract, msg.sender);
     }
 
