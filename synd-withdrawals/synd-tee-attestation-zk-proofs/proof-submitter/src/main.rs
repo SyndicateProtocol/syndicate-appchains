@@ -468,7 +468,7 @@ mod tests {
             contract_address: Some(*key_mgr_contract.address()),
             deploy_new_contract_with_sp1_verifier: None,
             deploy_expiration_tolerance: Duration::from_secs(3600),
-            chain_rpc_url: Some(chain_info.ws_url.to_string()),
+            chain_rpc_url: Some(chain_info.ws_url.clone()),
             private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
             elf_file_path: None,
         };
