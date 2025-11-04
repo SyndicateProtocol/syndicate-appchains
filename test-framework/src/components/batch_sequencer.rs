@@ -1,17 +1,25 @@
 use alloy::primitives::Address;
-
-pub(super) struct BatchSequencerConfig {
-    pub(crate) chain_id: u64,
-    pub(crate) valkey_url: String,
-    pub(crate) private_key: String,
-    pub(crate) sequencing_address: Address,
-    pub(crate) sequencing_rpc_url: String,
-    pub(crate) port: u16,
-    pub(crate) wait_for_receipt: bool,
+/// Configuration for the batch sequencer
+#[derive(Debug, Clone)]
+pub struct BatchSequencerConfig {
+    /// The chain ID of the batch sequencer
+    pub chain_id: u64,
+    /// The URL of the valkey
+    pub valkey_url: String,
+    /// The private key of the batch sequencer
+    pub private_key: String,
+    /// The address of the sequencing contract
+    pub sequencing_address: Address,
+    /// The RPC URL of the sequencing contract
+    pub sequencing_rpc_url: String,
+    /// The port of the batch sequencer
+    pub port: u16,
+    /// Whether to wait for the receipt of the transaction
+    pub wait_for_receipt: bool,
 }
 
 impl BatchSequencerConfig {
-    pub(crate) fn cli_args(&self) -> Vec<String> {
+    pub fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--chain-id".to_string(),
             self.chain_id.to_string(),

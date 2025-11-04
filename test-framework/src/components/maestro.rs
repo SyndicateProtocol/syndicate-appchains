@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub(super) struct MaestroConfig {
+pub struct MaestroConfig {
     pub port: u16,
     pub valkey_url: String,
     pub chain_rpc_urls: HashMap<u64, Vec<String>>,
@@ -13,7 +13,7 @@ pub(super) struct MaestroConfig {
 
 impl MaestroConfig {
     #[allow(clippy::unwrap_used)]
-    pub(super) fn cli_args(&self) -> Vec<String> {
+    pub fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--port".to_string(),
             self.port.to_string(),

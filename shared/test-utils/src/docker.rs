@@ -276,7 +276,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     let tag = env::var("NITRO_TAG").unwrap_or(NITRO_DEFAULT_TAG.to_string());
     let port = PortManager::instance().next_port().await;
 
-    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
+    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "trace".to_string());
 
     let sequencer_args = match args.sequencer_mode {
         NitroSequencerMode::None => vec!["--execution.forwarding-target=null".to_string()],

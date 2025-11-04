@@ -19,7 +19,7 @@ use synd_mchain::{
 };
 use test_utils::{
     docker::{launch_nitro_node, start_mchain, NitroNodeArgs, NitroSequencerMode},
-    nitro_chain::{NitroDeployment, ARB_OWNER_PRECOMPILE_ADDRESS},
+    nitro_chain::{NitroDeployment, ARB_OWNER_PUBLIC_PRECOMPILE_ADDRESS},
     wait_until,
 };
 
@@ -70,9 +70,11 @@ async fn arb_owner_test() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
-    let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_PRECOMPILE_ADDRESS, &chain_info.provider);
+    let arb_owner_public =
+        ArbOwnerPublic::new(ARB_OWNER_PUBLIC_PRECOMPILE_ADDRESS, &chain_info.provider);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?, [appchain_owner]);
     Ok(())
 }
@@ -96,6 +98,7 @@ async fn no_l1_fees_test() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &chain_info.provider);
@@ -151,6 +154,7 @@ async fn test_nitro_batch() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
 
@@ -232,6 +236,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
     let addr = get_signer().address();
@@ -330,6 +335,7 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
 
@@ -373,6 +379,7 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
             ..Default::default()
         },
         sequencer_private_key: None,
+        data_dir: None,
     })
     .await?;
 
