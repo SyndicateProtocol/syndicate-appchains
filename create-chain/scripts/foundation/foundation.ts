@@ -61,11 +61,13 @@ async function main() {
   let chainConfig: ChainConfig | undefined
   let coreContracts: CoreContracts | undefined
   if (coreContractsCreatedAtHash) {
-    print("🔍  Fetching existing core contracts and chain config...")
-    const { chainConfig: chainConfigFromHash, coreContracts: coreContractsFromHash } = await getConfigAndCoreContracts({ hash: coreContractsCreatedAtHash as `0x${string}` })
-    chainConfig = chainConfigFromHash
-    coreContracts = coreContractsFromHash
-    print("✅  Core contracts and chain config fetched")
+    try {
+      const result = await getConfigAndCoreContracts({ hash: coreContractsCreatedAtHash as `0x${string}` })
+      chainConfig = result.chainConfig
+      coreContracts = result.coreContracts
+    } catch (error) {
+      throw new Error("Failed to fetch existing core contracts and chain config from coreContractsCreatedAtHash. Please make sure coreContractsCreatedAtHash is valid and the transaction has been confirmed on the settlement chain.")
+    }
   }
 
   print("              CREATE INITIAL DEPENDENCIES FOR APPCHAIN              ")
@@ -74,10 +76,7 @@ async function main() {
 
   print("Chain ID", chainId)
   print("Chain Name", chainName)
-  print("Skip Deploying Core Contracts", coreContractsCreatedAtHash ? "Yes" : "No")
-  if (coreContractsCreatedAtHash) {
-    print("Core Contracts Created At Hash", coreContractsCreatedAtHash)
-  }
+  print("Skip Nitro Core", coreContractsCreatedAtHash ? "Yes" : "No")
   print("Deployer", deployerSettlementWalletClient.account.address)
   print("Sequencer Address", sequencerAccount.address)
   print("Sequencer PK", sequencerPrivateKey)
@@ -114,6 +113,12 @@ async function main() {
       print("Validator Utils", coreContracts.validatorUtils)
     }
     print("Deployed At Block", coreContracts.deployedAtBlockNumber)
+
+    print("---------------------------------------------------------")
+    print("              EXISTING CHAIN CONFIG                      ")
+    print("---------------------------------------------------------")
+    print("Chain Config", stringify(chainConfig, null, 2))
+    print("---------------------------------------------------------")
   }
   print("---------------------------------------------------------")
 
