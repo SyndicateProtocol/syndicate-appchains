@@ -1,6 +1,11 @@
 import { type Hex, parseEther, stringify } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 
+import {
+  type ChainConfig,
+  type CoreContracts
+} from "@arbitrum/orbit-sdk"
+
 import { getFoundationConfig } from "../utils/config"
 import {
   getDoesChainExist,
@@ -19,8 +24,10 @@ import {
   supportedSettlementChains
 } from "../utils/constants"
 import { fundAccount } from "../utils/fundAccount"
+import { generateBridgeConfig } from "../utils/generateBridgeConfig"
 import { print } from "../utils/print"
 import { createArbChainConfig } from "./createArbChainConfig"
+import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts"
 
 async function main() {
   const {
@@ -33,7 +40,10 @@ async function main() {
     sequencingPublicClient,
     ethereumChainRpcUrl,
     deployerSequencingWalletClient,
-    ownerPrivateKey
+    ownerPrivateKey,
+    coreContractsCreatedAtHash,
+    appChainRpcUrl,
+    appChainExplorerUrl
   } = await getFoundationConfig()
 
   const validators = [ownerSettlementWalletClient.account.address]
@@ -47,12 +57,27 @@ async function main() {
   const isTestnet = ownerSettlementWalletClient.chain.testnet
   const environment = isTestnet ? "testnet" : "mainnet"
 
+  // Fetch core contracts and chain config if hash is provided
+  let chainConfig: ChainConfig | undefined
+  let coreContracts: CoreContracts | undefined
+  if (coreContractsCreatedAtHash) {
+    print("🔍  Fetching existing core contracts and chain config...")
+    const { chainConfig: chainConfigFromHash, coreContracts: coreContractsFromHash } = await getConfigAndCoreContracts({ hash: coreContractsCreatedAtHash as `0x${string}` })
+    chainConfig = chainConfigFromHash
+    coreContracts = coreContractsFromHash
+    print("✅  Core contracts and chain config fetched")
+  }
+
   print("              CREATE INITIAL DEPENDENCIES FOR APPCHAIN              ")
   print("⚠️  Please confirm the following details before proceeding ⚠️")
   print("---------------------------------------------------------")
 
   print("Chain ID", chainId)
   print("Chain Name", chainName)
+  print("Skip Deploying Core Contracts", coreContractsCreatedAtHash ? "Yes" : "No")
+  if (coreContractsCreatedAtHash) {
+    print("Core Contracts Created At Hash", coreContractsCreatedAtHash)
+  }
   print("Deployer", deployerSettlementWalletClient.account.address)
   print("Sequencer Address", sequencerAccount.address)
   print("Sequencer PK", sequencerPrivateKey)
@@ -70,6 +95,26 @@ async function main() {
   print("Settlement Chain", settlementPublicClient.chain.name)
   print("Sequencing Chain", sequencingPublicClient.chain.name)
   print("Environment", environment)
+
+  if (coreContractsCreatedAtHash && coreContracts) {
+    print("---------------------------------------------------------")
+    print("              EXISTING CORE CONTRACTS                    ")
+    print("---------------------------------------------------------")
+    print("Rollup", coreContracts.rollup)
+    print("Inbox", coreContracts.inbox)
+    print("Outbox", coreContracts.outbox)
+    print("Bridge", coreContracts.bridge)
+    print("Sequencer Inbox", coreContracts.sequencerInbox)
+    print("Rollup Event Inbox", coreContracts.rollupEventInbox)
+    print("Challenge Manager", coreContracts.challengeManager)
+    print("Admin Proxy", coreContracts.adminProxy)
+    print("Upgrade Executor", coreContracts.upgradeExecutor)
+    print("Validator Wallet Creator", coreContracts.validatorWalletCreator)
+    if (coreContracts.validatorUtils) {
+      print("Validator Utils", coreContracts.validatorUtils)
+    }
+    print("Deployed At Block", coreContracts.deployedAtBlockNumber)
+  }
   print("---------------------------------------------------------")
 
   const promptResponse = prompt("Are you sure you want to proceed? (y/n)")
@@ -93,13 +138,33 @@ async function main() {
     `🔍  Settlement block before sequencing deployment: ${settlementBlockBeforeDeployment}`
   )
 
-  const { chainConfig, coreContracts, bridgeConfig } = await deployNitroRollup({
-    validators,
-    batchPosters,
-    batchPosterManager
-  })
+  let bridgeConfig: { chainInfo: any; coreContracts: CoreContracts; tokenBridgeContracts: any }
+
+  if (coreContractsCreatedAtHash && chainConfig && coreContracts) {
+    print("✅  Using existing Nitro Rollup core contracts")
+    // Create bridgeConfig structure compatible with existing code
+    bridgeConfig = generateBridgeConfig({
+      coreContracts,
+      chainName,
+      chainId,
+      parentChainId: settlementPublicClient.chain.id,
+      rollupOwnerAddress: ownerSettlementWalletClient.account.address,
+      rpcUrl: appChainRpcUrl,
+      explorerUrl: appChainExplorerUrl
+    })
+  } else {
+    const nitroDeploymentResult = await deployNitroRollup({
+      validators,
+      batchPosters,
+      batchPosterManager
+    })
+    chainConfig = nitroDeploymentResult.chainConfig
+    coreContracts = nitroDeploymentResult.coreContracts
+    bridgeConfig = nitroDeploymentResult.bridgeConfig
+    print("✅  Nitro Rollup deployed")
+  }
+
   await upsertToSyndObject(chainName, environment, "bridge", bridgeConfig)
-  print("✅  Nitro Rollup deployed")
 
   print("---------------------------------------------------------")
 

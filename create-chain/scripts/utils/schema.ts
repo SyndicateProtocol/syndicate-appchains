@@ -114,7 +114,9 @@ export const foundationConfig = z.object({
     .optional()
     .transform((val) => (val ? getAddress(val) : undefined)),
   deployerPrivateKey: z.string(),
-  ownerPrivateKey: z.string()
+  ownerPrivateKey: z.string(),
+  // hash of the transaction that created the core contracts
+  coreContractsCreatedAtHash: z.string().optional()
 })
 
 export const featuresConfig = z.object({
