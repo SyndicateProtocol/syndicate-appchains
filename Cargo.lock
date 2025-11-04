@@ -7696,6 +7696,7 @@ dependencies = [
  "alloy",
  "clap",
  "common",
+ "contract-bindings",
  "ctor",
  "derivative",
  "eyre",

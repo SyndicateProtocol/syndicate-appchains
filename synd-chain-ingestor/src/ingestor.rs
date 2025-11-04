@@ -14,7 +14,7 @@ use shared::{
     tracing::SpanKind,
     types::{BlockRef, PartialBlock},
 };
-use std::{cmp::Ordering, sync::Mutex};
+use std::{cmp::Ordering, collections::HashMap, sync::Mutex};
 use tracing::{error, info_span, instrument, warn};
 
 #[allow(missing_docs)]
@@ -123,6 +123,7 @@ pub async fn run(
                         x.logs
                     })
                     .collect(),
+                log_txs: HashMap::new(),
             };
 
             ctx.lock()
@@ -140,6 +141,7 @@ pub async fn run(
                                     .collect(),
                                 block_ref: partial_block.block_ref.clone(),
                                 parent_hash: partial_block.parent_hash,
+                                log_txs: HashMap::new(),
                             }))
                             .unwrap_or_else(|e| panic!("failed to serialize message: {e}")),
                         ))

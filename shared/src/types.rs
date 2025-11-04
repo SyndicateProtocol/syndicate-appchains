@@ -4,7 +4,7 @@ use alloy::{
     consensus::Eip658Value,
     hex,
     network::EthereumWallet,
-    primitives::{Address, Bloom, Log, B256},
+    primitives::{Address, Bloom, Bytes, Log, B256, U256},
     providers::{
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -12,12 +12,12 @@ use alloy::{
         },
         Identity, ProviderBuilder, RootProvider,
     },
-    rpc::types::Block,
     signers::local::PrivateKeySigner,
 };
 use async_trait::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
+    collections::HashMap,
     fmt::{Display, Formatter},
     str::FromStr as _,
 };
@@ -86,27 +86,16 @@ pub struct Receipt {
 }
 
 /// `PartialBlock` contains block transactions, event logs, and metadata
-#[allow(missing_docs)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct PartialBlock {
+    /// reference to the block that this partial block was built from
     pub block_ref: BlockRef,
+    /// hash of the parent block
     pub parent_hash: B256,
+    /// log data
     pub logs: Vec<Log>,
-}
-
-/// Convert a block and its receipts to a `PartialBlock`
-pub fn convert_block_to_partial_block(block: &Block, receipts: &[Receipt]) -> PartialBlock {
-    let filtered_logs: Vec<Log> =
-        receipts.iter().flat_map(|receipt| receipt.logs.clone()).collect();
-    PartialBlock {
-        block_ref: BlockRef {
-            number: block.header.number,
-            hash: block.header.hash,
-            timestamp: block.header.timestamp,
-        },
-        parent_hash: block.header.parent_hash,
-        logs: filtered_logs,
-    }
+    /// auxiliary tx data for `InboxMessageDeliveredFromOrigin` events (mapped by seqNum)
+    pub log_txs: HashMap<U256, Bytes>,
 }
 
 impl GetBlockRef for PartialBlock {

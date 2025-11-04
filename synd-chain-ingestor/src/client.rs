@@ -2,9 +2,15 @@
 
 use crate::{db::ITEM_SIZE, eth_client::EthClient, server::Message};
 use alloy::{
+    consensus::Transaction,
     eips::BlockNumberOrTag,
-    primitives::{Address, Bytes, B256},
+    primitives::{Address, Bytes, B256, U256},
     rpc::types::Filter,
+    sol_types::{SolCall, SolEvent as _},
+};
+use contract_bindings::synd::{
+    i_delayed_message_provider::IDelayedMessageProvider::InboxMessageDeliveredFromOrigin,
+    i_inbox::IInbox::sendL2MessageFromOriginCall,
 };
 use eyre::{eyre, OptionExt as _};
 use futures_util::{
@@ -26,7 +32,7 @@ use shared::{
     types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock},
 };
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::{HashMap, VecDeque},
     future::Future,
     pin::Pin,
     sync::Arc,
@@ -56,6 +62,7 @@ async fn build_partial_blocks(
             block_ref: BlockRef { number: i, timestamp, hash },
             parent_hash,
             logs: Default::default(),
+            log_txs: HashMap::new(),
         });
         parent_hash = hash;
     }
@@ -91,6 +98,10 @@ async fn build_partial_blocks(
         // Fetch all logs for unsafe blocks. This makes it more likely that a log is included which
         // contains block hash info with it.
         let first_unsafe_block = safe_block + 1;
+
+        // TODO isn't fetching ALL logs incredible bandwidth ineficient for large chains like base?
+        // (I get the CU total is better, but this seems silly)
+
         info!("fetching full logs from blocks {} to {}", first_unsafe_block, end_block);
         let mut unsafe_logs = client
             .get_logs(&Filter::new().from_block(first_unsafe_block).to_block(end_block))
@@ -107,11 +118,7 @@ async fn build_partial_blocks(
                     blocks[(safe_block - start_block) as usize].block_ref.hash
                 ));
             }
-            let mut addr_set = HashSet::new();
-            for addr in &addrs {
-                addr_set.insert(addr);
-            }
-            unsafe_logs.retain(|x| addr_set.contains(&x.address()));
+            unsafe_logs.retain(|x| addrs.contains(&x.address()));
             logs.append(&mut unsafe_logs);
         }
 
@@ -140,7 +147,20 @@ async fn build_partial_blocks(
         assert!(log_block > block || (log_block == block && log_index > index), "out of order log found from rpc provider: previous (block, index) = ({block} {index}), current = ({log_block}, {log_index})");
         block = log_block;
         index = log_index;
-        blocks[(log.block_number.unwrap() - start_block) as usize].logs.push(log.into_inner());
+        let block_index = (log.block_number.unwrap() - start_block) as usize;
+        if log.topics()[0] == InboxMessageDeliveredFromOrigin::SIGNATURE_HASH {
+            let tx_hash = log.transaction_hash.unwrap_or_else(|| panic!("log without txhash"));
+            let tx = client
+                .get_transaction_by_hash(tx_hash)
+                .await
+                .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+
+            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(tx.input())?;
+            let seq_num: U256 = log.topics()[1].into();
+            blocks[block_index].log_txs.insert(seq_num, decoded_tx.messageData);
+        };
+
+        blocks[block_index].logs.push(log.into_inner());
     }
 
     Ok(blocks)

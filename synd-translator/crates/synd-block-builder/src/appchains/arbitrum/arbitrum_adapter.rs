@@ -174,32 +174,32 @@ impl ArbitrumAdapter {
 
         // Process all inbox logs in all receipts
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            match log.topics()[0] {
+            let (msg_num, calldata) = match log.topics()[0] {
                 INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = log.topics()[1].into();
-
+                    let message_num: U256 = log.topics()[1].into();
                     // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data_validate(&log.data.data) {
-                        Ok(decoded) => {
-                            message_data.insert(message_num, decoded.0);
-                        }
-                        Err(e) => {
+                    let decoded = InboxMessageDelivered::abi_decode_data_validate(&log.data.data)
+                        .unwrap_or_else(|e| {
                             panic!(
                                 "{}",
                                 ArbitrumBlockBuilderError::DecodingError(
                                     "InboxMessageDelivered",
                                     e.into()
                                 )
-                            );
-                        }
-                    }
+                            )
+                        });
+                    (message_num, decoded.0)
                 }
-
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    panic!("unsupported inbox message delivered from origin: {}", log.topics()[1]);
+                    let message_num: U256 = log.topics()[1].into();
+                    let data = block.log_txs[&message_num].clone();
+                    (message_num, data)
                 }
-                _ => {}
-            }
+                e => {
+                    panic!("unsupported event type: {e}")
+                }
+            };
+            message_data.insert(msg_num, calldata);
         });
 
         trace!("Delayed message data: {:?}", message_data);
