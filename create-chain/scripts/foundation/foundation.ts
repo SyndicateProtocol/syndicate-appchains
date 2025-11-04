@@ -129,7 +129,7 @@ async function main() {
     return
   }
 
-  if (await getDoesChainExist(chainId)) {
+  if (!coreContractsCreatedAtHash && await getDoesChainExist(chainId)) {
     print(`🚫 Chain ${chainId} already exists`)
     process.exit(1)
   }
@@ -146,7 +146,7 @@ async function main() {
   let bridgeConfig: ReturnType<typeof generateBridgeConfig>
 
   if (coreContractsCreatedAtHash && chainConfig && coreContracts) {
-    print("✅  Using existing Nitro Rollup core contracts")
+    print("🔍  Using existing Nitro core contracts")
     // Create bridgeConfig structure compatible with existing code
     bridgeConfig = generateBridgeConfig({
       coreContracts,
@@ -158,6 +158,7 @@ async function main() {
       explorerUrl: appChainExplorerUrl
     })
   } else {
+    print("🔍  Deploying Nitro core contracts")
     const nitroDeploymentResult = await deployNitroRollup({
       validators,
       batchPosters,
