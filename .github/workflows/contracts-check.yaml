@@ -15,6 +15,7 @@ on:
       - staging
   # Only run on PRs that touch shared contracts
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -25,6 +26,7 @@ env:
 
 jobs:
   contracts-check:
+    if: github.event.pull_request.draft == false
     name: synd-contracts Check
     runs-on: ubuntu-latest
     defaults:
