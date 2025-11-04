@@ -186,6 +186,10 @@ pub struct TranslatorConfig {
     pub migrated_batch_acc: Option<B256>,
 
     /// The batch accumulator at the point of migration
+    #[arg(long, env = "MIGRATED_BEFORE_BATCH_ACC", value_parser = parse_hash)]
+    pub migrated_before_batch_acc: Option<B256>,
+
+    /// The batch accumulator at the point of migration
     #[arg(long, env = "MIGRATED_BATCH_COUNT")]
     pub migrated_batch_count: Option<u64>,
 
@@ -292,6 +296,8 @@ impl TranslatorConfig {
             .settlement_start_block
             .unwrap_or_else(|| panic!("migration initial settlement block is none"));
         let batch_acc = self.migrated_batch_acc.unwrap_or_else(|| panic!("batch acc is none"));
+        let before_batch_acc =
+            self.migrated_before_batch_acc.unwrap_or_else(|| panic!("before batch acc is none"));
         let batch_count =
             self.migrated_batch_count.unwrap_or_else(|| panic!("batch count is none"));
         let delayed_msgs_acc =
@@ -302,6 +308,7 @@ impl TranslatorConfig {
 
         Some(MigrationParams {
             settlement_start_block,
+            before_batch_acc,
             batch_acc,
             batch_count,
             delayed_msgs_acc,

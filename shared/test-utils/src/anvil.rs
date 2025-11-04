@@ -12,6 +12,8 @@ use alloy::{
 };
 use eyre::{eyre, Result};
 use shared::types::FilledProvider;
+use std::time::Duration;
+use tokio::time::sleep;
 
 pub async fn start_anvil(chain_id: u64) -> Result<ChainInfo> {
     start_anvil_with_args(chain_id, Default::default()).await
@@ -37,6 +39,7 @@ pub async fn start_anvil_with_args(chain_id: u64, args: &[&str]) -> Result<Chain
 
 /// mine a block with a delay
 pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
+    sleep(Duration::from_secs(1)).await;
     let block: Block = provider
         .get_block_by_number(BlockNumberOrTag::Latest)
         .await?

@@ -30,6 +30,7 @@ use std::{
     sync::{Arc, Mutex},
     time::UNIX_EPOCH,
 };
+use tracing::debug;
 
 /// `eth_subscribe`
 #[allow(clippy::unwrap_used)]
@@ -189,6 +190,7 @@ pub fn eth_get_block_by_hash(
 ) -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
     let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
     let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
+    debug!("eth_get_block_by_hash: number: {number}");
     let block = db.get_block(number)?;
     Ok(alloy::rpc::types::Block {
         header: create_header(

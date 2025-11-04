@@ -112,6 +112,7 @@ pub struct RollupState {
     pub block_number: u64,
     pub block_hash: B256,
     pub batch_count: u64,
+    pub before_batch_acc: B256,
     pub batch_acc: B256,
     pub parent_chain_block: u64,
     pub delayed_msgs_count: u64,
@@ -148,6 +149,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     debug!("chain config: {:#?}", chain_config);
 
     println!("\n---------------\n");
+    println!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
     println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
     println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
     println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
@@ -254,10 +256,17 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
         })
         .ok_or_else(|| eyre::eyre!("Failed to get delayed message accumulator"))?;
 
+    let before_batch_acc = arb_db
+        .get(make_numbered_key(b"s", batch_count - 2, &[]))?
+        .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
+        .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?
+        .acc;
+
     Ok(RollupState {
         block_number,
         block_hash,
         batch_count,
+        before_batch_acc,
         batch_acc: batch_data.acc,
         parent_chain_block: batch_data.parent_chain_block,
         delayed_msgs_count,

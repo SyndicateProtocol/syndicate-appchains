@@ -123,6 +123,7 @@ pub async fn setup_config_manager(
             .migration(
                 migration_data.parent_chain_block.try_into().unwrap(),
                 options.sequencing_start_block.try_into().unwrap(),
+                migration_data.before_batch_acc.try_into().unwrap(),
                 migration_data.batch_acc.try_into().unwrap(),
                 migration_data.batch_count.try_into().unwrap(),
                 migration_data.delayed_msgs_acc.try_into().unwrap(),

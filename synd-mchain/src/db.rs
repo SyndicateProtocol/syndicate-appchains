@@ -9,7 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use tracing::trace;
+use tracing::debug;
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -190,11 +190,12 @@ pub trait ArbitrumDB {
     fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64), ErrorObjectOwned> {
         let offset = self.get_migration_offset();
         let batch_count = if key >= offset { key - offset } else { key };
-        trace!("get_block_with_offset: key: {key}, offset: {offset}");
+        debug!("get_block_with_offset: key: {key}, offset: {offset}");
         self.get_block(batch_count).map(|block| (block, batch_count))
     }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
+        debug!("put_block: {key:?}, {value:?}");
         self.put(
             DBKey::Block(key).to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
@@ -219,6 +220,7 @@ pub trait ArbitrumDB {
     }
     /// Puts the message accumulator associated with the given sequence number
     fn put_message_acc(&self, sequence_number: u64, value: &FixedBytes<32>) {
+        debug!("put_message_acc: {sequence_number:?}, {value:?}");
         self.put(
             DBKey::MessageAcc(sequence_number).to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
@@ -236,6 +238,7 @@ pub trait ArbitrumDB {
     }
     /// Puts the state of the chain
     fn put_state(&self, value: &State) {
+        debug!("put_state: {value:?}");
         self.put(
             DBKey::State.to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
@@ -390,6 +393,7 @@ pub trait ArbitrumDB {
     fn appchain_migration(
         &self,
         settlement_start_block: u64,
+        before_batch_acc: B256,
         batch_acc: B256,
         batch_count: u64,
         delayed_msgs_acc: B256,
@@ -402,6 +406,16 @@ pub trait ArbitrumDB {
         // what Nitro expects. Because mchain is designed so that block number = batch count
         // we need to have an offset in order to get the correct block from a given batch
         // count.
+
+        // Batch count 2
+        // Settlement start block 29
+        // Offset 29 - 2 = 27
+
+        // nitro asks for block 30 --> 30-27 = 3 --> block 3
+
+        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}");
+        debug!("appchain_migration: batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc}");
+
         self.put_block(
             batch_count,
             &Block {
@@ -413,9 +427,9 @@ pub trait ArbitrumDB {
                     set_block_number: 0u64,
                     set_block_hash: B256::ZERO,
                 },
-                after_batch_acc: batch_acc,
                 messages: vec![],
-                before_batch_acc: batch_acc,
+                before_batch_acc,
+                after_batch_acc: batch_acc,
                 before_message_acc: delayed_msgs_acc,
                 before_message_count: delayed_msgs_count,
             },

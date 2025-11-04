@@ -19,6 +19,7 @@ contract ArbChainConfig is Initializable {
     event Migration(
         uint256 setStartBlock,
         uint256 seqStartBlock,
+        uint256 beforeBatchAcc,
         uint256 batchAcc,
         uint256 batchCount,
         uint256 delayedMsgsAcc,
@@ -48,6 +49,7 @@ contract ArbChainConfig is Initializable {
 
     // Migration-only data
     uint256 public MIGRATED_BATCH_ACC;
+    uint256 public MIGRATED_BEFORE_BATCH_ACC;
     uint256 public MIGRATED_BATCH_COUNT;
     uint256 public MIGRATED_DELAYED_MSGS_ACC;
     uint256 public MIGRATED_DELAYED_MSGS_COUNT;
@@ -130,6 +132,7 @@ contract ArbChainConfig is Initializable {
     function migration(
         uint256 _set_start_block,
         uint256 _seq_start_block,
+        uint256 _before_batch_acc,
         uint256 _batch_acc,
         uint256 _batch_count,
         uint256 _delayed_msgs_acc,
@@ -139,6 +142,7 @@ contract ArbChainConfig is Initializable {
         SETTLEMENT_START_BLOCK = _set_start_block;
         SEQUENCING_START_BLOCK = _seq_start_block;
         MIGRATED_BATCH_ACC = _batch_acc;
+        MIGRATED_BEFORE_BATCH_ACC = _before_batch_acc;
         MIGRATED_BATCH_COUNT = _batch_count;
         MIGRATED_DELAYED_MSGS_ACC = _delayed_msgs_acc;
         MIGRATED_DELAYED_MSGS_COUNT = _delayed_msgs_count;
@@ -146,6 +150,7 @@ contract ArbChainConfig is Initializable {
         emit Migration(
             SETTLEMENT_START_BLOCK,
             SEQUENCING_START_BLOCK,
+            MIGRATED_BEFORE_BATCH_ACC,
             MIGRATED_BATCH_ACC,
             MIGRATED_BATCH_COUNT,
             MIGRATED_DELAYED_MSGS_ACC,
