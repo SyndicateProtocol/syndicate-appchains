@@ -61,7 +61,6 @@ func init() {
 	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
 }
 
-
 // once the target qty is reached or exceeded, getLogs stops fetching logs
 // note that it may return more logs than the target qty or less if target qty logs do not exist
 // if target qty is set to 0, all logs in the range are fetched
@@ -150,8 +149,11 @@ func loadBatchPreimageData(
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 ) error {
 	// byte 40 is a flag byte that determines if the batch uses alt-DA
-	if len(batch) <= 40 || !daprovider.IsDASMessageHeaderByte(batch[40]) {
+	if len(batch) <= 40 || batch[40] == 0 {
 		return nil
+	}
+	if !daprovider.IsKnownHeaderByte(batch[40]) {
+		return fmt.Errorf("unknown header byte 0x%02x", batch[40])
 	}
 	for _, dapReader := range dapReaders {
 		if dapReader.IsValidHeaderByte(ctx, batch[40]) {
