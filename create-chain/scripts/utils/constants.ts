@@ -86,7 +86,7 @@ export const supportedSettlementChains: SupportedSettlementChains = {
     rollupCreatorAddress: "0xb8F414924D2f2DABb6bDe930f44632E055c2720A",
     tokenBridgeCreatorAddress: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
     arbConfigManagerAddress: "0xc18feFb2E79Ec35Ca9f3c3e7F1920EC1cad06e8F",
-    teeKeyManagerAddress: "0xE35A246164b05184776D4B61bB70EED676045939"
+    teeKeyManagerAddress: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187"
   },
   [base.id]: {
     chain: base,

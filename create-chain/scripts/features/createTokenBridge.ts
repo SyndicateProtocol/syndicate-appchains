@@ -9,9 +9,10 @@ import {
   createTokenBridgePrepareTransactionRequest,
   isTokenBridgeDeployed
 } from "@arbitrum/orbit-sdk"
-import { Chain, zeroAddress } from "viem"
+import { Chain, Hex, PublicClient, Transport, zeroAddress } from "viem"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"
+import { getTokenBridgeContracts } from "./getTokenBridgeContracts"
 
 // Source: https://github.com/OffchainLabs/arbitrum-orbit-sdk/blob/7143a874a94dc0d59d076a0407319f4927f5f49d/src/createTokenBridge.ts#L171-L172
 export async function createTokenBridge<
@@ -29,7 +30,10 @@ export async function createTokenBridge<
   gasOverrides,
   retryableGasOverrides,
   setWethGatewayGasOverrides
-}: CreateTokenBridgeParams<TParentChain, TOrbitChain>) {
+}: CreateTokenBridgeParams<TParentChain, TOrbitChain> & {
+  tokenBridgeCreatorAddressOverride: Hex
+  parentChainPublicClient: PublicClient<Transport, Chain>
+}) {
   const isTokenBridgeAlreadyDeployed = await isTokenBridgeDeployed({
     parentChainPublicClient,
     orbitChainPublicClient,
@@ -134,10 +138,10 @@ export async function createTokenBridge<
     `🔎  Transaction hash for second retryable is ${orbitChainRetryableReceipts[1].transactionHash}`
   )
 
-  // fetching the TokenBridge contracts
-  const tokenBridgeContracts = await txReceipt.getTokenBridgeContracts({
-    // @ts-ignore (todo: fix viem type issue)
-    parentChainPublicClient
+  const tokenBridgeContracts = await getTokenBridgeContracts({
+    bridgeCreationHash: txReceipt.transactionHash,
+    parentChainPublicClient,
+    tokenBridgeCreatorAddressOverride
   })
 
   // Non custom fee token

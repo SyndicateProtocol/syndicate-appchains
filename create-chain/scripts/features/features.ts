@@ -241,21 +241,6 @@ async function main() {
     })
   }
 
-  // Generate proposer config file
-  await writeToFile(
-    chainName,
-    `${environment}-proposer.${chainName}.json`,
-    JSON.stringify(
-      {
-        "assertion-poster-contract-address": assertionPosterAddress,
-        "tee-module-address": teeModuleAddress,
-        "proposer-private-key": proposerPrivateKey.replace("0x", "")
-      },
-      null,
-      2
-    )
-  )
-
   print(
     `🏁  Features setup complete. Artifacts saved at:
     - ./out/${chainName}/${environment}.synd.${chainName}.json
