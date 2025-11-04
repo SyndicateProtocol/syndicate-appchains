@@ -103,7 +103,7 @@ contract PerformancePoolTest is Test {
         return cur - 1;
     }
 
-    function nextEpoch(uint256 numDays) internal {
+    function stepDays(uint256 numDays) internal {
         vm.warp(block.timestamp + numDays * 1 days);
     }
 
@@ -841,7 +841,7 @@ contract PerformancePoolTest is Test {
         assertEq(0, e1_user2_claimable);
 
         // Advance time half way through the epoch
-        nextEpoch(15);
+        stepDays(15);
 
         // User 2 deposits
         vm.startPrank(user2);
@@ -849,7 +849,7 @@ contract PerformancePoolTest is Test {
         vm.stopPrank();
 
         // Advance time to the next epoch
-        nextEpoch(15);
+        stepDays(15);
 
         // Epoch 2
         uint256 e2 = _settledEpoch();
