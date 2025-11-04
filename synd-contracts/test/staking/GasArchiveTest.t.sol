@@ -646,4 +646,46 @@ contract GasArchiveTest is Test {
             assertEq(retrievedChainID, SETTLEMENT_CHAIN_ID, "Any caller should read correct settlementChainID");
         }
     }
+
+    function testSeqChainRemoveAndAddAgainDeadlock() public {
+        uint256 chainId2 = 999;
+
+        // Add multiple chains
+        vm.startPrank(admin);
+        gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
+        vm.stopPrank();
+
+        // Create test data
+        uint256[] memory appchainIds = new uint256[](2);
+        appchainIds[0] = APPCHAIN_ID_1;
+        appchainIds[1] = APPCHAIN_ID_2;
+
+        uint256[] memory gasUsageAmounts = new uint256[](2);
+        gasUsageAmounts[0] = 1000;
+        gasUsageAmounts[1] = 2000;
+
+        // Set archived data using helper contract
+        gasArchive.setEpochDataHashForTesting(EPOCH, chainId2, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(chainId2, appchainIds, gasUsageAmounts);
+
+        // Remove chainId2
+        vm.prank(admin);
+        gasArchive.removeSequencingChain(chainId2);
+
+        // Try to add chainId2 back
+        vm.prank(admin);
+        vm.expectRevert(GasArchive.AlreadySubmitted.selector);
+        gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
+
+        // Submit data for SEQ_CHAIN_ID
+        gasArchive.setEpochDataHashForTesting(EPOCH, SEQ_CHAIN_ID, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
+        gasArchive.submitEpochPreImageData(SEQ_CHAIN_ID, appchainIds, gasUsageAmounts);
+
+        // Check epoch completion
+        assertEq(gasArchive.epoch(), EPOCH + 1);
+
+        // Now try to add chainId2 back again
+        vm.prank(admin);
+        gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
+    }
 }
