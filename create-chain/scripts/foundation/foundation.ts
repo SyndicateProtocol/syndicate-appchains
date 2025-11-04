@@ -143,7 +143,7 @@ async function main() {
     `🔍  Settlement block before sequencing deployment: ${settlementBlockBeforeDeployment}`
   )
 
-  let bridgeConfig: { chainInfo: any; coreContracts: CoreContracts; tokenBridgeContracts: any }
+  let bridgeConfig: ReturnType<typeof generateBridgeConfig>
 
   if (coreContractsCreatedAtHash && chainConfig && coreContracts) {
     print("✅  Using existing Nitro Rollup core contracts")
