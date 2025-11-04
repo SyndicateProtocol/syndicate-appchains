@@ -42,8 +42,9 @@ type ValidationData struct {
 }
 
 var (
-	messageDeliveredID      common.Hash
-	inboxMessageDeliveredID common.Hash
+	messageDeliveredEventHash                common.Hash
+	inboxMessageDeliveredEventHash           common.Hash
+	inboxMessageDeliveredFromOriginEventHash common.Hash
 )
 
 var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -53,12 +54,13 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	messageDeliveredID = parsedIBridgeABI.Events["MessageDelivered"].ID
+	messageDeliveredEventHash = parsedIBridgeABI.Events["MessageDelivered"].ID
 	parsedIMessageProviderABI, err := bridgegen.IDelayedMessageProviderMetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
-	inboxMessageDeliveredID = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
+	inboxMessageDeliveredEventHash = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
+	inboxMessageDeliveredFromOriginEventHash = parsedIMessageProviderABI.Events["InboxMessageDeliveredFromOrigin"].ID
 }
 
 // once the target qty is reached or exceeded, getLogs stops fetching logs
@@ -234,7 +236,7 @@ func GetDelayedMessages(
 			0,
 			endBlock,
 			[]common.Address{bridge},
-			[][]common.Hash{{messageDeliveredID}, nil, {endAcc}},
+			[][]common.Hash{{messageDeliveredEventHash}, nil, {endAcc}},
 			1)
 		if err != nil {
 			return common.Hash{}, nil, false, err
@@ -269,7 +271,7 @@ func GetDelayedMessages(
 		0,
 		endBlock,
 		[]common.Address{bridge},
-		[][]common.Hash{{messageDeliveredID}, indexes},
+		[][]common.Hash{{messageDeliveredEventHash}, indexes},
 		uint64(len(indexes)))
 	if err != nil {
 		return common.Hash{}, nil, false, err
@@ -311,7 +313,7 @@ func GetDelayedMessages(
 	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
 		addrs,
 		[][]common.Hash{
-			{messageDeliveredID, inboxMessageDeliveredID},
+			{messageDeliveredEventHash, inboxMessageDeliveredEventHash, inboxMessageDeliveredFromOriginEventHash},
 		}, 0)
 	if err != nil {
 		return common.Hash{}, nil, false, err
@@ -337,6 +339,7 @@ func GetDelayedMessages(
 		if err != nil {
 			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 		}
+		// TODO continue here
 		dataLog, err := iinbox.ParseInboxMessageDelivered(logs[i+1])
 		if err != nil {
 			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
