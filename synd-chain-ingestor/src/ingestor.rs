@@ -125,7 +125,6 @@ pub async fn run(
                     .collect(),
             };
 
-            #[allow(clippy::unwrap_used)]
             ctx.lock()
                 .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
                 .subs
@@ -142,7 +141,7 @@ pub async fn run(
                                 block_ref: partial_block.block_ref.clone(),
                                 parent_hash: partial_block.parent_hash,
                             }))
-                            .unwrap(),
+                            .unwrap_or_else(|e| panic!("failed to serialize message: {e}")),
                         ))
                         .inspect_err(|err| error!("try_send failed: {err}"))
                         .is_ok()

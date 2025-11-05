@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/ethdb/memorydb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -36,32 +35,17 @@ import (
 	"github.com/offchainlabs/nitro/execution"
 )
 
-func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uint64, dasEnabled bool, eigenDAEnabled bool) (*arbostypes.MessageWithMetadata, error) {
-	var dasReader dasutil.DASReader
-	var eigenDAReader *wavmio.EigenDAPreimageReader
-	var dasKeysetFetcher dasutil.DASKeysetFetcher
+func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uint64, dasEnabled bool) (*arbostypes.MessageWithMetadata, error) {
+	dapReaders := []daprovider.Reader{eigenda.NewReaderForEigenDA(&wavmio.EigenDAPreimageReader{Wavm: wavm}), daprovider.NewReaderForBlobReader(&wavmio.BlobPreimageReader{Wavm: wavm})}
 	if dasEnabled {
 		// DAS batch and keysets are all together in the same preimage binary.
-		dasReader = &wavmio.PreimageDASReader{Wavm: wavm}
-		dasKeysetFetcher = &wavmio.PreimageDASReader{Wavm: wavm}
-	}
-	if eigenDAEnabled {
-		eigenDAReader = &wavmio.EigenDAPreimageReader{Wavm: wavm}
+		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(&wavmio.PreimageDASReader{Wavm: wavm}, &wavmio.PreimageDASReader{Wavm: wavm}))
 	}
 	backend := &wavmio.WavmInbox{Wavm: wavm}
 	keysetValidationMode := daprovider.KeysetPanicIfInvalid
 	if backend.GetPositionWithinMessage() > 0 {
 		keysetValidationMode = daprovider.KeysetDontValidate
 	}
-	var dapReaders []daprovider.Reader
-	if eigenDAReader != nil {
-		dapReaders = append(dapReaders, eigenda.NewReaderForEigenDA(eigenDAReader))
-	}
-	if dasReader != nil {
-		dapReaders = append(dapReaders, dasutil.NewReaderForDAS(dasReader, dasKeysetFetcher))
-	}
-
-	dapReaders = append(dapReaders, daprovider.NewReaderForBlobReader(&wavmio.BlobPreimageReader{Wavm: wavm}))
 	inboxMultiplexer := arbstate.NewInboxMultiplexer(backend, delayedMessagesRead, dapReaders, keysetValidationMode)
 	msg, err := inboxMultiplexer.Pop(ctx)
 	if err != nil {
@@ -112,8 +96,7 @@ func Verify(
 		return nil, err
 	}
 
-	// use the rust LRU cache (0) for wasm programs
-	db := state.NewDatabase(triedb.NewDatabase(rawdb.WrapDatabaseWithWasm(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), memorydb.New(), 0, []ethdb.WasmTarget{rawdb.LocalTarget()}), nil), nil)
+	db := state.NewDatabase(triedb.NewDatabase(rawdb.WrapDatabaseWithWasm(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), memorydb.New()), nil), nil)
 
 	for wavm.GetInboxPosition() < batchCount {
 		if err = ctx.Err(); err != nil {
@@ -164,14 +147,14 @@ func Verify(
 			}
 		}
 
-		message, err := readMessage(ctx, wavm, header.Nonce.Uint64(), chainConfig.ArbitrumChainParams.DataAvailabilityCommittee, chainConfig.ArbitrumChainParams.EigenDA)
+		message, err := readMessage(ctx, wavm, header.Nonce.Uint64(), chainConfig.ArbitrumChainParams.DataAvailabilityCommittee)
 		if err != nil {
 			return nil, err
 		}
 
 		chainContext := wavmio.WavmChainContext{ChainConfig: chainConfig, Wavm: wavm}
 
-		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.MessageReplayMode)
+		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.NewMessageRecordingContext([]rawdb.WasmTarget{rawdb.LocalTarget()}))
 		if err != nil {
 			return nil, err
 		}

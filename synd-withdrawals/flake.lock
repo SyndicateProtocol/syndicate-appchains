@@ -39,11 +39,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1756770412,
-        "narHash": "sha256-+uWLQZccFHwqpGqr2Yt5VsW/PbeJVTn9Dk6SHWhNRPw=",
+        "lastModified": 1760948891,
+        "narHash": "sha256-TmWcdiUUaWk8J4lpjzu4gCGxWY6/Ok7mOK4fIFfBuU4=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "4524271976b625a4a605beefd893f270620fd751",
+        "rev": "864599284fc7c0ba6357ed89ed5e2cd5040f0c04",
         "type": "github"
       },
       "original": {
@@ -55,17 +55,17 @@
     "nitro": {
       "flake": false,
       "locked": {
-        "lastModified": 1751937809,
-        "narHash": "sha256-MKspZoDyO7xUMSjldVbzhucHM1ED/5yfR7A5WKjpdm0=",
-        "ref": "refs/heads/eigenda-v3.6.4",
-        "rev": "2625cbb20485326af9f8c05bce6b025b42ba59b6",
-        "revCount": 18593,
+        "lastModified": 1760981764,
+        "narHash": "sha256-+ZKXcS5qmYVCrPf2uUJcpr6PFYUgafgIisSCpGsKRrU=",
+        "ref": "refs/heads/release-eigenda-v3.7.6",
+        "rev": "c3d1012b2e23eb8121196e0f23dd0dea0855f6a6",
+        "revCount": 21758,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/SyndicateProtocol/nitro.git"
       },
       "original": {
-        "rev": "2625cbb20485326af9f8c05bce6b025b42ba59b6",
+        "rev": "c3d1012b2e23eb8121196e0f23dd0dea0855f6a6",
         "submodules": true,
         "type": "git",
         "url": "https://github.com/SyndicateProtocol/nitro.git"
@@ -104,11 +104,11 @@
     },
     "nixpkgs-2505": {
       "locked": {
-        "lastModified": 1758070117,
-        "narHash": "sha256-uLwwHFCZnT1c3N3biVe/0hCkag2GSrf9+M56+Okf+WY=",
+        "lastModified": 1761597516,
+        "narHash": "sha256-wxX7u6D2rpkJLWkZ2E932SIvDJW8+ON/0Yy8+a5vsDU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e9b7f2ff62b35f711568b1f0866243c7c302028d",
+        "rev": "daf6dc47aa4b44791372d6139ab7b25269184d55",
         "type": "github"
       },
       "original": {
