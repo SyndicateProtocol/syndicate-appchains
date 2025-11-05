@@ -174,7 +174,7 @@ impl ArbitrumAdapter {
 
         // Process all inbox logs in all receipts
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            let (msg_num, calldata) = match log.topics()[0] {
+            let res = match log.topics()[0] {
                 INBOX_MSG_DELIVERED_EVENT_HASH => {
                     let message_num: U256 = log.topics()[1].into();
                     // Decode the event using the contract bindings
@@ -188,18 +188,21 @@ impl ArbitrumAdapter {
                                 )
                             )
                         });
-                    (message_num, decoded.0)
+                    Some((message_num, decoded.0))
                 }
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
                     let message_num: U256 = log.topics()[1].into();
                     let data = block.log_txs[&message_num].clone();
-                    (message_num, data)
+                    Some((message_num, data))
                 }
                 e => {
-                    panic!("unsupported event type: {e}")
+                    trace!("unsupported event type: {e}");
+                    None
                 }
             };
-            message_data.insert(msg_num, calldata);
+            if let Some((msg_num, calldata)) = res {
+                message_data.insert(msg_num, calldata);
+            }
         });
 
         trace!("Delayed message data: {:?}", message_data);

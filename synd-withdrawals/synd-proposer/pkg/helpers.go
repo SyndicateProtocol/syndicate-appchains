@@ -11,6 +11,7 @@ import (
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -42,6 +43,7 @@ type ValidationData struct {
 }
 
 var (
+	parsedIBridgeABI                         *abi.ABI
 	messageDeliveredEventHash                common.Hash
 	inboxMessageDeliveredEventHash           common.Hash
 	inboxMessageDeliveredFromOriginEventHash common.Hash
@@ -50,7 +52,8 @@ var (
 var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
 
 func init() {
-	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
+	var err error
+	parsedIBridgeABI, err = bridgegen.IBridgeMetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -335,23 +338,56 @@ func GetDelayedMessages(
 	var msgs [][]byte
 	var prevAcc *common.Hash
 	for i := 0; i < len(logs); i += 2 {
-		log, err := ibridge.ParseMessageDelivered(logs[i])
+		msgDeliveredLog, err := ibridge.ParseMessageDelivered(logs[i])
 		if err != nil {
 			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 		}
-		// TODO continue here
-		dataLog, err := iinbox.ParseInboxMessageDelivered(logs[i+1])
-		if err != nil {
-			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
+
+		inboxLog := logs[i+1]
+		var logData []byte
+		var logBlockNum uint64
+		var logMsgIndex *big.Int
+
+		switch inboxLog.Topics[0] {
+		case inboxMessageDeliveredEventHash:
+			dataLog, err := iinbox.ParseInboxMessageDelivered(inboxLog)
+			if err != nil {
+				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
+			}
+			logData = dataLog.Data
+			logBlockNum = dataLog.Raw.BlockNumber
+			logMsgIndex = dataLog.MessageNum
+
+		case inboxMessageDeliveredFromOriginEventHash:
+			dataLog, err := iinbox.ParseInboxMessageDeliveredFromOrigin(inboxLog)
+			if err != nil {
+				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered from origin log")
+			}
+			// fetch the tx from the event
+			tx, _, err := c.TransactionByHash(ctx, inboxLog.TxHash)
+			if err != nil {
+				return common.Hash{}, nil, false, errors.Wrap(err, fmt.Sprintf("failed to get tx by hash %s", inboxLog.TxHash.String()))
+			}
+			decodedTxInputs, err := parsedIBridgeABI.Methods["sendL2MessageFromOrigin"].Inputs.Unpack(tx.Data()[4:])
+			if err != nil {
+				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse inputs of sendL2MessageFromOrigin")
+			}
+			var ok bool
+			logData, ok = decodedTxInputs[0].([]byte)
+			if !ok {
+				return common.Hash{}, nil, false, errors.New("failed to cast messageData to []byte")
+			}
+			logBlockNum = dataLog.Raw.BlockNumber
+			logMsgIndex = dataLog.MessageNum
 		}
-		if log.MessageIndex.Cmp(dataLog.MessageNum) != 0 {
+		if msgDeliveredLog.MessageIndex.Cmp(logMsgIndex) != 0 {
 			return common.Hash{}, nil, false, errors.New("event log msg index mismatch")
 		}
-		if log.Raw.BlockNumber != dataLog.Raw.BlockNumber {
+		if msgDeliveredLog.Raw.BlockNumber != logBlockNum {
 			return common.Hash{}, nil, false, errors.New("event log block number mismatch")
 		}
 		// skip events prior to the start one
-		if log.MessageIndex.Cmp(big.NewInt(int64(start))) != 0 {
+		if msgDeliveredLog.MessageIndex.Cmp(big.NewInt(int64(start))) != 0 {
 			continue
 		}
 		// exit once we have processed the end message
@@ -360,25 +396,25 @@ func GetDelayedMessages(
 		}
 		start++
 		if prevAcc == nil {
-			hash := common.Hash(log.BeforeInboxAcc)
+			hash := common.Hash(msgDeliveredLog.BeforeInboxAcc)
 			prevAcc = &hash
 		}
-		requestId := common.BigToHash(log.MessageIndex)
+		requestId := common.BigToHash(msgDeliveredLog.MessageIndex)
 
 		msg := arbostypes.L1IncomingMessage{
 			Header: &arbostypes.L1IncomingMessageHeader{
-				Kind:        log.Kind,
-				Poster:      log.Sender,
-				BlockNumber: log.Raw.BlockNumber,
-				Timestamp:   log.Timestamp,
+				Kind:        msgDeliveredLog.Kind,
+				Poster:      msgDeliveredLog.Sender,
+				BlockNumber: msgDeliveredLog.Raw.BlockNumber,
+				Timestamp:   msgDeliveredLog.Timestamp,
 				RequestId:   &requestId,
-				L1BaseFee:   log.BaseFeeL1,
+				L1BaseFee:   msgDeliveredLog.BaseFeeL1,
 			},
-			L2msg: dataLog.Data,
+			L2msg: logData,
 		}
 
 		if settlesToArbitrumRollup {
-			block, err := c.BlockByHash(ctx, log.Raw.BlockHash)
+			block, err := c.BlockByHash(ctx, msgDeliveredLog.Raw.BlockHash)
 			if err != nil {
 				return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block by hash")
 			}

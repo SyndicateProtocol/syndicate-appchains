@@ -11,7 +11,7 @@ use alloy::{
     rpc::types::{
         anvil::MineOptions,
         trace::geth::{GethDebugTracingOptions, GethTrace},
-        TransactionRequest,
+        TransactionReceipt, TransactionRequest,
     },
     signers::local::PrivateKeySigner,
     sol,
@@ -392,6 +392,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
 
             // send a contract tx to trigger the nitro fork code.
+            // TODO why is this cfg(false) here??
             #[cfg(false)]
             {
                 let addr_3 = address!("0x0000000000000000000000000000000000000003");
@@ -457,6 +458,57 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             )
             .await?;
 
+            // Assert new balance is equal to withdrawal amount
+            let balance_after = components.settlement_provider.get_balance(to_address).await?;
+            assert_eq!(balance_after, withdrawal_value);
+
+            // lets withdraw using sendL2MessageFromOrigin
+            let withdrawal_value = parse_ether("0.1")?;
+            let to_address = address!("0x0000000000000000000000000000000000000002");
+            let withdraw_from_origin_tx =
+                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                    .await?;
+            let tx_hash = withdraw_from_origin_tx.hash();
+
+            let nonce = components.settlement_provider.get_transaction_count(components.settlement_provider.default_signer_address()).await?;
+            assert!(inbox
+                .sendL2MessageFromOrigin(withdraw_from_origin_tx.encoded_2718().into())
+                .nonce(nonce)
+                .send()
+                .await?
+                .get_receipt()
+                .await?
+                .status());
+
+            let mut receipt : Option<TransactionReceipt> = None;
+            wait_until!(
+                receipt = components.appchain_provider.get_transaction_receipt(*tx_hash).await?; receipt.is_some(),
+                Duration::from_secs(60)
+            );
+            let receipt = receipt.unwrap();
+            assert!(receipt.status());
+
+            // wait for the sendroot to be updated
+            wait_until!(
+                rollup_core
+                    .NodeConfirmed_filter()
+                    .query()
+                    .await?
+                    .iter()
+                    .any(|event| event.0.blockHash == receipt.block_hash.unwrap()),
+                Duration::from_secs(10 * 60)
+            );
+
+            // finish the withdrawal on the settlement chain
+            execute_withdrawal(
+                to_address,
+                withdrawal_value,
+                components.appchain_deployment.bridge,
+                &components.settlement_provider,
+                &components.appchain_provider,
+            )
+            .await?;
+            
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);
