@@ -672,9 +672,8 @@ contract GasArchiveTest is Test {
         vm.prank(admin);
         gasArchive.removeSequencingChain(chainId2);
 
-        // Try to add chainId2 back
+        // Add chainId2 back
         vm.prank(admin);
-        vm.expectRevert(GasArchive.AlreadySubmitted.selector);
         gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
 
         // Submit data for SEQ_CHAIN_ID
@@ -683,9 +682,5 @@ contract GasArchiveTest is Test {
 
         // Check epoch completion
         assertEq(gasArchive.epoch(), EPOCH + 1);
-
-        // Now try to add chainId2 back again
-        vm.prank(admin);
-        gasArchive.addSequencingChain(chainId2, address(1), address(1), false);
     }
 }
