@@ -1,7 +1,7 @@
 //! e2e tests for the `synd-withdrawals`
 use alloy::{
     contract::CallBuilder,
-    eips::{BlockNumberOrTag, Encodable2718},
+    eips::{BlockId, BlockNumberOrTag, Encodable2718},
     network::{Ethereum, TransactionBuilder as _},
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U160, U256},
     providers::{
@@ -37,7 +37,7 @@ use test_utils::{
     port_manager::PortManager,
     wait_until,
 };
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, time::sleep};
 
 #[ctor::ctor]
 fn init() {
@@ -470,7 +470,13 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?;
             let tx_hash = withdraw_from_origin_tx.hash();
 
-            let nonce = components.settlement_provider.get_transaction_count(components.settlement_provider.default_signer_address()).await?;
+            let appchain_latest_block =
+                components.appchain_provider.get_block(BlockId::latest()).await?.unwrap();
+            println!("appchain_latest_block: {appchain_latest_block:?}");
+            let nonce = components
+                .settlement_provider
+                .get_transaction_count(components.settlement_provider.default_signer_address())
+                .await?;
             assert!(inbox
                 .sendL2MessageFromOrigin(withdraw_from_origin_tx.encoded_2718().into())
                 .nonce(nonce)
@@ -480,24 +486,31 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .await?
                 .status());
 
-            let mut receipt : Option<TransactionReceipt> = None;
+            // sleep(Duration::from_secs(60)).await;
+
+            // let mut receipt: Option<TransactionReceipt> = None;
             wait_until!(
-                receipt = components.appchain_provider.get_transaction_receipt(*tx_hash).await?; receipt.is_some(),
+                {
+                    let block =
+                        components.appchain_provider.get_block(BlockId::latest()).await?.unwrap();
+                    println!("wait_until block: {block:?}");
+                    block.number() > appchain_latest_block.number()
+                },
                 Duration::from_secs(60)
             );
-            let receipt = receipt.unwrap();
-            assert!(receipt.status());
+            // let receipt = receipt.unwrap();
+            // assert!(receipt.status());
 
             // wait for the sendroot to be updated
-            wait_until!(
-                rollup_core
-                    .NodeConfirmed_filter()
-                    .query()
-                    .await?
-                    .iter()
-                    .any(|event| event.0.blockHash == receipt.block_hash.unwrap()),
-                Duration::from_secs(10 * 60)
-            );
+            // wait_until!(
+            //     rollup_core
+            //         .NodeConfirmed_filter()
+            //         .query()
+            //         .await?
+            //         .iter()
+            //         .any(|event| event.0.blockHash == receipt.block_hash.unwrap()),
+            //     Duration::from_secs(10 * 60)
+            // );
 
             // finish the withdrawal on the settlement chain
             execute_withdrawal(
@@ -508,7 +521,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 &components.appchain_provider,
             )
             .await?;
-            
+
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);

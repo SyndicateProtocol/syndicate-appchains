@@ -43,17 +43,16 @@ type ValidationData struct {
 }
 
 var (
-	parsedIBridgeABI                         *abi.ABI
 	messageDeliveredEventHash                common.Hash
 	inboxMessageDeliveredEventHash           common.Hash
 	inboxMessageDeliveredFromOriginEventHash common.Hash
+	l2MessageFromOriginCallABI               *abi.Method
 )
 
 var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
 
 func init() {
-	var err error
-	parsedIBridgeABI, err = bridgegen.IBridgeMetaData.GetAbi()
+	parsedIBridgeABI, err := bridgegen.IBridgeMetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -64,6 +63,11 @@ func init() {
 	}
 	inboxMessageDeliveredEventHash = parsedIMessageProviderABI.Events["InboxMessageDelivered"].ID
 	inboxMessageDeliveredFromOriginEventHash = parsedIMessageProviderABI.Events["InboxMessageDeliveredFromOrigin"].ID
+	parsedIInboxABI, err := bridgegen.IInboxMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	l2MessageFromOriginCallABI = parsedIInboxABI.Methods["sendL2MessageFromOrigin"]
 }
 
 // once the target qty is reached or exceeded, getLogs stops fetching logs
@@ -372,7 +376,7 @@ func GetDelayedMessages(
 				return common.Hash{}, nil, false, errors.New("tx data too short")
 			}
 			args := make(map[string]interface{})
-			err = parsedIBridgeABI.Methods["sendL2MessageFromOrigin"].Inputs.UnpackIntoMap(args, tx.Data()[4:])
+			err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 			if err != nil {
 				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse inputs of sendL2MessageFromOrigin")
 			}
