@@ -616,7 +616,7 @@ impl TestComponents {
                 valkey_url: valkey_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 sequencing_address: sequencing_contract_address,
-                sequencing_rpc_url: seq_rpc_ws_url.to_string(),
+                sequencing_rpc_url: seq_rpc_ws_url.clone(),
                 port: PortManager::instance().next_port().await,
                 wait_for_receipt: true,
             };

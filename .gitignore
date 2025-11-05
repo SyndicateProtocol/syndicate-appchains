@@ -86,3 +86,8 @@ synd-contracts/soljson-latest.js
 run.sh
 
 .ignore
+
+create-chain/*.config.json
+!create-chain/*.config.json.example
+create-chain/node_modules
+create-chain/*.tsbuildinfo

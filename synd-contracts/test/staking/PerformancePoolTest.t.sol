@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
@@ -100,6 +100,10 @@ contract PerformancePoolTest is Test {
             cur = staking.getCurrentEpoch();
         }
         return cur - 1;
+    }
+
+    function stepDays(uint256 numDays) internal {
+        vm.warp(block.timestamp + numDays * 1 days);
     }
 
     /* ---------- Basic Claim Tests ------------- */
@@ -818,5 +822,46 @@ contract PerformancePoolTest is Test {
         vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
         performancePool.claimFor(epoch, user1, address(0), appchainId1);
         vm.stopPrank();
+    }
+
+    function test_getClaimableAmount_only_full_epoch_stake() public {
+        setupStake(100 ether, 0, 0);
+
+        // Epoch 1
+        uint256 e1 = _settledEpoch();
+        setGasShares(e1, 1, 0, 0);
+        performancePool.deposit{value: 40 ether}(e1);
+        performancePool.computeDiminishingFactors(e1, 0);
+
+        uint256 e1_user1_claimable = performancePool.getClaimableAmount(e1, user1, appchainId1);
+        uint256 e1_user2_claimable = performancePool.getClaimableAmount(e1, user2, appchainId1);
+
+        assertEq(40 ether, e1_user1_claimable);
+        assertEq(0, e1_user2_claimable);
+
+        // Advance time half way through the epoch
+        stepDays(15);
+
+        // User 2 deposits
+        vm.startPrank(user2);
+        staking.stakeSynd{value: 100 ether}(appchainId2);
+        vm.stopPrank();
+
+        // Advance time to the next epoch
+        stepDays(15);
+
+        // Epoch 2
+        uint256 e2 = _settledEpoch();
+        require(e2 != e1, "need a different epoch after warp");
+        setGasShares(e2, 1, 0, 0);
+        performancePool.deposit{value: 60 ether}(e2);
+        performancePool.computeDiminishingFactors(e2, 0);
+
+        uint256 e2_user1_claimable = performancePool.getClaimableAmount(e2, user1, appchainId1);
+        uint256 e2_user2_claimable = performancePool.getClaimableAmount(e2, user2, appchainId1);
+
+        assertEq(60 ether, e2_user1_claimable);
+        // Still expect 0 since user2 wasnt staked for the entire epoch
+        assertEq(0, e2_user2_claimable);
     }
 }
