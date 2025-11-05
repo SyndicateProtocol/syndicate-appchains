@@ -1,13 +1,7 @@
 export const syndicateFactoryABI = [
   {
     "type": "constructor",
-    "inputs": [
-      {
-        "name": "admin",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "inputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -25,7 +19,7 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
-    "name": "MANAGER_ROLE",
+    "name": "SYNDICATE_FACTORY_STORAGE_LOCATION",
     "inputs": [],
     "outputs": [
       {
@@ -38,38 +32,13 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
-    "name": "appchainContracts",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
+    "name": "UPGRADE_INTERFACE_VERSION",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "chainIDs",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "view"
@@ -78,11 +47,6 @@ export const syndicateFactoryABI = [
     "type": "function",
     "name": "computeSequencingChainAddress",
     "inputs": [
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
       {
         "name": "chainId",
         "type": "uint256",
@@ -100,10 +64,23 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
+    "name": "computeStubImplementationAddress",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "createSyndicateSequencingChain",
     "inputs": [
       {
-        "name": "appchainId",
+        "name": "nonce",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -116,11 +93,40 @@ export const syndicateFactoryABI = [
         "name": "permissionModule",
         "type": "address",
         "internalType": "contract IRequirementModule"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sequencingChain",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "chainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createSyndicateSequencingChainWithCustomId",
+    "inputs": [
+      {
+        "name": "customChainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "permissionModule",
+        "type": "address",
+        "internalType": "contract IRequirementModule"
       }
     ],
     "outputs": [
@@ -139,69 +145,37 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
-    "name": "getAppchainsAndContracts",
-    "inputs": [],
-    "outputs": [
+    "name": "generateDeterministicChainId",
+    "inputs": [
       {
-        "name": "_chainIDs",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "_contracts",
-        "type": "address[]",
-        "internalType": "address[]"
+        "name": "nonce",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getBytecode",
-    "inputs": [
+    "outputs": [
       {
         "name": "chainId",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "getProxyBytecode",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "bytes",
         "internalType": "bytes"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "getContractsForAppchains",
-    "inputs": [
-      {
-        "name": "_chainIDs",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "_contracts",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getNextChainId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -221,19 +195,6 @@ export const syndicateFactoryABI = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTotalAppchains",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -282,6 +243,19 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "isChainIdUsed",
     "inputs": [
       {
@@ -295,32 +269,6 @@ export const syndicateFactoryABI = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "namespacePrefix",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "nextAutoChainId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -341,6 +289,19 @@ export const syndicateFactoryABI = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proxiableUUID",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -383,6 +344,32 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
+    "name": "setSyndicateSequencingChainImplementation",
+    "inputs": [
+      {
+        "name": "newImplementation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "stubImplementation",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -402,6 +389,19 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
+    "name": "syndicateChainImpl",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "unpause",
     "inputs": [],
     "outputs": [],
@@ -409,10 +409,10 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
-    "name": "updateNamespaceConfig",
+    "name": "updateVersion",
     "inputs": [
       {
-        "name": "newPrefix",
+        "name": "newVersion",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -422,27 +422,51 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "function",
-    "name": "usedNamespaces",
+    "name": "upgradeToAndCall",
     "inputs": [
+      {
+        "name": "newImplementation",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "version",
+    "inputs": [],
+    "outputs": [
       {
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8",
-        "internalType": "enum NamespaceState"
-      }
-    ],
     "stateMutability": "view"
   },
   {
     "type": "event",
-    "name": "ChainIdManuallyMarked",
+    "name": "DeterministicChainIdGenerated",
     "inputs": [
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
       {
         "name": "chainId",
         "type": "uint256",
@@ -454,19 +478,26 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "event",
-    "name": "NamespaceConfigUpdated",
+    "name": "ImplementationAdded",
     "inputs": [
       {
-        "name": "oldNamespacePrefix",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
+        "name": "implementation",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
       {
-        "name": "newNamespacePrefix",
-        "type": "uint256",
+        "name": "version",
+        "type": "uint64",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -598,6 +629,19 @@ export const syndicateFactoryABI = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "Upgraded",
+    "inputs": [
+      {
+        "name": "implementation",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -620,12 +664,39 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "error",
+    "name": "AddressEmptyCode",
+    "inputs": [
+      {
+        "name": "target",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ChainIdAlreadyExists",
     "inputs": []
   },
   {
     "type": "error",
     "name": "Create2EmptyBytecode",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ERC1967InvalidImplementation",
+    "inputs": [
+      {
+        "name": "implementation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC1967NonPayable",
     "inputs": []
   },
   {
@@ -640,7 +711,17 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "error",
+    "name": "FailedCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FailedDeployment",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FailedToInitializeSyndicateSequencingChain",
     "inputs": []
   },
   {
@@ -661,8 +742,34 @@ export const syndicateFactoryABI = [
   },
   {
     "type": "error",
-    "name": "StringsInvalidChar",
+    "name": "InvalidInitialization",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotInitializing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SyndicateChainImplementationNotSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UUPSUnauthorizedCallContext",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UUPSUnsupportedProxiableUUID",
+    "inputs": [
+      {
+        "name": "slot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",

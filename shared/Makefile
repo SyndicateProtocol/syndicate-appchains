@@ -13,7 +13,8 @@ create-contract-bindings-rust:
 		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
 		--select 'IBridge|IOutbox|IRollupCore|IRollup|IUpgradeExecutor' \
 		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwnerPublic' \
-		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig'
+		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig' \
+		--select 'ERC1967Proxy|GasMeter|AlwaysAllowedModule'
 	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 
 .PHONY: create-withdrawal-contract-bindings-go

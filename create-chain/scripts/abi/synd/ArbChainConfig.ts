@@ -268,6 +268,32 @@ export const arbChainConfigABI = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "updateVersion",
+    "inputs": [
+      {
+        "name": "newVersion",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "version",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "AppchainBlockExplorerUrlUpdated",
     "inputs": [
