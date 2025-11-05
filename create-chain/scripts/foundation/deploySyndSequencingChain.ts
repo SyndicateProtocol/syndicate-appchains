@@ -101,12 +101,11 @@ async function createSyndicateSequencingChain(requireAndModuleAddress: Hex) {
       account: deployerSequencingWalletClient.account,
       address: syndicateFactoryAddress,
       abi: syndicateFactoryABI,
-      functionName: "createSyndicateSequencingChain",
+      functionName: "createSyndicateSequencingChainWithCustomId",
       args: [
         BigInt(chainId),
         deployerSequencingWalletClient.account.address,
-        requireAndModuleAddress,
-        toHex(toBytes(chainId, { size: 32 }))
+        requireAndModuleAddress
       ]
     })
   const syndicateSequencingChainHash =
