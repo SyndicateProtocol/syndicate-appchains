@@ -53,7 +53,7 @@ pub struct BatcherConfig {
     ///
     /// This is the private key for the wallet responsible for signing transaction
     /// batches submitted by the Batcher service. The corresponding wallet must be
-    /// funded with sufficient native tokens (e.g., ETH) to cover gas costs when
+    /// funded with sufficient native tokens (e.g. $ETH, $SYND) to cover gas costs when
     /// submitting transactions on the sequencing chain.
     #[derivative(Debug(format_with = "fmt_redacted"))]
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
@@ -98,6 +98,11 @@ pub struct BatcherConfig {
     /// The timeout for waiting for the receipt of the batch submission
     #[arg(long, env = "WAIT_FOR_RECEIPT_TIMEOUT", value_parser = humantime::parse_duration)]
     pub wait_for_receipt_timeout: Option<Duration>,
+
+    /// Max fee per gas unit, in wei units, for a single batch transaction submission.
+    /// Default is 0.0001 ETH units (SYND) / 100,000 gwei / 100000000000000 wei
+    #[arg(long, env = "MAX_FEE_PER_GAS", default_value = "100000000000000")]
+    pub max_fee_per_gas: u128,
 }
 
 fn fmt_redacted<T>(_value: &T, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -125,6 +130,7 @@ impl Default for BatcherConfig {
             port: 8082,
             wait_for_receipt: false,
             wait_for_receipt_timeout: Some(Duration::from_secs(600)),
+            max_fee_per_gas: 100000000000000,
         }
     }
 }
