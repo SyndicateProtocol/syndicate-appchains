@@ -1,16 +1,63 @@
 # nixos/nix:2.31.1
 FROM nixos/nix@sha256:24196c350d146529a4101edea9c82129308640b500ebbc01d225ad36b6322cb6 AS bootstrap
-WORKDIR /build
-COPY flake.nix flake.lock .
-COPY nix nix
-COPY synd-enclave/cmd/enclave/main.go synd-enclave/cmd/enclave/g1.point synd-enclave/cmd/enclave/
-COPY synd-enclave/enclave synd-enclave/enclave
-COPY synd-enclave/teemodule synd-enclave/teemodule
-COPY synd-enclave/teetypes synd-enclave/teetypes
-COPY synd-enclave/go.mod synd-enclave/go.sum synd-enclave
-COPY synd-enclave/eif synd-enclave/eif
 
-RUN nix --extra-experimental-features "nix-command flakes" --accept-flake-config build .#eif-bin --no-update-lock-file
+ENV REPO=https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap.git
+ENV COMMIT=7614f19963e4e956493b3260fda4d62834bb281c
+RUN git init && \
+    git remote add origin $REPO && \
+    git fetch --depth=1 origin $COMMIT && \
+    git reset --hard FETCH_HEAD
+
+RUN mkdir out
+RUN nix-build --option filter-syscalls false -A kernel && cp -r result/* out/
+RUN nix-build --option filter-syscalls false -A init && cp -r result/* out/
+
+# node builder
+FROM ghcr.io/syndicateprotocol/syndicate-appchains/node-builder AS builder
+RUN go install github.com/linuxkit/linuxkit/src/cmd/linuxkit@270fd1c5aa1986977b31af6c743c6a2681f67a29
+WORKDIR /build
+RUN mv /workspace /build/nitro
+RUN ls /build && ls /build/nitro
+COPY synd-enclave/cmd/enclave/main.go synd-enclave/cmd/enclave/g1.point cmd/enclave/
+COPY synd-enclave/enclave enclave
+COPY synd-enclave/teemodule teemodule
+COPY synd-enclave/teetypes teetypes
+COPY synd-enclave/go.mod synd-enclave/go.sum .
+RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/enclave ./cmd/enclave
+
+COPY synd-enclave/eif/init-ramdisk.yaml synd-enclave/eif/user-ramdisk.yaml eif/
+COPY --from=bootstrap out bootstrap
+RUN linuxkit build --format kernel+initrd --no-sbom --name init-ramdisk ./eif/init-ramdisk.yaml
+RUN linuxkit build --format kernel+initrd --no-sbom --name user-ramdisk ./eif/user-ramdisk.yaml
+
+# rust:1.80.1
+FROM rust@sha256:29fe4376919e25b7587a1063d7b521d9db735fc137d3cf30ae41eb326d209471 AS eif
+
+RUN mkdir /build
+WORKDIR /build
+
+ENV REPO=https://github.com/aws/aws-nitro-enclaves-image-format.git
+ENV COMMIT=483114f1da3bad913ad1fb7d5c00dadacc6cbae6
+RUN git init && \
+    git remote add origin $REPO && \
+    git fetch --depth=1 origin $COMMIT && \
+    git reset --hard FETCH_HEAD
+
+RUN cargo build --all --release
+
+ARG TARGETARCH
+COPY "synd-enclave/eif/cmdline-${TARGETARCH}" cmdline
+COPY --from=bootstrap out bootstrap
+COPY --from=builder /build/init-ramdisk-initrd.img .
+COPY --from=builder /build/user-ramdisk-initrd.img .
+
+RUN ./target/release/eif_build \
+    --kernel bootstrap/*Image \
+    --kernel_config bootstrap/*Image.config \
+    --cmdline "$(cat cmdline)" \
+    --ramdisk init-ramdisk-initrd.img \
+    --ramdisk user-ramdisk-initrd.img \
+    --output eif.bin
 
 FROM scratch AS eif-bin
-COPY --from=bootstrap /build/result eif.bin
+COPY --from=eif /build/eif.bin .
