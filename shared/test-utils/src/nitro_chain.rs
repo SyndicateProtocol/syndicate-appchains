@@ -4,7 +4,7 @@ use crate::{chain_info::PRIVATE_KEY, docker::E2EProcess};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
-    primitives::{address, Address, Bytes, B256, U256},
+    primitives::{address, Address, Bytes, B256, U160, U256},
     providers::{Provider, WalletProvider},
 };
 use contract_bindings::synd::{
@@ -126,6 +126,27 @@ pub struct NitroBlock {
     pub timestamp: U256,
 }
 
+/// Computes the L2 alias of an L1 address.
+///
+/// When a contract on L1 sends a message to L2 via the Inbox, the sender address
+/// on L2 is aliased by adding this offset. This prevents address collisions and
+/// distinguishes L1-originated messages from native L2 messages.
+///
+/// The offset is: 0x1111000000000000000000000000000000001111
+///
+/// # Arguments
+/// * `l1_address` - The original L1 address
+///
+/// # Returns
+/// The aliased L2 address
+const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1000000000000000000000000000000000000001");
+pub fn apply_l1_to_l2_alias(l1_address: Address) -> Address {
+    Address::from(
+        U160::from_be_slice(&l1_address[..])
+            .wrapping_add(U160::from_be_slice(&L1_TO_L2_ALIAS_OFFSET[..])),
+    )
+}
+
 pub async fn init_withdrawal_tx(
     to_address: Address,
     withdrawal_value: U256,
@@ -150,9 +171,11 @@ pub async fn init_withdrawal_tx(
 pub async fn execute_withdrawal(
     to_address: Address,
     withdrawal_value: U256,
+    appchain_block_hash_to_prove: B256,
     bridge_address: Address,
     settlement_provider: &FilledProvider,
     appchain_provider: &FilledProvider,
+    l2_sender: Address,
 ) -> eyre::Result<()> {
     // Generate proof
     let node_interface = NodeInterface::new(NODE_INTERFACE_PRECOMPILE_ADDRESS, &appchain_provider);
@@ -168,20 +191,21 @@ pub async fn execute_withdrawal(
         &settlement_provider,
     );
 
-    let block: NitroBlock =
-        appchain_provider.raw_request("eth_getBlockByNumber".into(), ("latest", false)).await?;
+    let block: NitroBlock = appchain_provider
+        .raw_request("eth_getBlockByHash".into(), (appchain_block_hash_to_prove, false))
+        .await?;
 
     let _ = outbox
         .executeTransaction(
-            proof.proof,                                  // proof
-            U256::from(0),                                // index
-            settlement_provider.default_signer_address(), // l2Sender
-            to_address,                                   // to
-            block.number,                                 // l2Block,
-            block.l1_block_number,                        // l1Block,
-            block.timestamp,                              // l2Timestamp,
-            withdrawal_value,                             // value
-            Bytes::new(),                                 // data (always empty)
+            proof.proof,           // proof
+            U256::from(0),         // index
+            l2_sender,             // l2Sender
+            to_address,            // to
+            block.number,          // l2Block,
+            block.l1_block_number, // l1Block,
+            block.timestamp,       // l2Timestamp,
+            withdrawal_value,      // value
+            Bytes::new(),          // data (always empty)
         )
         // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
         .nonce(
@@ -190,7 +214,8 @@ pub async fn execute_withdrawal(
                 .await?,
         )
         .send()
-        .await?;
+        .await
+        .unwrap_or_else(|e| panic!("failed to execute outbox transaction {e}"));
     Ok(())
 }
 

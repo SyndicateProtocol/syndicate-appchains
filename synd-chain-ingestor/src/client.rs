@@ -43,7 +43,7 @@ use tracing::{info, instrument};
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
-async fn build_partial_blocks(
+async fn build_partial_blocks_from_init_requests(
     start_block: u64,
     data: &IndexedBlockData,
     client: &EthClient,
@@ -62,6 +62,7 @@ async fn build_partial_blocks(
             block_ref: BlockRef { number: i, timestamp, hash },
             parent_hash,
             logs: Default::default(),
+            log_tx_hashes: Default::default(),
             log_txs: HashMap::new(),
         });
         parent_hash = hash;
@@ -137,33 +138,49 @@ async fn build_partial_blocks(
         }
     }
 
-    let mut block = start_block - 1;
-    let mut index = 0;
+    let mut prev_block_index = start_block - 1;
+    let mut prev_log_index = 0;
     for log in logs {
         assert!(!log.removed);
         let log_block = log.block_number.unwrap();
         assert_eq!(log.block_hash, Some(blocks[(log_block - start_block) as usize].block_ref.hash));
         let log_index = log.log_index.unwrap();
-        assert!(log_block > block || (log_block == block && log_index > index), "out of order log found from rpc provider: previous (block, index) = ({block} {index}), current = ({log_block}, {log_index})");
-        block = log_block;
-        index = log_index;
+        assert!(log_block > prev_block_index || (log_block == prev_block_index && log_index > prev_log_index),
+            "out of order log found from rpc provider: previous (block, index) = ({prev_block_index} {prev_log_index}), current = ({log_block}, {log_index})");
+        prev_block_index = log_block;
+        prev_log_index = log_index;
         let block_index = (log.block_number.unwrap() - start_block) as usize;
-        if log.topics()[0] == InboxMessageDeliveredFromOrigin::SIGNATURE_HASH {
-            let tx_hash = log.transaction_hash.unwrap_or_else(|| panic!("log without txhash"));
-            let tx = client
-                .get_transaction_by_hash(tx_hash)
-                .await
-                .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
-
-            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(tx.input())?;
-            let seq_num: U256 = log.topics()[1].into();
-            blocks[block_index].log_txs.insert(seq_num, decoded_tx.messageData);
-        };
-
+        blocks[block_index]
+            .log_tx_hashes
+            .push(log.transaction_hash.unwrap_or_else(|| panic!("log without txhash")));
         blocks[block_index].logs.push(log.into_inner());
     }
 
     Ok(blocks)
+}
+
+/// Fills a partial block with tx calldata for logs of `InboxMessageDeliveredFromOrigin` event
+#[allow(clippy::cognitive_complexity)]
+pub async fn fill_partial_block_with_l2msg_from_origin_txs(
+    mut block: PartialBlock,
+    client: &EthClient,
+) -> eyre::Result<PartialBlock> {
+    for (i, log) in block.logs.iter().enumerate() {
+        if log.topics()[0] == InboxMessageDeliveredFromOrigin::SIGNATURE_HASH {
+            let tx = client
+                .get_transaction_by_hash(block.log_tx_hashes[i])
+                .await
+                .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+
+            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(
+                tx.input().get(4..).unwrap_or_else(|| panic!("tx input less than 4 bytes")),
+            )?;
+            // let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(tx.input())?;
+            let seq_num: U256 = log.topics()[1].into();
+            block.log_txs.insert(seq_num, decoded_tx.messageData);
+        };
+    }
+    Ok(block)
 }
 
 struct BlockStream<
@@ -175,7 +192,8 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
-    init_data: Option<(EthClient, Vec<Address>, u64)>,
+    client: EthClient,
+    init_data: Option<(Vec<Address>, u64)>,
     #[allow(clippy::type_complexity)]
     init_requests: VecDeque<
         Pin<
@@ -198,13 +216,15 @@ impl<
         stream: S,
         block_builder: Arc<B>,
         start_block: u64,
-        init_data: (EthClient, Vec<Address>, u64),
+        client: EthClient,
+        init_data: (Vec<Address>, u64),
     ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
             block_builder,
             buffer: Default::default(),
             indexed_block_number: start_block,
+            client,
             init_data: Some(init_data),
             init_requests: Default::default(),
         }
@@ -213,45 +233,45 @@ impl<
     /// Process the init message into initial requests to be processed later
     #[allow(clippy::unwrap_used)]
     async fn process_init_message(&mut self) -> eyre::Result<(), eyre::Error> {
-        if let Some((client, addrs, max_blocks_per_request)) = self.init_data.take() {
+        if let Some((addrs, max_blocks_per_request)) = self.init_data.take() {
             // fetch initial blocks from the stream
             let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
             // remove the first block from the stream, which is a special init message
             init_blocks.rotate_left(1);
+            // init_blocks.remove(0); // TODO revisit, I think rotate is wrong
             let mut init: IndexedBlockData = init_blocks.pop().unwrap()?.init();
 
             // get start and end blocks for batching
             let mut start_block = self.indexed_block_number;
 
-            if max_blocks_per_request == 0 {
-                self.init_requests.push_back(Box::pin(async move {
-                    let blocks = build_partial_blocks(start_block, &init, &client, addrs)
-                        .await?
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect();
-                    Ok(blocks)
-                }));
-            } else {
-                while init.count() > 0 {
-                    let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
-
-                    let client_clone = client.clone();
-                    let addrs_clone = addrs.clone();
-
-                    self.init_requests.push_back(Box::pin(async move {
-                        let blocks = build_partial_blocks(
-                            start_block,
-                            &init_batch,
+            let create_request =
+                |init_data: IndexedBlockData, block_num: u64, addrs: Vec<Address>| {
+                    let client_clone = self.client.clone();
+                    Box::pin(async move {
+                        let blocks = build_partial_blocks_from_init_requests(
+                            block_num,
+                            &init_data,
                             &client_clone,
-                            addrs_clone,
+                            addrs,
                         )
                         .await?
                         .into_iter()
                         .map(|x| Ok(Message::Block(x)))
                         .collect();
                         Ok(blocks)
-                    }));
+                    })
+                };
+
+            if max_blocks_per_request == 0 {
+                self.init_requests.push_back(create_request(init, start_block, addrs));
+            } else {
+                while init.count() > 0 {
+                    let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
+                    self.init_requests.push_back(create_request(
+                        init_batch,
+                        start_block,
+                        addrs.clone(),
+                    ));
                     start_block += max_blocks_per_request;
                     init = remaining;
                 }
@@ -285,7 +305,7 @@ impl<
 {
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
-        let mut blocks = vec![];
+        let mut responses = vec![];
 
         // If there is init data, handle the initial message
         // This happens only once, the first time this function is called
@@ -294,16 +314,19 @@ impl<
         }
 
         if !self.init_requests.is_empty() {
-            blocks = self.init_requests.pop_front().unwrap().await?;
+            responses = self.init_requests.pop_front().unwrap().await?;
         } else if self.stream.as_mut().peek().now_or_never().is_some() {
             // If there are no init requests, and there is data in the stream, pop it off
             // This is to try to catch any reorgs ASAP
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+            responses = self.stream.next().await.ok_or_eyre("stream closed")?;
         }
 
         loop {
-            for partial_block in blocks {
-                let block = self.block_builder.build_block(&partial_block?.block())?;
+            for resp in responses {
+                let partial_block =
+                    fill_partial_block_with_l2msg_from_origin_txs(resp?.block(), &self.client)
+                        .await?;
+                let block = self.block_builder.build_block(&partial_block)?;
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
@@ -338,7 +361,7 @@ impl<
             }
 
             // If there are no valid blocks in the buffer, await the next block from the stream
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?
+            responses = self.stream.next().await.ok_or_eyre("stream closed")?
         }
     }
 }
@@ -473,7 +496,8 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses, 0),
+            client,
+            (addresses, 0),
         ))
     }
 }
@@ -502,8 +526,9 @@ impl Default for IngestorProviderConfig {
     }
 }
 
+/// Ingestor provider - tuple of a [`WsClient`] and the maximum number of blocks to fetch per
+/// request
 #[derive(Debug, Clone)]
-#[allow(missing_docs)]
 pub struct IngestorProvider(Arc<WsClient>, u64);
 
 #[allow(missing_docs)]
@@ -560,17 +585,14 @@ impl Provider for IngestorProvider {
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
-        Ok(BlockStream::new(
-            self.subscribe::<_, Message>(
+        let stream = self
+            .subscribe::<_, Message>(
                 "subscribe_blocks",
                 (start_block, addresses.clone()),
                 "unsubscribe_blocks",
             )
-            .await?,
-            block_builder,
-            start_block,
-            (client, addresses, self.1),
-        ))
+            .await?;
+        Ok(BlockStream::new(stream, block_builder, start_block, client, (addresses, self.1)))
     }
 }
 

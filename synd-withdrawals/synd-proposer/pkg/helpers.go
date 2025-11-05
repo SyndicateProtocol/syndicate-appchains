@@ -46,7 +46,7 @@ var (
 	messageDeliveredEventHash                common.Hash
 	inboxMessageDeliveredEventHash           common.Hash
 	inboxMessageDeliveredFromOriginEventHash common.Hash
-	l2MessageFromOriginCallABI               *abi.Method
+	l2MessageFromOriginCallABI               abi.Method
 )
 
 var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")

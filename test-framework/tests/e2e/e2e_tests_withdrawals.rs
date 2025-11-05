@@ -1,7 +1,7 @@
 //! e2e tests for the `synd-withdrawals`
 use alloy::{
     contract::CallBuilder,
-    eips::{BlockId, BlockNumberOrTag, Encodable2718},
+    eips::{BlockNumberOrTag, Encodable2718},
     network::{Ethereum, TransactionBuilder as _},
     primitives::{address, keccak256, utils::parse_ether, Address, B256, U160, U256},
     providers::{
@@ -37,7 +37,7 @@ use test_utils::{
     port_manager::PortManager,
     wait_until,
 };
-use tokio::{task::JoinHandle, time::sleep};
+use tokio::task::JoinHandle;
 
 #[ctor::ctor]
 fn init() {
@@ -452,9 +452,11 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             execute_withdrawal(
                 to_address,
                 withdrawal_value,
+                appchain_block_hash_to_prove,
                 components.appchain_deployment.bridge,
                 &components.settlement_provider,
                 &components.appchain_provider,
+                components.appchain_provider.default_signer_address(),
             )
             .await?;
 
@@ -469,16 +471,12 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
                     .await?;
             let tx_hash = withdraw_from_origin_tx.hash();
+            let mut raw_tx_with_prefix = withdraw_from_origin_tx.encoded_2718();
+                raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
 
-            let appchain_latest_block =
-                components.appchain_provider.get_block(BlockId::latest()).await?.unwrap();
-            println!("appchain_latest_block: {appchain_latest_block:?}");
-            let nonce = components
-                .settlement_provider
-                .get_transaction_count(components.settlement_provider.default_signer_address())
-                .await?;
+            let nonce = components.settlement_provider.get_transaction_count(components.settlement_provider.default_signer_address()).await?;
             assert!(inbox
-                .sendL2MessageFromOrigin(withdraw_from_origin_tx.encoded_2718().into())
+                .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
                 .nonce(nonce)
                 .send()
                 .await?
@@ -486,39 +484,43 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .await?
                 .status());
 
-            // sleep(Duration::from_secs(60)).await;
+            // send a dummy tx so that the sequencing chain progresses and the deposit is
+            // slotted in
+            components.sequence_tx(b"dummy_tx", 0, false).await?;
 
-            // let mut receipt: Option<TransactionReceipt> = None;
+            let mut receipt : Option<TransactionReceipt> = None;
             wait_until!(
-                {
-                    let block =
-                        components.appchain_provider.get_block(BlockId::latest()).await?.unwrap();
-                    println!("wait_until block: {block:?}");
-                    block.number() > appchain_latest_block.number()
-                },
+                receipt = components.appchain_provider.get_transaction_receipt(*tx_hash).await?; receipt.is_some(),
                 Duration::from_secs(60)
             );
-            // let receipt = receipt.unwrap();
-            // assert!(receipt.status());
+            let receipt = receipt.unwrap();
+            assert!(receipt.status());
+
+
 
             // wait for the sendroot to be updated
-            // wait_until!(
-            //     rollup_core
-            //         .NodeConfirmed_filter()
-            //         .query()
-            //         .await?
-            //         .iter()
-            //         .any(|event| event.0.blockHash == receipt.block_hash.unwrap()),
-            //     Duration::from_secs(10 * 60)
-            // );
+            let appchain_block_hash_to_prove = receipt.block_hash.unwrap();
+            wait_until!(
+                rollup_core
+                    .NodeConfirmed_filter()
+                    .query()
+                    .await?
+                    .iter()
+                    .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
+                Duration::from_secs(10 * 60)
+            );
 
             // finish the withdrawal on the settlement chain
+            // Even though sent via sendL2MessageFromOrigin, this is a SignedTx (see L2MessageKind::SignedTx),
+            // so the l2_sender is the transaction signer, not the aliased settlement sender
             execute_withdrawal(
                 to_address,
                 withdrawal_value,
+                appchain_block_hash_to_prove,
                 components.appchain_deployment.bridge,
                 &components.settlement_provider,
                 &components.appchain_provider,
+                components.appchain_provider.default_signer_address(), 
             )
             .await?;
 

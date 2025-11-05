@@ -4,7 +4,7 @@ use alloy::{
     consensus::Eip658Value,
     hex,
     network::EthereumWallet,
-    primitives::{Address, Bloom, Bytes, Log, B256, U256},
+    primitives::{Address, Bloom, Bytes, FixedBytes, Log, B256, U256},
     providers::{
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -94,6 +94,8 @@ pub struct PartialBlock {
     pub parent_hash: B256,
     /// log data
     pub logs: Vec<Log>,
+    /// associated transaction hashes for each log
+    pub log_tx_hashes: Vec<FixedBytes<32>>,
     /// auxiliary tx data for `InboxMessageDeliveredFromOrigin` events (mapped by seqNum)
     pub log_txs: HashMap<U256, Bytes>,
 }
