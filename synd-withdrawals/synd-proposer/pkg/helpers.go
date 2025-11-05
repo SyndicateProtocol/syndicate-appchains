@@ -368,12 +368,16 @@ func GetDelayedMessages(
 			if err != nil {
 				return common.Hash{}, nil, false, errors.Wrap(err, fmt.Sprintf("failed to get tx by hash %s", inboxLog.TxHash.String()))
 			}
-			decodedTxInputs, err := parsedIBridgeABI.Methods["sendL2MessageFromOrigin"].Inputs.Unpack(tx.Data()[4:])
+			if len(tx.Data()) < 4 {
+				return common.Hash{}, nil, false, errors.New("tx data too short")
+			}
+			args := make(map[string]interface{})
+			err = parsedIBridgeABI.Methods["sendL2MessageFromOrigin"].Inputs.UnpackIntoMap(args, tx.Data()[4:])
 			if err != nil {
 				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse inputs of sendL2MessageFromOrigin")
 			}
 			var ok bool
-			logData, ok = decodedTxInputs[0].([]byte)
+			logData, ok = args["messageData"].([]byte)
 			if !ok {
 				return common.Hash{}, nil, false, errors.New("failed to cast messageData to []byte")
 			}
