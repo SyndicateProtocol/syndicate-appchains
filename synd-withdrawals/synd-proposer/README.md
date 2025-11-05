@@ -14,3 +14,34 @@ The Syndicate Proposer is responsible for extracting the appchain root state and
    ```sh
    go run ./cmd/synd-proposer
    ```
+
+## Troubleshooting
+
+### Import Errors
+
+If you encounter import errors related to missing packages like `github.com/offchainlabs/nitro/solgen/go/*`, you need to regenerate the Go bindings from the Nitro contracts:
+
+1. Build legacy contracts:
+   ```bash
+   cd ../synd-enclave/nitro/contracts-legacy
+   yarn build
+   ```
+
+2. Generate Go bindings:
+   ```bash
+   cd ..
+   go run solgen/gen.go
+   ```
+
+3. Update Go modules:
+   ```bash
+   cd ../../synd-proposer
+   go mod tidy
+   ```
+
+**One-liner from synd-proposer directory:**
+```bash
+cd ../synd-enclave/nitro/contracts-legacy && yarn build && cd .. && mkdir -p solgen/go/ && go run solgen/gen.go && cd ../../synd-proposer && go mod tidy
+```
+
+**Note:** These bindings are auto-generated from Solidity contracts and are not checked into version control.
