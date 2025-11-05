@@ -8,5 +8,8 @@
   "appChainExplorerUrl": "https://<APPCHAIN_EXPLORER_URL>",
   "deployerPrivateKey": "<DEPLOYER_KEY>",
   "ownerPrivateKey": "<OWNER_PRIVATE_KEY_NEW_WALLET>",
-  "nativeTokenAddress": "0x0000000000000000000000000000000000000000"
+  "nativeTokenAddress": "0x0000000000000000000000000000000000000000",
+
+  // include the hash of the transaction that created the core contracts if you want to skip deploying the nitro core contracts
+  "coreContractsCreatedAtHash": "<CORE_CONTRACTS_CREATED_AT_HASH>"
 }
