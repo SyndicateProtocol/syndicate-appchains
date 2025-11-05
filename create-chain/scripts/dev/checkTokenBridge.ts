@@ -8,7 +8,11 @@ import {
 import type { JsonRpcProvider } from "@ethersproject/providers"
 import { providers } from "ethers"
 import type { Chain, PublicClient, Transport } from "viem"
+import { getTokenBridgeContracts } from "../features/getTokenBridgeContracts"
 import { getFeaturesConfig } from "../utils/config"
+import { supportedSettlementChains } from "../utils/constants"
+import { generateBridgeConfig } from "../utils/generateBridgeConfig"
+import { getChainRpcUrl, upsertToSyndObject } from "../utils/helpers"
 
 async function main() {
   const {
@@ -50,9 +54,10 @@ async function main() {
   )
 
   // fetching the TokenBridge contracts
-  const tokenBridgeContracts = await txReceipt.getTokenBridgeContracts({
-    // @ts-ignore (todo: fix viem type issue)
-    parentChainPublicClient: settlementPublicClient
+  const tokenBridgeContracts = await getTokenBridgeContracts({
+    bridgeCreationHash: tokenBridgeCreatedAtHash,
+    parentChainPublicClient: settlementPublicClient,
+    tokenBridgeCreatorAddressOverride: supportedSettlementChains[settlementPublicClient.chain.id].tokenBridgeCreatorAddress
   })
   console.log("TokenBridge contracts fetched")
   console.log(tokenBridgeContracts)
