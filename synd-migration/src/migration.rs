@@ -5,7 +5,7 @@ use alloy::{
     rlp::{Decodable, RlpDecodable},
 };
 use eyre::{Context, Result};
-use rocksdb::{Options, DB};
+use rocksdb::{DB, Options};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::{debug, info};
@@ -126,7 +126,10 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     info!("Nitro DB path: {:?}", nitro_db_path);
     let chaindata_path = nitro_db_path.join("l2chaindata");
     if !chaindata_path.exists() {
-        eyre::bail!("L2 chaindata path does not exist: {:?}. Make sure you're pointing to the Nitro database directory (parent of l2chaindata)", chaindata_path);
+        eyre::bail!(
+            "L2 chaindata path does not exist: {:?}. Make sure you're pointing to the Nitro database directory (parent of l2chaindata)",
+            chaindata_path
+        );
     }
 
     // Open the database with read-write access if we're modifying, read-only otherwise
@@ -184,14 +187,6 @@ fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
     Ok((chain_config, config_key))
 }
 
-/// Updates the chain config in the database.
-fn update_chain_config(db: &DB, config: &ChainConfig, key: &[u8]) -> Result<()> {
-    let encoded = serde_json::to_vec(config).context("Failed to serialize chain config")?;
-    db.put(key, encoded).context("Failed to write chain config to database")?;
-    db.flush().context("Failed to flush database")?;
-    Ok(())
-}
-
 fn make_numbered_key(prefix: &[u8], number: u64, suffix: &[u8]) -> Vec<u8> {
     let mut key = prefix.to_vec();
     key.extend_from_slice(&number.to_be_bytes());
@@ -247,20 +242,18 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
         .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?;
 
-    let delayed_msgs_acc = arb_db
-        .get(make_numbered_key(b"e", batch_data.delayed_message_count, &[]))?
-        .map(|bytes| {
-            println!("bytes: {}", alloy::hex::encode(&bytes));
-
-            return B256::from_slice(&bytes[..32]);
-        })
-        .ok_or_else(|| eyre::eyre!("Failed to get delayed message accumulator"))?;
+    debug!("batch_data: {:#?}", batch_data);
 
     let before_batch_acc = arb_db
         .get(make_numbered_key(b"s", batch_count - 2, &[]))?
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
         .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?
         .acc;
+
+    let delayed_msgs_acc = arb_db
+        .get(make_numbered_key(b"e", delayed_msgs_count - 1, &[]))?
+        .map(|bytes| B256::from_slice(&bytes[..32]))
+        .ok_or_else(|| eyre::eyre!("Failed to get delayed message accumulator"))?;
 
     Ok(RollupState {
         block_number,

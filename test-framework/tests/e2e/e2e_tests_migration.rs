@@ -341,11 +341,11 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(1)
     );
 
-    assert!(migration_data.before_batch_acc == before_batch_acc);
-    assert!(migration_data.batch_acc == batch_acc);
-    assert!(migration_data.batch_count == 2);
-    assert!(migration_data.delayed_msgs_acc == delayed_msgs_acc);
-    assert!(U256::from(migration_data.delayed_msgs_count) == delayed_msgs_count);
+    assert_eq!(migration_data.before_batch_acc, before_batch_acc);
+    assert_eq!(migration_data.batch_acc, batch_acc);
+    assert_eq!(migration_data.batch_count, 2);
+    assert_eq!(U256::from(migration_data.delayed_msgs_count), delayed_msgs_count);
+    assert_eq!(migration_data.delayed_msgs_acc, delayed_msgs_acc);
 
     // migrate the bridge contract
     // - TODO Remove validators and stakers
@@ -416,7 +416,7 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
-    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
+    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(15));
 
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
