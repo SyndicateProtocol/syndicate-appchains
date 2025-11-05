@@ -19,6 +19,7 @@ contract RewardPoolBaseTest is Test {
     MockRewardPoolBase public rewardPoolBase;
     MockGasProvider public gasProvider;
 
+    address public admin;
     address public user1;
     address public user2;
     address public user3;
@@ -40,7 +41,8 @@ contract RewardPoolBaseTest is Test {
         gasProvider = new MockGasProvider();
 
         // pool takes admin, staking + gas provider
-        rewardPoolBase = new MockRewardPoolBase(msg.sender, address(staking), address(gasProvider));
+        admin = makeAddr("admin");
+        rewardPoolBase = new MockRewardPoolBase(admin, address(staking), address(gasProvider));
 
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
@@ -169,5 +171,29 @@ contract RewardPoolBaseTest is Test {
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
         assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
+    }
+
+    function test_changeParametersMidCompute() public {
+        setupStake(30 ether, 20 ether, 10 ether);
+
+        uint256 epoch = _settledEpoch();
+        setGasShares(epoch, 60 ether, 50 ether, 40 ether);
+
+        assertFalse(rewardPoolBase.computeDiminishingFactors(epoch, 1));
+
+        vm.expectRevert();
+        vm.prank(admin);
+        rewardPoolBase.setFeeMultiplier(0.6e18);
+
+        assertTrue(rewardPoolBase.computeDiminishingFactors(epoch, 0));
+
+        rewardPoolBase.deposit{value: 100 ether}(epoch);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId1), 41785679991199430718);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId2), 33578634284580271148);
+        assertEq(rewardPoolBase.getAppchainTotalReward(epoch, appchainId3), 24635685724220298132);
+
+        // Now you can change the parameters
+        vm.prank(admin);
+        rewardPoolBase.setFeeMultiplier(0.6e18);
     }
 }

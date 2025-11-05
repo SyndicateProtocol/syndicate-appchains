@@ -272,7 +272,7 @@ pub struct NitroNodeArgs {
 
 /// Starts nitro instance
 pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
-    const NITRO_DEFAULT_TAG: &str = "eigenda-v3.6.4-rc.2";
+    const NITRO_DEFAULT_TAG: &str = "eigenda-v3.7.6";
     let tag = env::var("NITRO_TAG").unwrap_or(NITRO_DEFAULT_TAG.to_string());
     let port = PortManager::instance().next_port().await;
 
@@ -345,6 +345,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--node.staker.enable=false")
             .arg("--execution.tx-pre-checker.strictness=20")
             .arg("--ensure-rollup-deployment=false")
+            .arg("--init.validate-genesis-assertion=false")
             .arg(format!(
                 "--chain.info-json={}",
                 nitro_chain_info_json(NitroChainInfoArgs {
@@ -508,8 +509,9 @@ pub async fn start_eigenda_proxy() -> Result<(E2EProcess, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:{port}"))
-            .arg("ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8")
+            .arg("ghcr.io/layr-labs/eigenda-proxy:2.4.0")
             .arg("--memstore.enabled")
+            .arg("--apis.enabled=arb,metrics,standard,admin")
             .arg("--eigenda.disable-tls=true")
             .arg("--eigenda.response-timeout=60m")
             .arg("--log.level=debug")

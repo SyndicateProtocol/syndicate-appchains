@@ -38,7 +38,7 @@ export async function canDeployMulticall3() {
 
   if (balance === BigInt(0)) {
     print(
-      "⏪ Deployer does not have balance on appchain. Skipping multicall3 deployment"
+      "⏪  Deployer does not have balance on appchain. Skipping multicall3 deployment"
     )
     return false
   }

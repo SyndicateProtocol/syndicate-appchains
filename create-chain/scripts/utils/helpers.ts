@@ -104,7 +104,7 @@ export async function upsertToSyndObject(
 ) {
   const basePath = path.join(__dirname, "../../", "out")
   const chainDir = path.join(basePath, chainName)
-  const syndFilePath = path.join(chainDir, `${environment}.synd.config.json`)
+  const syndFilePath = path.join(chainDir, `${environment}.synd.${chainName}.json`)
 
   // Ensure the directory exists
   await fs.mkdir(chainDir, { recursive: true })
