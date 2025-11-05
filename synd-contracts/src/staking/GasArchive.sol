@@ -420,7 +420,10 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         require(chainID != 0, ZeroChainId());
 
         require(seqChains.add(chainID), SequencingChainAlreadyExists());
-        epochRemainingChains++;
+        // If the chain has data for this epoch already, dont increment the counter
+        if (!epochChainDataSubmitted[epoch][chainID]) {
+            epochRemainingChains++;
+        }
         seqChainGasAggregator[chainID] = aggregatorAddress;
 
         if (chainID != settlementChainID) {
