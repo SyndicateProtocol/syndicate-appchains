@@ -329,14 +329,16 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             )
             .await?;
 
-            // send a dummy tx so that the sequencing chain progresses and the deposit is
-            // slotted in
-            components.sequence_tx(b"dummy_tx", 0, false).await?;
-
             wait_until!(
-                components.appchain_provider.get_balance(test_account1().address).await? >=
-                    parse_ether("1")?,
-                Duration::from_secs(60)
+                {
+                    // send a dummy tx so that the sequencing chain progresses and the deposit is
+                    // slotted in
+                    components.sequence_tx(b"dummy_tx", 0, false).await?;
+                    components.appchain_provider.get_balance(test_account1().address).await? >=
+                        parse_ether("1")?
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
             );
 
             // send 101 valid txs plus some invalid ones to trigger the block splitting code which
@@ -473,9 +475,12 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?;
             let tx_hash = withdraw_from_origin_tx.hash();
             let mut raw_tx_with_prefix = withdraw_from_origin_tx.encoded_2718();
-                raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
+            raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
 
-            let nonce = components.settlement_provider.get_transaction_count(components.settlement_provider.default_signer_address()).await?;
+            let nonce = components
+                .settlement_provider
+                .get_transaction_count(components.settlement_provider.default_signer_address())
+                .await?;
             assert!(inbox
                 .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
                 .nonce(nonce)
@@ -485,15 +490,18 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .await?
                 .status());
 
-            // send a dummy tx so that the sequencing chain progresses and the deposit is
-            // slotted in
-            time::sleep(Duration::from_secs(3)).await; // wait more than the settlement delay
-            components.sequence_tx(b"dummy_tx", 0, false).await?;
-
-            let mut receipt : Option<TransactionReceipt> = None;
+            let mut receipt: Option<TransactionReceipt> = None;
             wait_until!(
-                receipt = components.appchain_provider.get_transaction_receipt(*tx_hash).await?; receipt.is_some(),
-                Duration::from_secs(60)
+                {
+                    // send a dummy tx so that the sequencing chain progresses and the deposit is
+                    // slotted in
+                    components.sequence_tx(b"dummy_tx", 0, false).await?;
+                    receipt =
+                        components.appchain_provider.get_transaction_receipt(*tx_hash).await?;
+                    receipt.is_some()
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
             );
             let receipt = receipt.unwrap();
             assert!(receipt.status());
@@ -510,9 +518,11 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 Duration::from_secs(10 * 60)
             );
 
-
             // topic 3 of the L2ToL1Tx event is the withdrawal position
-            let withdrawal_position: u64 = U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into()).try_into().unwrap();
+            let withdrawal_position: u64 =
+                U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into())
+                    .try_into()
+                    .unwrap();
 
             // finish the withdrawal on the settlement chain
             execute_withdrawal(ExecuteWithdrawalParams {
