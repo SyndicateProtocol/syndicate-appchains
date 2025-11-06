@@ -375,7 +375,7 @@ mod tests {
     use alloy::{
         eips::Encodable2718,
         network::{EthereumWallet, TransactionBuilder as _},
-        primitives::{hex, keccak256},
+        primitives::{hex, keccak256, FixedBytes},
         rpc::types::TransactionRequest,
         signers::local::PrivateKeySigner,
     };

@@ -168,55 +168,68 @@ pub async fn init_withdrawal_tx(
     Ok(tx)
 }
 
-pub async fn execute_withdrawal(
-    to_address: Address,
-    withdrawal_value: U256,
-    appchain_block_hash_to_prove: B256,
-    bridge_address: Address,
-    settlement_provider: &FilledProvider,
-    appchain_provider: &FilledProvider,
-    l2_sender: Address,
-) -> eyre::Result<()> {
+pub struct ExecuteWithdrawalParams<'a> {
+    pub to_address: Address,
+    pub withdrawal_value: U256,
+    pub appchain_block_hash_to_prove: B256,
+    pub bridge_address: Address,
+    pub settlement_provider: &'a FilledProvider,
+    pub appchain_provider: &'a FilledProvider,
+    pub l2_sender: Address,
+    pub send_root_size: u64,
+    pub withdrawal_position: u64,
+}
+
+pub async fn execute_withdrawal(params: ExecuteWithdrawalParams<'_>) {
     // Generate proof
-    let node_interface = NodeInterface::new(NODE_INTERFACE_PRECOMPILE_ADDRESS, &appchain_provider);
-    let proof = node_interface.constructOutboxProof(1, 0).call().await?;
+    let node_interface =
+        NodeInterface::new(NODE_INTERFACE_PRECOMPILE_ADDRESS, &params.appchain_provider);
+    let proof = node_interface
+        .constructOutboxProof(params.send_root_size, params.withdrawal_position)
+        .call()
+        .await
+        .unwrap();
 
     // Execute withdrawal
-    let bridge = IBridge::new(bridge_address, &settlement_provider);
+    let bridge = IBridge::new(params.bridge_address, &params.settlement_provider);
     let outbox = IOutbox::new(
-        IRollupCore::new(bridge.rollup().call().await?, &settlement_provider)
+        IRollupCore::new(bridge.rollup().call().await.unwrap(), &params.settlement_provider)
             .outbox()
             .call()
-            .await?,
-        &settlement_provider,
+            .await
+            .unwrap(),
+        &params.settlement_provider,
     );
 
-    let block: NitroBlock = appchain_provider
-        .raw_request("eth_getBlockByHash".into(), (appchain_block_hash_to_prove, false))
-        .await?;
+    let block: NitroBlock = params
+        .appchain_provider
+        .raw_request("eth_getBlockByHash".into(), (params.appchain_block_hash_to_prove, false))
+        .await
+        .unwrap();
 
     let _ = outbox
         .executeTransaction(
-            proof.proof,           // proof
-            U256::from(0),         // index
-            l2_sender,             // l2Sender
-            to_address,            // to
-            block.number,          // l2Block,
-            block.l1_block_number, // l1Block,
-            block.timestamp,       // l2Timestamp,
-            withdrawal_value,      // value
-            Bytes::new(),          // data (always empty)
+            proof.proof,                            // proof
+            U256::from(params.withdrawal_position), // index
+            params.l2_sender,                       // l2Sender
+            params.to_address,                      // to
+            block.number,                           // l2Block,
+            block.l1_block_number,                  // l1Block,
+            block.timestamp,                        // l2Timestamp,
+            params.withdrawal_value,                // value
+            Bytes::new(),                           // data (always empty)
         )
         // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
         .nonce(
-            settlement_provider
-                .get_transaction_count(settlement_provider.default_signer_address())
-                .await?,
+            params
+                .settlement_provider
+                .get_transaction_count(params.settlement_provider.default_signer_address())
+                .await
+                .unwrap(),
         )
         .send()
         .await
-        .unwrap_or_else(|e| panic!("failed to execute outbox transaction {e}"));
-    Ok(())
+        .unwrap();
 }
 
 #[allow(dead_code)]

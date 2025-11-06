@@ -33,11 +33,11 @@ use test_framework::components::{
 use test_utils::{
     chain_info::{test_account1, test_account2, test_account3, PRIVATE_KEY3},
     docker::{launch_enclave_server, start_component},
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
+    nitro_chain::{execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams},
     port_manager::PortManager,
     wait_until,
 };
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, time};
 
 #[ctor::ctor]
 fn init() {
@@ -88,7 +88,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                         }))
                         .await
                         .unwrap(); // NOTE: this will crash once the test ends that's fine
-                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    time::sleep(Duration::from_secs(10)).await;
                 }
             });
 
@@ -392,7 +392,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
 
             // send a contract tx to trigger the nitro fork code.
-            // TODO why is this cfg(false) here??
             #[cfg(false)]
             {
                 let addr_3 = address!("0x0000000000000000000000000000000000000003");
@@ -449,23 +448,25 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
 
             // finish the withdrawal on the settlement chain
-            execute_withdrawal(
+            execute_withdrawal(ExecuteWithdrawalParams {
                 to_address,
                 withdrawal_value,
                 appchain_block_hash_to_prove,
-                components.appchain_deployment.bridge,
-                &components.settlement_provider,
-                &components.appchain_provider,
-                components.appchain_provider.default_signer_address(),
-            )
-            .await?;
+                bridge_address: components.appchain_deployment.bridge,
+                settlement_provider: &components.settlement_provider,
+                appchain_provider: &components.appchain_provider,
+                l2_sender: components.appchain_provider.default_signer_address(),
+                send_root_size: 1,
+                withdrawal_position: 0,
+            })
+            .await;
 
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);
 
             // lets withdraw using sendL2MessageFromOrigin
-            let withdrawal_value = parse_ether("0.1")?;
+            let withdrawal_value = parse_ether("0.5")?;
             let to_address = address!("0x0000000000000000000000000000000000000002");
             let withdraw_from_origin_tx =
                 init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
@@ -486,6 +487,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
 
             // send a dummy tx so that the sequencing chain progresses and the deposit is
             // slotted in
+            time::sleep(Duration::from_secs(3)).await; // wait more than the settlement delay
             components.sequence_tx(b"dummy_tx", 0, false).await?;
 
             let mut receipt : Option<TransactionReceipt> = None;
@@ -495,8 +497,6 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
             let receipt = receipt.unwrap();
             assert!(receipt.status());
-
-
 
             // wait for the sendroot to be updated
             let appchain_block_hash_to_prove = receipt.block_hash.unwrap();
@@ -510,19 +510,23 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 Duration::from_secs(10 * 60)
             );
 
+
+            // topic 3 of the L2ToL1Tx event is the withdrawal position
+            let withdrawal_position: u64 = U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into()).try_into().unwrap();
+
             // finish the withdrawal on the settlement chain
-            // Even though sent via sendL2MessageFromOrigin, this is a SignedTx (see L2MessageKind::SignedTx),
-            // so the l2_sender is the transaction signer, not the aliased settlement sender
-            execute_withdrawal(
+            execute_withdrawal(ExecuteWithdrawalParams {
                 to_address,
                 withdrawal_value,
                 appchain_block_hash_to_prove,
-                components.appchain_deployment.bridge,
-                &components.settlement_provider,
-                &components.appchain_provider,
-                components.appchain_provider.default_signer_address(), 
-            )
-            .await?;
+                bridge_address: components.appchain_deployment.bridge,
+                settlement_provider: &components.settlement_provider,
+                appchain_provider: &components.appchain_provider,
+                l2_sender: components.appchain_provider.default_signer_address(),
+                send_root_size: 2,
+                withdrawal_position,
+            })
+            .await;
 
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
