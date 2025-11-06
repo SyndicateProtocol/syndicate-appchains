@@ -100,9 +100,6 @@ async fn build_partial_blocks_from_init_requests(
         // contains block hash info with it.
         let first_unsafe_block = safe_block + 1;
 
-        // TODO isn't fetching ALL logs incredible bandwidth ineficient for large chains like base?
-        // (I get the CU total is better, but this seems silly)
-
         info!("fetching full logs from blocks {} to {}", first_unsafe_block, end_block);
         let mut unsafe_logs = client
             .get_logs(&Filter::new().from_block(first_unsafe_block).to_block(end_block))
@@ -175,7 +172,6 @@ pub async fn fill_partial_block_with_l2msg_from_origin_txs(
             let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(
                 tx.input().get(4..).unwrap_or_else(|| panic!("tx input less than 4 bytes")),
             )?;
-            // let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(tx.input())?;
             let seq_num: U256 = log.topics()[1].into();
             block.log_txs.insert(seq_num, decoded_tx.messageData);
         };
@@ -238,7 +234,6 @@ impl<
             let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
             // remove the first block from the stream, which is a special init message
             init_blocks.rotate_left(1);
-            // init_blocks.remove(0); // TODO revisit, I think rotate is wrong
             let mut init: IndexedBlockData = init_blocks.pop().unwrap()?.init();
 
             // get start and end blocks for batching
