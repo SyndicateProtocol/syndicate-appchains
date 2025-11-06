@@ -3,7 +3,8 @@
 
 use alloy::{
     eips::BlockNumberOrTag,
-    providers::{Provider as _, ProviderBuilder, RootProvider, WsConnect},
+    primitives::TxHash,
+    providers::{Provider, ProviderBuilder, RootProvider, WsConnect},
     pubsub::Subscription,
     rpc::types::{Filter, FilterBlockOption, Header},
     transports::{ws::WebSocketConfig, RpcError, TransportErrorKind},
@@ -184,6 +185,26 @@ impl EthClient {
                 handle_rpc_error("failed to get logs", &err);
                 Err(err)
             }
+        }
+    }
+
+    /// Gets a transaction by hash
+    #[instrument(skip(self), fields(otel.kind = ?SpanKind::Client))]
+    pub async fn get_transaction_by_hash(
+        &self,
+        hash: TxHash,
+    ) -> Option<alloy::rpc::types::Transaction> {
+        loop {
+            match timeout(self.timeout, self.client.get_transaction_by_hash(hash)).await {
+                Err(_) => {
+                    error!("eth_getTransactionByHash request timed out");
+                }
+                Ok(Err(err)) => {
+                    handle_rpc_error("failed to get block by hash", &err);
+                }
+                Ok(Ok(tx)) => return tx,
+            }
+            tokio::time::sleep(self.retry_interval).await;
         }
     }
 

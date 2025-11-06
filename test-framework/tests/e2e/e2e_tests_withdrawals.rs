@@ -11,7 +11,7 @@ use alloy::{
     rpc::types::{
         anvil::MineOptions,
         trace::geth::{GethDebugTracingOptions, GethTrace},
-        TransactionRequest,
+        TransactionReceipt, TransactionRequest,
     },
     signers::local::PrivateKeySigner,
     sol,
@@ -33,11 +33,11 @@ use test_framework::components::{
 use test_utils::{
     chain_info::{test_account1, test_account2, test_account3, PRIVATE_KEY3},
     docker::{launch_enclave_server, start_component},
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx},
+    nitro_chain::{execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams},
     port_manager::PortManager,
     wait_until,
 };
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, time};
 
 #[ctor::ctor]
 fn init() {
@@ -88,7 +88,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                         }))
                         .await
                         .unwrap(); // NOTE: this will crash once the test ends that's fine
-                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    time::sleep(Duration::from_secs(10)).await;
                 }
             });
 
@@ -329,14 +329,16 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             )
             .await?;
 
-            // send a dummy tx so that the sequencing chain progresses and the deposit is
-            // slotted in
-            components.sequence_tx(b"dummy_tx", 0, false).await?;
-
             wait_until!(
-                components.appchain_provider.get_balance(test_account1().address).await? >=
-                    parse_ether("1")?,
-                Duration::from_secs(60)
+                {
+                    // send a dummy tx so that the sequencing chain progresses and the deposit is
+                    // slotted in
+                    components.sequence_tx(b"dummy_tx", 0, false).await?;
+                    components.appchain_provider.get_balance(test_account1().address).await? >=
+                        parse_ether("1")?
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
             );
 
             // send 101 valid txs plus some invalid ones to trigger the block splitting code which
@@ -448,14 +450,93 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             );
 
             // finish the withdrawal on the settlement chain
-            execute_withdrawal(
+            execute_withdrawal(ExecuteWithdrawalParams {
                 to_address,
                 withdrawal_value,
-                components.appchain_deployment.bridge,
-                &components.settlement_provider,
-                &components.appchain_provider,
-            )
-            .await?;
+                appchain_block_hash_to_prove,
+                bridge_address: components.appchain_deployment.bridge,
+                settlement_provider: &components.settlement_provider,
+                appchain_provider: &components.appchain_provider,
+                l2_sender: components.appchain_provider.default_signer_address(),
+                send_root_size: 1,
+                withdrawal_position: 0,
+            })
+            .await;
+
+            // Assert new balance is equal to withdrawal amount
+            let balance_after = components.settlement_provider.get_balance(to_address).await?;
+            assert_eq!(balance_after, withdrawal_value);
+
+            // lets withdraw using sendL2MessageFromOrigin
+            let withdrawal_value = parse_ether("0.5")?;
+            let to_address = address!("0x0000000000000000000000000000000000000002");
+            let withdraw_from_origin_tx =
+                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                    .await?;
+            let tx_hash = withdraw_from_origin_tx.hash();
+            let mut raw_tx_with_prefix = withdraw_from_origin_tx.encoded_2718();
+            raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
+
+            let nonce = components
+                .settlement_provider
+                .get_transaction_count(components.settlement_provider.default_signer_address())
+                .await?;
+            assert!(inbox
+                .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
+                .nonce(nonce)
+                .send()
+                .await?
+                .get_receipt()
+                .await?
+                .status());
+
+            let mut receipt: Option<TransactionReceipt> = None;
+            wait_until!(
+                {
+                    // send a dummy tx so that the sequencing chain progresses and the deposit is
+                    // slotted in
+                    components.sequence_tx(b"dummy_tx", 0, false).await?;
+                    receipt =
+                        components.appchain_provider.get_transaction_receipt(*tx_hash).await?;
+                    receipt.is_some()
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
+            );
+            let receipt = receipt.unwrap();
+            assert!(receipt.status());
+
+            // wait for the sendroot to be updated
+            let appchain_block_hash_to_prove = receipt.block_hash.unwrap();
+            wait_until!(
+                rollup_core
+                    .NodeConfirmed_filter()
+                    .query()
+                    .await?
+                    .iter()
+                    .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
+                Duration::from_secs(10 * 60)
+            );
+
+            // topic 3 of the L2ToL1Tx event is the withdrawal position
+            let withdrawal_position: u64 =
+                U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into())
+                    .try_into()
+                    .unwrap();
+
+            // finish the withdrawal on the settlement chain
+            execute_withdrawal(ExecuteWithdrawalParams {
+                to_address,
+                withdrawal_value,
+                appchain_block_hash_to_prove,
+                bridge_address: components.appchain_deployment.bridge,
+                settlement_provider: &components.settlement_provider,
+                appchain_provider: &components.appchain_provider,
+                l2_sender: components.appchain_provider.default_signer_address(),
+                send_root_size: 2,
+                withdrawal_position,
+            })
+            .await;
 
             // Assert new balance is equal to withdrawal amount
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
