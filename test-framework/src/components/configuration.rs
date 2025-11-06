@@ -64,13 +64,6 @@ impl Default for ConfigurationOptions {
 }
 
 /// Sets up the config manager and creates the chain configuration
-/// Example migration data:
-/// ```
-/// MIGRATED_BATCH_ACC: 0x7209353306f1c3d450e53594d31d38bbc8badd6037767ca24b753e90e662d0ea
-/// MIGRATED_BATCH_COUNT: 7612
-/// MIGRATED_DELAYED_MSGS_ACC: 0xe544ba45e8ae3da11ca56d10a5691d5d6e73fc09080df712999c9ebab87253f8
-/// MIGRATED_DELAYED_MSGS_COUNT: 16
-/// ```
 #[allow(clippy::unwrap_used, clippy::too_many_arguments)]
 pub async fn setup_config_manager(
     set_provider: &FilledProvider,

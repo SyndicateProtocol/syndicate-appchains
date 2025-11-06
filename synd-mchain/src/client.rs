@@ -101,10 +101,7 @@ pub trait MchainProvider: Send + Sync {
             let mchain_block_before = self.get_block_number().await;
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
-            warn!(
-                "rolled back to block {:?}, before: {:?}, after: {:?}",
-                mchain_block_number, mchain_block_before, mchain_block_after
-            );
+            warn!("rolled back to block {mchain_block_number:?}, before: {mchain_block_before:?}, after: {mchain_block_after:?}",);
         }
         if safe_state.is_some() {
             debug!("safe state found");

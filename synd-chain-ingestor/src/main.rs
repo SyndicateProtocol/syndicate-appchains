@@ -64,6 +64,7 @@ async fn main() -> eyre::Result<()> {
     let db = sync_db(
         &provider,
         &cfg.db_file,
+        // we subtract 1 to make sure we don't miss the first block that Translator will use
         cfg.start_block.saturating_sub(1),
         chain_id,
         cfg.parallel_sync_requests,
