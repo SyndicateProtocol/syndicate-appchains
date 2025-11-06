@@ -14,7 +14,7 @@ alloy-rlp  = { workspace = true }
 clap       = { workspace = true, features = ["derive", "env"] }
 eyre       = { workspace = true }
 rlp        = { workspace = true }
-rocksdb    = { workspace = true }
+rocksdb    = { version = "0.23.0" }
 serde      = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 shared     = { workspace = true }
