@@ -1,9 +1,7 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
-    eips::BlockId,
     primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::TransactionRequest,
 };
 use contract_bindings::synd::{
     arb_owner::ArbOwner,
@@ -76,6 +74,7 @@ struct SyndicateStack {
     valkey: E2EProcess,
 }
 
+#[allow(clippy::too_many_arguments, clippy::cognitive_complexity)]
 async fn spin_up_syndicate_stack(
     appchain_chain_id: u64,
     appchain_owner: Address,
@@ -88,16 +87,15 @@ async fn spin_up_syndicate_stack(
     migrated_appchain_deployment: NitroDeployment,
     data_dir: String,
 ) -> Result<SyndicateStack> {
+    info!("Starting Read Loop components...");
     let opt = ConfigurationOptions {
         appchain_chain_id,
         base_chains_type: test_framework::components::configuration::BaseChainsType::Nitro,
         rollup_owner: appchain_owner,
         ..Default::default()
     };
-    let (mchain_rpc_url, mchain, mchain_provider) =
+    let (mchain_rpc_url, mchain, _mchain_provider) =
         start_mchain(appchain_chain_id, opt.finality_delay).await?;
-
-    println!("mchain started");
 
     // Setup config manager and get chain config address
     let config_manager_address = setup_config_manager(
@@ -111,8 +109,6 @@ async fn spin_up_syndicate_stack(
         Some(migration_data.clone()),
     )
     .await?;
-
-    println!("config manager address: {config_manager_address}");
 
     let temp = test_path("chain_ingestor");
     let seq_chain_ingestor_cfg = ChainIngestorConfig {
@@ -150,8 +146,6 @@ async fn spin_up_syndicate_stack(
     let sequencing_ingestor_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
     let settlement_ingestor_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
 
-    println!("sequencing_ingestor_rpc_url: {sequencing_ingestor_rpc_url}");
-
     let translator_config = TranslatorConfig {
         settlement_ws_url: settlement_ingestor_rpc_url.clone(),
         config_manager_address: Some(config_manager_address),
@@ -174,8 +168,6 @@ async fn spin_up_syndicate_stack(
     )
     .await?;
 
-    println!("translator started");
-
     // Nitro
     let maestro_port = PortManager::instance().next_port().await;
     let migrated_appchain = launch_nitro_node(NitroNodeArgs {
@@ -193,9 +185,7 @@ async fn spin_up_syndicate_stack(
 
     // Write loop
     info!("Starting Write Loop components...");
-    info!("Starting valkey...");
     let (valkey, valkey_url) = start_valkey().await?;
-    info!("Starting maestro...");
     let maestro_config = MaestroConfig {
         port: maestro_port,
         valkey_url: valkey_url.clone(),
@@ -215,7 +205,6 @@ async fn spin_up_syndicate_stack(
         Default::default(),
     )
     .await?;
-    info!("Starting batch sequencer...");
     let batch_sequencer_config = BatchSequencerConfig {
         chain_id: opt.appchain_chain_id,
         valkey_url: valkey_url.clone(),
@@ -416,7 +405,8 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
-    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(15));
+    mine_block(&seq_chain.provider.clone(), 1).await?;
+    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
 
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;

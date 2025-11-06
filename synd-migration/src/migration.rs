@@ -1,11 +1,10 @@
 //! Module for migrating the `DataAvailabilityCommittee` flag in Nitro chain configs.
-
 use alloy::{
     primitives::B256,
     rlp::{Decodable, RlpDecodable},
 };
 use eyre::{Context, Result};
-use rocksdb::{DB, Options};
+use rocksdb::{Options, DB};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::{debug, info};
@@ -109,13 +108,21 @@ pub struct ChainConfig {
 /// Rollup state information
 #[derive(Debug, Clone, Default)]
 pub struct RollupState {
+    /// The block number
     pub block_number: u64,
+    /// The block hash
     pub block_hash: B256,
+    /// The batch count
     pub batch_count: u64,
+    /// The before batch accumulator
     pub before_batch_acc: B256,
+    /// The batch accumulator
     pub batch_acc: B256,
+    /// The parent chain block
     pub parent_chain_block: u64,
+    /// The delayed messages count
     pub delayed_msgs_count: u64,
+    /// The delayed messages accumulator
     pub delayed_msgs_acc: B256,
 }
 
@@ -146,20 +153,20 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     let rollup_state = get_rollup_state(&db, &arb_db)?;
 
     // Get the chain config
-    let (mut chain_config, config_key) = get_chain_config(&db)?;
+    let (chain_config, _config_key) = get_chain_config(&db)?;
 
     debug!("rollup state: {:#?}", rollup_state);
     debug!("chain config: {:#?}", chain_config);
 
-    println!("\n---------------\n");
-    println!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
-    println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
-    println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
-    println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
-    println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
-    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
-    println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    println!("\n---------------\n");
+    info!("\n---------------\n");
+    info!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
+    info!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
+    info!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
+    info!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
+    info!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
+    info!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
+    info!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
+    info!("\n---------------\n");
 
     Ok(rollup_state)
 }

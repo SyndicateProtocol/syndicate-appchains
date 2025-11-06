@@ -2,20 +2,21 @@
 
 use crate::components::test_components::SEQUENCING_CHAIN_ID;
 use alloy::{
-    primitives::{Address, B256, U256},
+    primitives::{Address, U256},
     providers::WalletProvider,
 };
 use contract_bindings::synd::{
-    arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
+    arb_chain_config::ArbChainConfig::{self, ArbChainConfigInstance},
+    arb_config_manager::ArbConfigManager,
 };
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
-use synd_block_builder::config;
 use synd_migration::migration::RollupState;
 use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 use tracing::info;
 
+/// The base chains type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BaseChainsType {
     Anvil,
@@ -63,11 +64,14 @@ impl Default for ConfigurationOptions {
 }
 
 /// Sets up the config manager and creates the chain configuration
+/// Example migration data:
+/// ```
 /// MIGRATED_BATCH_ACC: 0x7209353306f1c3d450e53594d31d38bbc8badd6037767ca24b753e90e662d0ea
-// MIGRATED_BATCH_COUNT: 7612
-// MIGRATED_DELAYED_MSGS_ACC: 0xe544ba45e8ae3da11ca56d10a5691d5d6e73fc09080df712999c9ebab87253f8
-// MIGRATED_DELAYED_MSGS_COUNT: 16
-#[allow(clippy::unwrap_used)]
+/// MIGRATED_BATCH_COUNT: 7612
+/// MIGRATED_DELAYED_MSGS_ACC: 0xe544ba45e8ae3da11ca56d10a5691d5d6e73fc09080df712999c9ebab87253f8
+/// MIGRATED_DELAYED_MSGS_COUNT: 16
+/// ```
+#[allow(clippy::unwrap_used, clippy::too_many_arguments)]
 pub async fn setup_config_manager(
     set_provider: &FilledProvider,
     options: &ConfigurationOptions,
@@ -118,24 +122,7 @@ pub async fn setup_config_manager(
     let config = ArbChainConfig::new(config_address, set_provider.clone());
 
     if let Some(migration_data) = migration_data {
-        info!("Migrating chain config with data: {:#?}", migration_data);
-        let receipt = config
-            .migration(
-                migration_data.parent_chain_block.try_into().unwrap(),
-                options.sequencing_start_block.try_into().unwrap(),
-                migration_data.before_batch_acc.try_into().unwrap(),
-                migration_data.batch_acc.try_into().unwrap(),
-                migration_data.batch_count.try_into().unwrap(),
-                migration_data.delayed_msgs_acc.try_into().unwrap(),
-                migration_data.delayed_msgs_count.try_into().unwrap(),
-                migration_data.block_hash.try_into().unwrap(),
-            )
-            .send()
-            .await?
-            .get_receipt()
-            .await?;
-        assert!(receipt.status());
-        info!("Migration transaction receipt: {:#?}", receipt);
+        migrate_chain_config(&config, options, &migration_data).await?;
     }
 
     match options.base_chains_type {
@@ -146,6 +133,31 @@ pub async fn setup_config_manager(
     };
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
-
     Ok(config_manager.address().to_owned())
+}
+
+async fn migrate_chain_config(
+    config: &ArbChainConfigInstance<FilledProvider>,
+    options: &ConfigurationOptions,
+    migration_data: &RollupState,
+) -> Result<()> {
+    info!("Migrating chain config with data: {:#?}", migration_data);
+    let receipt = config
+        .migration(
+            migration_data.parent_chain_block.try_into()?,
+            options.sequencing_start_block.try_into()?,
+            migration_data.before_batch_acc.into(),
+            migration_data.batch_acc.into(),
+            migration_data.batch_count.try_into()?,
+            migration_data.delayed_msgs_acc.into(),
+            migration_data.delayed_msgs_count.try_into()?,
+            migration_data.block_hash.into(),
+        )
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+    assert!(receipt.status());
+    info!("Migration transaction receipt: {:#?}", receipt);
+    Ok(())
 }
