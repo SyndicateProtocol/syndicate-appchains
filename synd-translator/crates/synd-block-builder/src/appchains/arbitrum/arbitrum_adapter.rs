@@ -14,7 +14,7 @@ use crate::{
     config::BlockBuilderConfig,
 };
 use alloy::{
-    primitives::{Address, Bytes, FixedBytes, Log, U256},
+    primitives::{Address, Bytes, Log, U256},
     sol_types::SolEvent as _,
 };
 use common::types::{SequencingBlock, SettlementBlock};
@@ -36,11 +36,6 @@ use tracing::{debug, error, info, trace};
 // Eventually once the translator uses nitro to simulate tx execution, transactions can be slotted
 // into blocks based on gas usage instead.
 const TX_PER_BLOCK: usize = 100;
-
-const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
-const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
-const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
-    InboxMessageDeliveredFromOrigin::SIGNATURE_HASH;
 
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, Error)]
@@ -169,36 +164,40 @@ impl ArbitrumAdapter {
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
         // Process all bridge logs in all receipts
         let delayed_messages = block.logs.iter().filter(|log| {
-            log.address == self.bridge_address && log.topics()[0] == MSG_DELIVERED_EVENT_HASH
+            log.address == self.bridge_address &&
+                log.topics()[0] == MessageDelivered::SIGNATURE_HASH
         });
 
         // Process all inbox logs in all receipts
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            match log.topics()[0] {
-                INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = log.topics()[1].into();
-
+            let res = match log.topics()[0] {
+                InboxMessageDelivered::SIGNATURE_HASH => {
+                    let message_num: U256 = log.topics()[1].into();
                     // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data_validate(&log.data.data) {
-                        Ok(decoded) => {
-                            message_data.insert(message_num, decoded.0);
-                        }
-                        Err(e) => {
+                    let decoded = InboxMessageDelivered::abi_decode_data_validate(&log.data.data)
+                        .unwrap_or_else(|e| {
                             panic!(
                                 "{}",
                                 ArbitrumBlockBuilderError::DecodingError(
                                     "InboxMessageDelivered",
                                     e.into()
                                 )
-                            );
-                        }
-                    }
+                            )
+                        });
+                    Some((message_num, decoded.0))
                 }
-
-                INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    panic!("unsupported inbox message delivered from origin: {}", log.topics()[1]);
+                InboxMessageDeliveredFromOrigin::SIGNATURE_HASH => {
+                    let message_num: U256 = log.topics()[1].into();
+                    let data = block.log_txs[&message_num].clone();
+                    Some((message_num, data))
                 }
-                _ => {}
+                e => {
+                    trace!("unsupported event type: {e}");
+                    None
+                }
+            };
+            if let Some((msg_num, calldata)) = res {
+                message_data.insert(msg_num, calldata);
             }
         });
 
@@ -376,7 +375,7 @@ mod tests {
     use alloy::{
         eips::Encodable2718,
         network::{EthereumWallet, TransactionBuilder as _},
-        primitives::{hex, keccak256},
+        primitives::{hex, keccak256, FixedBytes},
         rpc::types::TransactionRequest,
         signers::local::PrivateKeySigner,
     };
@@ -531,7 +530,11 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
@@ -573,7 +576,11 @@ mod tests {
 
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
@@ -592,7 +599,7 @@ mod tests {
         // Create log with invalid event data
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH],
+            vec![MessageDelivered::SIGNATURE_HASH],
             Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
         );
 
@@ -627,7 +634,11 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
