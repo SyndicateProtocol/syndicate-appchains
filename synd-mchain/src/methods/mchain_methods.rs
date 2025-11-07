@@ -33,7 +33,7 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
         metrics.record_last_block(batch_count, timestamp);
         let mut data = mutex.lock().unwrap();
         data.pending_ts.push_back(timestamp);
-        assert_eq!(data.finalized_block + data.pending_ts.len() as u64, batch_count);
+        assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, batch_count);
         data.subs.retain_mut(|sink| {
             if sink.is_closed() {
                 return false;
@@ -106,9 +106,9 @@ pub fn rollback_to_block(
 
     // Update stale finality data
     let mut data = mutex.lock().unwrap();
-    if block_number < data.finalized_block {
+    if block_number < data.finalized_batch {
         metrics.record_finalized_block(block_number, timestamp);
-        data.finalized_block = block_number;
+        data.finalized_batch = block_number;
         data.pending_ts.clear();
     } else {
         let removed = (state.batch_count - block_number) as usize;
@@ -116,7 +116,7 @@ pub fn rollback_to_block(
         assert!(data_len >= removed);
         data.pending_ts.truncate(data_len - removed);
     }
-    assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block_number);
+    assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, block_number);
 
     data.subs.retain_mut(|sink| {
         !sink.is_closed() &&
@@ -161,8 +161,6 @@ pub fn appchain_migration(
 ) -> Result<(), ErrorObjectOwned> {
     let (migration_params,): (MigrationParams,) = params.parse()?;
     debug!("appchain migration: {:?}", migration_params);
-    let mut data =
-        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
     db.appchain_migration(
         migration_params.settlement_start_block,
         migration_params.before_batch_acc,
@@ -172,7 +170,9 @@ pub fn appchain_migration(
         migration_params.delayed_msgs_count,
     )
     .map_err(to_err)?;
-    data.finalized_block = migration_params.batch_count;
+    let mut data =
+        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
+    data.finalized_batch = migration_params.batch_count;
     drop(data);
     Ok(())
 }
@@ -245,7 +245,7 @@ mod tests {
         let mut metrics_state = MetricsState::default();
         let metrics = MchainMetrics::new(&mut metrics_state.registry);
         let context =
-            Mutex::new(Context { finalized_block: 0, pending_ts: VecDeque::new(), subs: vec![] });
+            Mutex::new(Context { finalized_batch: 0, pending_ts: VecDeque::new(), subs: vec![] });
         (mock_db, metrics, context)
     }
 

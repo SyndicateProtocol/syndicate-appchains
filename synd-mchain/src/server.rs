@@ -91,7 +91,11 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     let mut module = RpcModule::new((
         db,
         metrics,
-        Mutex::new(Context { finalized_block, pending_ts, subs: Default::default() }),
+        Mutex::new(Context {
+            finalized_batch: finalized_block,
+            pending_ts,
+            subs: Default::default(),
+        }),
     ));
 
     // -------------------------------------------------
