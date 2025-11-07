@@ -120,12 +120,12 @@ pub fn eth_get_logs(
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
             let mut before_acc = block.before_message_acc;
-            for (j, (msg, acc)) in block.messages.iter().enumerate() {
+            for (msg_idx, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     batch_count,
                     offset,
                     IBridge::MessageDelivered {
-                        messageIndex: U256::from(block.before_message_count + j as u64),
+                        messageIndex: U256::from(block.before_message_count + msg_idx as u64),
                         beforeInboxAcc: before_acc,
                         inbox: APPCHAIN_CONTRACT,
                         kind: msg.kind,
@@ -171,12 +171,12 @@ pub fn eth_get_logs(
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
-            for (j, (msg, _)) in block.messages.iter().enumerate() {
+            for (msg_idx, (msg, _)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     batch_count,
                     offset,
                     IInbox::InboxMessageDelivered {
-                        messageNum: U256::from(block.before_message_count + j as u64),
+                        messageNum: U256::from(block.before_message_count + msg_idx as u64),
                         data: msg.data.clone(),
                     }
                     .encode_log_data(),
@@ -228,14 +228,14 @@ pub fn eth_get_block_by_number(
                     break;
                 }
                 ts = *block_ts;
-                data.finalized_block += 1;
+                data.finalized_batch += 1;
                 data.pending_ts.pop_front();
             }
             if ts > 0 {
-                metrics.record_finalized_block(data.finalized_block, ts);
+                metrics.record_finalized_block(data.finalized_batch, ts);
             }
 
-            data.finalized_block
+            data.finalized_batch
         }
         _ => return Err(format!("invalid tag: {tag}")).map_err(to_err),
     };
@@ -329,7 +329,7 @@ mod tests {
         (
             TestDB::new(),
             MchainMetrics::new(&mut MetricsState::default().registry),
-            Mutex::new(Context { finalized_block: 0, pending_ts: VecDeque::new(), subs: vec![] }),
+            Mutex::new(Context { finalized_batch: 0, pending_ts: VecDeque::new(), subs: vec![] }),
         )
     }
 

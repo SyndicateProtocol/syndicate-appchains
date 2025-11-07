@@ -12,6 +12,7 @@ services:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
       GENESIS_CONFIG: ${GENESIS_CONFIG}
       DATADIR: /datadir
+      RUST_LOG: TRACE
     ports:
       - "8545"
       - "8546"

@@ -41,14 +41,14 @@ pub fn create_header(
     timestamp: u64,
 ) -> alloy::rpc::types::Header {
     // TODO maybe revert
-    let l1_block_num = if offset == 0 { seq_block_num } else { batch_count + offset };
+    // let l1_block_num = if offset == 0 { seq_block_num } else { batch_count + offset };
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
             number: batch_count + offset,
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
-            mix_hash: U256::from(l1_block_num)
+            mix_hash: U256::from(seq_block_num)
                 .checked_shl(64)
                 .unwrap()
                 .checked_add(U256::from(1))
@@ -103,7 +103,7 @@ pub fn appchain_config(chain_id: u64) -> String {
 #[derive(Debug)]
 pub struct Context {
     /// The finalized block number
-    pub finalized_block: u64,
+    pub finalized_batch: u64,
     /// The pending timestamps
     pub pending_ts: VecDeque<u64>,
     /// The subscriptions
