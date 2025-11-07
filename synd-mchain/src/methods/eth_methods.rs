@@ -86,18 +86,20 @@ pub fn eth_get_logs(
             Some(alloy::rpc::types::ValueOrArray::Value(i)) => i,
             _ => return Err(err("missing topic1")),
         };
-        let ind = u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
-        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(ind + 1).into()) {
+        let batch_seq_num =
+            u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
+        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(batch_seq_num + 1).into()) {
             return Err(err("block hash and batch index mismatch"));
         }
-        let (block, batch_count) = db.get_block_with_offset(ind + 1)?;
+        let block = db.get_block(batch_seq_num + 1)?;
         if block.batch.is_empty() {
             return Err(err("batch is empty - SequencerBatchData event does not exist"));
         }
         return Ok(vec![create_log(
-            batch_count,
+            batch_seq_num + 1,
+            db.get_migration_offset(),
             ISequencerInbox::SequencerBatchData {
-                batchSequenceNumber: U256::from(batch_count - 1),
+                batchSequenceNumber: U256::from(batch_seq_num),
                 data: block.batch,
             }
             .encode_log_data(),
@@ -116,11 +118,12 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count) = db.get_block_with_offset(i)?;
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
             let mut before_acc = block.before_message_acc;
             for (j, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     batch_count,
+                    offset,
                     IBridge::MessageDelivered {
                         messageIndex: U256::from(block.before_message_count + j as u64),
                         beforeInboxAcc: before_acc,
@@ -139,9 +142,10 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count) = db.get_block_with_offset(i)?;
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
             events.push(create_log(
                 batch_count,
+                offset,
                 ISequencerInbox::SequencerBatchDelivered {
                     batchSequenceNumber: U256::from(batch_count - 1),
                     beforeAcc: block.before_batch_acc,
@@ -166,10 +170,11 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count) = db.get_block_with_offset(i)?;
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
             for (j, (msg, _)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     batch_count,
+                    offset,
                     IInbox::InboxMessageDelivered {
                         messageNum: U256::from(block.before_message_count + j as u64),
                         data: msg.data.clone(),

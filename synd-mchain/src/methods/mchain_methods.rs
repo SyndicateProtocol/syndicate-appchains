@@ -29,27 +29,26 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
 
     metrics.record_sequencing_block(seq_block_number, timestamp);
 
-    Ok(block.inspect(|&block| {
-        metrics.record_last_block(block, timestamp);
+    Ok(block.inspect(|&batch_count| {
+        metrics.record_last_block(batch_count, timestamp);
         let mut data = mutex.lock().unwrap();
         data.pending_ts.push_back(timestamp);
-        assert_eq!(
-            data.finalized_block + data.pending_ts.len() as u64,
-            block - db.get_migration_offset()
-        );
+        assert_eq!(data.finalized_block + data.pending_ts.len() as u64, batch_count);
         data.subs.retain_mut(|sink| {
-            !sink.is_closed() &&
-                sink.try_send(SubscriptionMessage::from(
-                    serde_json::value::to_raw_value(&create_header(
-                        block,
-                        db.get_migration_offset(),
-                        seq_block_number,
-                        timestamp,
-                    ))
-                    .unwrap(),
+            if sink.is_closed() {
+                return false;
+            }
+            sink.try_send(SubscriptionMessage::from(
+                serde_json::value::to_raw_value(&create_header(
+                    batch_count,
+                    db.get_migration_offset(),
+                    seq_block_number,
+                    timestamp,
                 ))
-                .inspect_err(|err| error!("try_send failed: {err}"))
-                .is_ok()
+                .unwrap(),
+            ))
+            .inspect_err(|err| error!("try_send failed: {err}"))
+            .is_ok()
         });
         drop(data);
     }))
@@ -162,6 +161,8 @@ pub fn appchain_migration(
 ) -> Result<(), ErrorObjectOwned> {
     let (migration_params,): (MigrationParams,) = params.parse()?;
     debug!("appchain migration: {:?}", migration_params);
+    let mut data =
+        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
     db.appchain_migration(
         migration_params.settlement_start_block,
         migration_params.before_batch_acc,
@@ -171,8 +172,6 @@ pub fn appchain_migration(
         migration_params.delayed_msgs_count,
     )
     .map_err(to_err)?;
-    let mut data =
-        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
     data.finalized_block = migration_params.batch_count;
     drop(data);
     Ok(())

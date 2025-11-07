@@ -21,6 +21,8 @@ struct Config {
     // time delay until a block is considered finalized
     #[arg(long, env = "FINALITY_DELAY", default_value_t = 60)]
     finality_delay: u64,
+    #[arg(long, env = "GENESIS_CONFIG")]
+    genesis_config: Option<String>,
     #[arg(long, env = "DATADIR", default_value = "./datadir")]
     datadir: String,
     #[arg(long, env = "PORT", default_value_t = 8545)]
@@ -50,7 +52,8 @@ async fn main() -> eyre::Result<()> {
 
     info!("starting synd-mchain server on port {}", cfg.port);
     tokio::spawn(start_http_server_with_metrics_only(metrics_state, cfg.metrics_port));
-    let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
+    let module =
+        start_mchain(cfg.appchain_chain_id, cfg.finality_delay, cfg.genesis_config, db, metrics);
     let jsonrpsee_cfg = ServerConfigBuilder::new()
         .enable_ws_ping(PingConfig::default())
         .set_id_provider(RandomStringIdProvider::new(64))

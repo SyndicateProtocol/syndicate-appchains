@@ -36,6 +36,7 @@ const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("000b00800203"));
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     finality_delay: u64,
+    genesis_config: Option<String>,
     db: T,
     metrics: MchainMetrics,
 ) -> RpcModule<(T, MchainMetrics, Mutex<Context>)> {
@@ -47,7 +48,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             U256::from(chain_id),
             [1u8],      // initMsgVersion
             U256::ZERO, // currentDataCost
-            appchain_config(chain_id),
+            genesis_config.unwrap_or_else(|| appchain_config(chain_id)),
         )
             .abi_encode_packed()
             .into(),

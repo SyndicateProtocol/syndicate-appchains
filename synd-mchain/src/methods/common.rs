@@ -19,12 +19,16 @@ pub fn err(message: &'static str) -> ErrorObjectOwned {
 }
 
 /// Helper function to create a mock log object
-pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
+pub fn create_log(
+    batch_count: u64,
+    offset: u64,
+    data: alloy::primitives::LogData,
+) -> alloy::rpc::types::Log {
     alloy::rpc::types::Log {
         inner: alloy::primitives::Log { address: APPCHAIN_CONTRACT, data },
         transaction_hash: Some(FixedBytes::ZERO),
-        block_number: Some(block_num),
-        block_hash: Some(U256::from(block_num).into()),
+        block_number: Some(batch_count + offset),
+        block_hash: Some(U256::from(batch_count).into()),
         ..Default::default()
     }
 }
@@ -33,9 +37,11 @@ pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rp
 pub fn create_header(
     batch_count: u64,
     offset: u64,
-    l1_block_num: u64,
+    seq_block_num: u64,
     timestamp: u64,
 ) -> alloy::rpc::types::Header {
+    // TODO maybe revert
+    let l1_block_num = if offset == 0 { seq_block_num } else { batch_count + offset };
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
             number: batch_count + offset,
@@ -79,12 +85,12 @@ pub fn appchain_config(chain_id: u64) -> String {
             "berlinBlock": 0,
             "londonBlock": 0,
             "clique": {{
-            "period": 0,
-            "epoch": 0
+                "period": 0,
+                "epoch": 0
             }},
             "arbitrum": {{
-            "EnableArbOS": true,
-            "Syndicate": true
+                "EnableArbOS": true,
+                "Syndicate": true
             }}
         }}"#
     );

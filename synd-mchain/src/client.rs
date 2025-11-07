@@ -105,6 +105,7 @@ pub trait MchainProvider: Send + Sync {
         }
         if safe_state.is_some() {
             debug!("safe state found");
+            // TODO think about race condition nitro vs translator when starting from migration
             return Ok(safe_state);
         }
         debug!("no safe state found, checking for migration_params");
@@ -267,7 +268,7 @@ mod tests {
 
     async fn setup() -> eyre::Result<(impl MchainProvider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
-        let mchain = start_mchain(10, 60, db.clone(), MchainMetrics::default());
+        let mchain = start_mchain(10, 60, None, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
     }
 
