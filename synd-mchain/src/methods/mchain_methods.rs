@@ -161,6 +161,8 @@ pub fn appchain_migration(
 ) -> Result<(), ErrorObjectOwned> {
     let (migration_params,): (MigrationParams,) = params.parse()?;
     debug!("appchain migration: {:?}", migration_params);
+    let mut data =
+        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
     db.appchain_migration(
         migration_params.settlement_start_block,
         migration_params.before_batch_acc,
@@ -170,9 +172,7 @@ pub fn appchain_migration(
         migration_params.delayed_msgs_count,
     )
     .map_err(to_err)?;
-    let mut data =
-        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
-    data.finalized_batch = migration_params.batch_count;
+    data.finalized_batch = migration_params.batch_count + 1;
     drop(data);
     Ok(())
 }

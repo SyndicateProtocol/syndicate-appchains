@@ -38,7 +38,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument, trace};
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
@@ -164,6 +164,7 @@ pub async fn fill_partial_block_with_l2msg_from_origin_txs(
 ) -> eyre::Result<PartialBlock> {
     for (i, log) in block.logs.iter().enumerate() {
         if log.topics()[0] == InboxMessageDeliveredFromOrigin::SIGNATURE_HASH {
+            debug!("InboxMessageDeliveredFromOrigin event found: {log:?}");
             let tx = client
                 .get_transaction_by_hash(block.log_tx_hashes[i])
                 .await
@@ -321,6 +322,7 @@ impl<
                 let partial_block =
                     fill_partial_block_with_l2msg_from_origin_txs(resp?.block(), &self.client)
                         .await?;
+                trace!("received and filled partial block: {partial_block:?}");
                 let block = self.block_builder.build_block(&partial_block)?;
                 let block_number = block.block_ref().number;
                 assert!(

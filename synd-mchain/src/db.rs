@@ -393,6 +393,8 @@ pub trait ArbitrumDB {
         Ok(Some(block_number))
     }
 
+    // TODO think about make this a config param
+
     /// Applies a custom batch with appchain migration information
     fn appchain_migration(
         &self,
@@ -418,40 +420,41 @@ pub trait ArbitrumDB {
         // nitro asks for block 30 --> 30-27 = 3 --> block 3
 
         debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
-        //
+
         // let data_hash = keccak256(
         //     (
         //         0u64,     // minTimestamp
         //         u64::MAX, // maxTimestamp
         //         0u64,     // minBlockNumber
         //         u64::MAX, // maxBlockNumber
-        //         delayed_msgs_count,
-        //         // batch is empty
+        //         block.after_message_count(),
+        //         // empty batch
         //     )
         //         .abi_encode_packed(),
         // );
         // let after_batch_acc =
         //     keccak256((batch_acc, data_hash, delayed_msgs_acc).abi_encode_packed());
-        //
-        self.put_block(
-            batch_count,
-            &Block {
-                timestamp: 0u64,
-                batch: Bytes::new(),
-                slot: Slot {
-                    seq_block_number: 0u64,
-                    seq_block_hash: B256::ZERO,
-                    set_block_number: 0u64,
-                    set_block_hash: B256::ZERO,
-                },
-                messages: vec![],
-                // before_batch_acc: batch_acc,
-                after_batch_acc: batch_acc,
-                before_message_acc: delayed_msgs_acc,
-                before_message_count: delayed_msgs_count,
-                ..Default::default()
-            },
-        );
+
+        // self.put_block(
+        //     batch_count,
+        //     &Block {
+        //         timestamp: 0u64,
+        //         batch: Bytes::new(),
+        //         slot: Slot {
+        //             seq_block_number: 0u64,
+        //             seq_block_hash: B256::ZERO,
+        //             set_block_number: 0u64,
+        //             set_block_hash: B256::ZERO,
+        //         },
+        //         messages: vec![],
+        //         before_batch_acc,
+        //         after_batch_acc: batch_acc,
+        //         before_message_acc: delayed_msgs_acc,
+        //         before_message_count: delayed_msgs_count,
+        //     },
+        // );
+
+        //prepare the state so add_batch is able to add an empty batch
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
         self.put_state(&State {
             batch_count,
@@ -469,6 +472,7 @@ pub trait ArbitrumDB {
                 set_block_hash: B256::ZERO,
             },
         });
+        self.add_batch(MBlock { payload: Some(Default::default()), ..Default::default() })?;
         Ok(())
     }
 }
