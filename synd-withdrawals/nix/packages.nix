@@ -31,7 +31,7 @@
         cp -rv ${nitro-arbitrator-stylus-lib}/lib/* vendor/github.com/offchainlabs/nitro/target/lib
       fi
     '';
-    vendorHash = "sha256-zIk55iKad9UB4kvdlH5Qb4yLj3dDd39AH4JzBuqPpbg=";
+    vendorHash = "sha256-n6QtUCrLMthhUjkaHQSjLAi2SKjTsYaxmnYsjGU9BWs";
     subPackages = ["cmd/enclave"];
     ldFlags = [
       "-linkmode external"
@@ -142,12 +142,12 @@
     ${pkgs.wabt}/bin/wat2wasm forward.wat -o $out
   '';
 
-  nitro-arbitrator-stylus-lib = pkgs.rustPlatform.buildRustPackage {
+  nitro-arbitrator-stylus-lib = lib.pkgs-2505.rustPlatform.buildRustPackage {
     pname = "stylus";
     version = "0.1.0";
     src = "${inputs.nitro}/arbitrator";
     buildAndTestSubdir = "stylus";
-    cargoHash = "sha256-w38dRbXeXM5IsE/cktk9M9D29+8d+dULNzcPcx+Yzv8=";
+    cargoHash = "sha256-KuWPhtSQl9inY8fc13/Wqw9rGBMzDmJLo549qqrQ5tw=";
     doCheck = false;
     preBuild = ''
       mkdir -p ../target
@@ -184,7 +184,7 @@
       go run solgen/gen.go
       cp -r solgen/go/* $out/
     '';
-    vendorHash = "sha256-lmTzAxidFSPiDGLPziItkUY0xjvsYhqyfhvQo6g50nM=";
+    vendorHash = "sha256-GqRlu1LWHZ8gb3+HI76wk/pYMtP7uj5cxqaBVyeovc8=";
   };
 
   enclave-src-with-generated = let

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {RewardPoolBase} from "./RewardPoolBase.sol";
@@ -128,7 +128,7 @@ contract PerformancePool is IUserPool, RewardPoolBase {
         uint256 appchainTotal = getAppchainTotalReward(epochIndex, appchainId);
         if (appchainTotal == 0) return 0;
 
-        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStakeShare(epochIndex, user);
+        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStake(epochIndex, user);
         if (userStaked == 0) return 0;
 
         uint256 appchainStaked = ISyndStaking(address(stakingContract)).getAppchainStake(epochIndex, appchainId);

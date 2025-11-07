@@ -3,6 +3,8 @@ name: Rust Workspace CI
 on:
   # Mandatory checks - must run on all PRs
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
+
   # Run on main pushes only AFTER publish-images workflow completes successfully
   workflow_run:
     workflows: ["Publish Service Images"] # Run on `main` pushes only AFTER `publish-images` workflow completes successfully
@@ -28,6 +30,7 @@ env:
 
 jobs:
   taplo:
+    if: github.event.pull_request.draft == false
     name: Cargo.toml format validation
     runs-on: ubuntu-latest
     steps:
@@ -49,6 +52,7 @@ jobs:
         run: taplo fmt --check "**/Cargo.toml" --verbose
 
   machete:
+    if: github.event.pull_request.draft == false
     name: Machete
     runs-on: ubuntu-latest
     steps:
@@ -75,6 +79,7 @@ jobs:
             "test-framework"
 
   fmt:
+    if: github.event.pull_request.draft == false
     name: Fmt
     runs-on: ubuntu-latest
     steps:
@@ -89,6 +94,7 @@ jobs:
         run: cargo +nightly fmt --all --check -- --unstable-features
 
   clippy:
+    if: github.event.pull_request.draft == false
     name: Clippy
     runs-on: shared-large-01
     steps:
@@ -131,6 +137,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features
 
   test:
+    if: github.event.pull_request.draft == false
     name: Tests
     runs-on: shared-large-02
     timeout-minutes: 45

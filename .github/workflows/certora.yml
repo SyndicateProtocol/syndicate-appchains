@@ -16,6 +16,7 @@ on:
     branches: [main, staging]
   # Only run on PRs that touch synd-contracts .sol and .spec files to avoid unnecessary CI runs
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
     paths:
       - "synd-contracts/src/**/*.sol"
       - "synd-contracts/certora/specs/**/*.spec"
@@ -33,6 +34,7 @@ jobs:
   # installation of certora-cli ################################################
   ##############################################################################
   certora:
+    if: github.event.pull_request.draft == false
     name: Syndicate Certora Prover Run
     runs-on: ubuntu-latest
     defaults:

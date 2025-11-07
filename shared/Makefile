@@ -5,14 +5,23 @@ create-contract-bindings-rust:
 	git submodule update --remote ../synd-contracts/lib/nitro-contracts # needs specific branch
 	git submodule status --recursive
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
-	cd ../synd-contracts  && forge bind --alloy --force --skip IDeterministicDeploymentProxy
-	cp -r ../synd-contracts/out/bindings/src/* contract-bindings/src/synd
-	mv contract-bindings/src/synd/lib.rs contract-bindings/src/synd/mod.rs
+	# Generate bindings only for contracts actually used in the codebase
+	cd ../synd-contracts && forge bind --alloy --module --force \
+		--skip test --skip script \
+		--select 'GasAggregator|GasArchive|BlockHashRelayer|EmissionsCalculator|EmissionsScheduler|Refunder' \
+		--select 'ArbConfigManager|SyndicateSequencingChain|Rollup|IInbox|AssertionPoster' \
+		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
+		--select 'IBridge|IOutbox|IRollupCore|IRollup|IUpgradeExecutor' \
+		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwnerPublic' \
+		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig' \
+		--select 'ERC1967Proxy|GasMeter|AlwaysAllowedModule'
+	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 
 .PHONY: create-withdrawal-contract-bindings-go
 create-withdrawal-contract-bindings-go:
+	# NOTE: 99% of the time this task is executed in sequence after `create-contract-bindings-rust`. Let's skip forge build here to save time.
 	# 1) build everything so that Forge knows about TeeModule
-	cd ../synd-contracts && forge build --force
+	# cd ../synd-contracts && forge build --force
 
 	# 2) ensure our build-out dir exists in the appchains repo
 	mkdir -p ../shared/contract-bindings/src/withdrawals-go
@@ -39,3 +48,4 @@ create-withdrawal-contract-bindings-go:
 
 .PHONY: create-contract-bindings
 create-contract-bindings: create-contract-bindings-rust create-withdrawal-contract-bindings-go
+

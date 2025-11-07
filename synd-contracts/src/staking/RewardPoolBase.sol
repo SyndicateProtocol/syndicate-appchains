@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {EpochTracker} from "./EpochTracker.sol";
 import {IPool} from "src/staking/interfaces/IPool.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title RewardPoolBase
@@ -32,7 +33,7 @@ import {IPool} from "src/staking/interfaces/IPool.sol";
  * - "claimed" accounting (tracking already claimed amounts)
  * - Pool-specific reward distribution logic
  */
-abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPool {
+abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, Pausable, IPool {
     /// @notice Weight multiplier for gas fee contribution (40% by default)
     /// @dev Higher values give more weight to gas fee performance in reward calculation
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -148,6 +149,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
             if (remainingPlusOne == 1) {
                 return true;
             }
+            _pause();
         }
 
         if (count == 0 || count >= remainingPlusOne) {
@@ -185,7 +187,12 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
         }
         epochTotalDiminishingFactor[epochIndex] = dfSum;
 
-        return remainingAppchainsPlusOne[epochIndex] == 1;
+        bool isComplete = remainingAppchainsPlusOne[epochIndex] == 1;
+        if (isComplete) {
+            _unpause();
+        }
+
+        return isComplete;
     }
 
     /// @notice Helper function to compute the diminishing factor
@@ -266,7 +273,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
      * @dev Higher values give more weight to gas fee performance
      * @param _fee The new fee multiplier (in UD60x18 format)
      */
-    function setFeeMultiplier(uint256 _fee) external onlyOwner {
+    function setFeeMultiplier(uint256 _fee) external onlyOwner whenNotPaused {
         feeMultiplier = ud(_fee);
     }
 
@@ -275,7 +282,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
      * @dev Higher values give more weight to stake amount
      * @param _stake The new stake multiplier (in UD60x18 format)
      */
-    function setStakeMultiplier(uint256 _stake) external onlyOwner {
+    function setStakeMultiplier(uint256 _stake) external onlyOwner whenNotPaused {
         stakeMultiplier = ud(_stake);
     }
 
@@ -284,7 +291,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, IPoo
      * @dev Higher values create stronger diminishing returns effect
      * @param _decay The new decay factor (in UD60x18 format)
      */
-    function setDecayFactor(uint256 _decay) external onlyOwner {
+    function setDecayFactor(uint256 _decay) external onlyOwner whenNotPaused {
         decayFactor = ud(_decay);
     }
 }

@@ -32,7 +32,7 @@ contract GasArchiveTest is Test {
     uint256 public constant SEQ_CHAIN_ID = 31337; // matches the expected values in testConfirmEpochDataHashSuccess
     uint256 public constant APPCHAIN_ID_1 = 123;
     uint256 public constant APPCHAIN_ID_2 = 456;
-    uint256 public constant EPOCH = 10; // matches the expected values in testConfirmEpochDataHashSuccess
+    uint256 public constant EPOCH = 10;
 
     bytes32 public constant TEST_ETH_BLOCK_HASH = keccak256("eth_block");
     bytes32 public constant TEST_SETTLEMENT_BLOCK_HASH = keccak256("settlement_block");
@@ -193,60 +193,29 @@ contract GasArchiveTest is Test {
     ///      4. Submitting epoch pre-image data
     ///      5. Completing an epoch and verifying gas fee tracking
     ///
-    /// @dev SKIPPED: Requires regenerating proof fixture in test/staking/fixtures/gasAggregatorEpochDataHashProof.json
-    ///      The proof data was generated from a local Anvil node and is now stale. To fix:
-    ///      1. Deploy GasAggregator to a local test node
-    ///      2. Submit epoch data
-    ///      3. Generate new Merkle Patricia proof using eth_getProof RPC call
-    ///      4. Update the fixture JSON file
-    ///      5. Update the block header hex in this test
-    ///
-    ///      Note: The inverted logic bug in GasArchive.sol:229 has been fixed, but the proof data
-    ///      still needs to be regenerated to match current contract state layout.
-    ///
-    ///      See original TODO(ENG-2113) for proof regeneration task tracking.
     function testConfirmEpochDataHashSuccess() public {
-        vm.skip(true);
-        bytes memory seqChainHeader =
-            hex"f90262a0605defa624498989bf665b3a40ae020f887dcfe2416d768c9d42a5f19b22fcc1a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347940000000000000000000000000000000000000000a00d663178efa9bfb74511ae198171076765cdde527748f2b403dc0098f8b5a77ca07b6f777b47600b2184243dd7a8acd4718ac39b7cacff19d7cc7e4859d7b4babda0a4eb1fbd62f3905dbeead463382bd44cadbb8aab9c8ca947071cecded7cf7b51b901000000000400000000040000000000000040000000000000000080000000000000000000000000000000000000000000001000000000004020000000000004000100000000000000000000000000000200000100000004000000000000000000000000000002000000000000010080080000000480000000000000000400000040000000000000000000080000000000000000000000008000000000000080000000000000000000000000000200000000000000000000000000100000000000000000002000000020000000000000180000000000240c000100000008000060000000000000000000000000000000000000000000000000c0000000000000000080028401c9c3808325da7a8468b97c7980a01735d51a6bf99e813a40505ea196a5b79e0ab7d9d0dfb579ecee9499bccca784880000000000000000843455cb4aa056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4218080a00000000000000000000000000000000000000000000000000000000000000000a0e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        // Setup: Set block hashes
-        vm.prank(blockHashSender);
-        gasArchive.sendBlockHashes(TEST_ETH_BLOCK_HASH, keccak256(seqChainHeader));
+        // NOTE: the proof on `./fixtures/gasAggregatorEpochDataHashProof.json` was generated using a local anvil node (as if it were a sequencing chain) and the following data:
+        // Implementation: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+        // appchain 1: 0x5FbDB2315678afecb367f032d93F642f64180aa3 tokensUsed: 100 chainId: 123
+        // appchain 2: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 tokensUsed: 200 chainId 456
+        // GasAggregator: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+        // epoch = 1
 
-        // Setup: add the sequencing chain
-        vm.warp(1754089200 + (EPOCH - 1) * 30 days);
-        vm.prank(admin);
-        gasArchive.addSettlementChainAsSequencingChain(address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0));
-        vm.warp(1754089200 + EPOCH * 30 days);
+        // this simple mock appchain contract is used
+        //
+        // // SPDX-License-Identifier: UNLICENSED
+        // pragma solidity 0.8.28;
+        // contract MockAppchain {
+        //     uint256 gasUsed;
+        //     function setGasUsed(uint256 gas) external {
+        //         gasUsed = gas;
+        //     }
+        //     function tokensUsedPerEpoch(uint256 epoch) external view returns (uint256){
+        //         return gasUsed;
+        //     }
+        // }
 
-        uint256[] memory appchains = new uint256[](2);
-        appchains[0] = APPCHAIN_ID_1;
-        appchains[1] = APPCHAIN_ID_2;
-
-        uint256[] memory tokens = new uint256[](2);
-        tokens[0] = 100;
-        tokens[1] = 200;
-
-        bytes[] memory mockAccountProof = new bytes[](1);
-        mockAccountProof[0] = abi.encode("account_proof");
-        bytes[] memory mockStorageProof = new bytes[](1);
-        mockStorageProof[0] = abi.encode("storage_proof");
-
-        // NOTE: the proof on `./fixtures/gasAggregatorEpochDataHashProof.json` was generated using a local anvil node and the following data:
-        //Implementation: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-        // GasAggregator (Proxy): 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-        // Anvil chain id: 31337
-        // Anvil block hash: 0x55c3e74a2dec0e3d150636b57e5c988c570215255b1b7670e9366914ba597018
-        // appchain1 {id: 123, tokens: 100, emissionsReceiver: 0x123}
-        // appchain2 {id: 456, tokens: 200, emissionsReceiver: 0x456}
-        // EPOCH = 10
-
-        // Load fixture data
-        string memory seqProofJson = vm.readFile("./test/staking/fixtures/gasAggregatorEpochDataHashProof.json");
-
-        // Parse JSON arrays directly
-        bytes[] memory seqAccountProofArray = vm.parseJsonBytesArray(seqProofJson, ".accountProof");
-        bytes[] memory seqStorageProofArray = vm.parseJsonBytesArray(seqProofJson, ".storageProof[0].proof");
+        // and each appchain is added using the `addLegacyChain` function
 
         // RLP encoded block header obtained with the following rust code:
         //
@@ -258,42 +227,85 @@ contract GasArchiveTest is Test {
         // block.header.encode(&mut buf);
         // println!("{}", alloy::hex::encode(&buf));
 
-        gasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
+        uint256 testEpoch = 1; // Fixture was generated for epoch 1
+
+        // Deploy a fresh GasArchive instance for this test with epoch 1
+        address testGasArchiveImpl = address(new GasArchiveTestHelper(blockHashSender, SETTLEMENT_CHAIN_ID));
+        bytes memory testInitData = abi.encodeCall(GasArchive.initialize, (testEpoch));
+        vm.prank(admin);
+        GasArchiveTestHelper testGasArchive =
+            GasArchiveTestHelper(address(new ERC1967Proxy(testGasArchiveImpl, testInitData)));
+
+        bytes memory seqChainHeader =
+            hex"f90262a07167e95bf5aba056c95ef955b97b2b2f15d8be3c7e34f1dfae6fcb8e89aedf00a01dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347940000000000000000000000000000000000000000a0e8f92fe4bb1e858b314d387a1931771d8ff99c37aef301e5f9757cb2ceea49eca0580e5fa979108b49feef86ad187d78d31952c2bea1b7e19045b6e7d8daec449aa0895a85eb5d12606d376b22c85f5be4f78061100c77503cb88ed2fb6174f5af79b901000000000000000000000000000000000000000000000000008000000000000000000000000000000000000200000000000000000000004020000000000004000000000000000000000000000000000000000800000004040000000000800000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000040000000000000040080088401c9c380830164d78468f7757a80a0b43699eab41f0370ee4d80cb949263979b52d6b68934f335a0aa55506186606c8800000000000000008417eb804ca056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b4218080a00000000000000000000000000000000000000000000000000000000000000000a0e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        // Setup: Set block hashes
+        vm.prank(blockHashSender);
+        testGasArchive.sendBlockHashes(TEST_ETH_BLOCK_HASH, keccak256(seqChainHeader));
+
+        // Setup: add the sequencing chain
+        vm.warp(1754089200 + (testEpoch - 1) * 30 days);
+        vm.prank(admin);
+        testGasArchive.addSettlementChainAsSequencingChain(address(0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0));
+        vm.warp(1754089200 + testEpoch * 30 days);
+
+        uint256[] memory appchains = new uint256[](2);
+        appchains[0] = APPCHAIN_ID_1;
+        appchains[1] = APPCHAIN_ID_2;
+
+        uint256[] memory tokens = new uint256[](2);
+        tokens[0] = 100;
+        tokens[1] = 200;
+
+        // setup: add a secondary sequencing chain which will be removed later (so we can test the "already submitted" error, otherwise the epoch gets closed immediatelly)
+        vm.prank(admin);
+        uint256 mockSeqChainId = 111;
+        testGasArchive.addSequencingChain(mockSeqChainId, makeAddr("someGasAggr"), makeAddr("someOutbox"), false);
+
+        // Load fixture data
+        string memory seqProofJson = vm.readFile("./test/staking/fixtures/gasAggregatorEpochDataHashProof.json");
+        bytes[] memory seqAccountProofArray = vm.parseJsonBytesArray(seqProofJson, ".accountProof");
+        bytes[] memory seqStorageProofArray = vm.parseJsonBytesArray(seqProofJson, ".storageProof[0].proof");
+
+        testGasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
 
         // Test resubmission prevention for confirmEpochDataHash
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
+        testGasArchive.confirmSettlementChainEpochDataHash(seqChainHeader, seqAccountProofArray, seqStorageProofArray);
 
         // At this point, the epoch data hash is verified but epoch is not yet completed
-        assertFalse(gasArchive.epoch() > EPOCH, "Epoch should not be completed yet");
+        assertFalse(testGasArchive.epoch() > testEpoch, "Epoch should not be completed yet");
 
-        gasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
+        testGasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
 
         // Test resubmission prevention for submitEpochPreImageData
         vm.expectRevert(GasArchive.AlreadySubmitted.selector);
-        gasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
+        testGasArchive.submitEpochPreImageData(SETTLEMENT_CHAIN_ID, appchains, tokens);
 
         // Epoch is not complete yet
-        assertFalse(gasArchive.epoch() > EPOCH);
+        assertFalse(testGasArchive.epoch() > testEpoch);
 
-        // Remove the original sequencing chain
+        // Remove the settlement chain (added as sequencing chain)
         vm.prank(admin);
         vm.expectEmit(true, false, false, false);
-        emit GasArchive.EpochCompleted(EPOCH);
-        gasArchive.removeSequencingChain(SEQ_CHAIN_ID);
+        emit GasArchive.EpochCompleted(testEpoch);
+        testGasArchive.removeSequencingChain(mockSeqChainId);
 
         // Now the epoch should be completed
-        assertTrue(gasArchive.epoch() > EPOCH, "Epoch should be marked as completed");
+        assertTrue(testGasArchive.epoch() > testEpoch, "Epoch should be marked as completed");
 
         // Check total gas fees
-        assertEq(gasArchive.getTotalGasFees(EPOCH), 300, "Total gas fees should be 100 + 200 = 300");
+        assertEq(testGasArchive.getTotalGasFees(testEpoch), 300, "Total gas fees should be 100 + 200 = 300");
 
         // Check individual appchain gas fees
-        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_1), 100, "Appchain 123 should have 100 tokens");
-        assertEq(gasArchive.getAppchainGasFees(EPOCH, APPCHAIN_ID_2), 200, "Appchain 456 should have 200 tokens");
+        assertEq(
+            testGasArchive.getAppchainGasFees(testEpoch, APPCHAIN_ID_1), 100, "Appchain 123 should have 100 tokens"
+        );
+        assertEq(
+            testGasArchive.getAppchainGasFees(testEpoch, APPCHAIN_ID_2), 200, "Appchain 456 should have 200 tokens"
+        );
 
         // Check active appchain IDs
-        uint256[] memory activeAppchains = gasArchive.getAppchainIds(EPOCH);
+        uint256[] memory activeAppchains = testGasArchive.getAppchainIds(testEpoch);
         assertEq(activeAppchains.length, 2, "Should have 2 active appchains");
         assertEq(activeAppchains[0], APPCHAIN_ID_1, "First appchain should be 123");
         assertEq(activeAppchains[1], APPCHAIN_ID_2, "Second appchain should be 456");

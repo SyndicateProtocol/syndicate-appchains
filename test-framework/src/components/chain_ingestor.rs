@@ -15,7 +15,7 @@ impl ChainIngestorConfig {
             "--ws-urls".to_string(),
             self.ws_urls.join(","),
             "--db-file".to_string(),
-            self.db_file.to_string(),
+            self.db_file.clone(),
             "--start-block".to_string(),
             self.start_block.to_string(),
             "--port".to_string(),
