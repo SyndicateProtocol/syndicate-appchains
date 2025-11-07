@@ -3,7 +3,7 @@
 FROM ghcr.io/succinctlabs/sp1:v5.2.2 AS builder
 
 WORKDIR /workspace
-COPY --parents **/Cargo.toml **/Cargo.lock **/lib.rs **/main.rs .
+COPY --parents **/Cargo.toml **/Cargo.lock **/lib.rs .
 RUN mkdir synd-translator/tests/tests && touch synd-translator/tests/tests/lib.rs
 
 WORKDIR synd-withdrawals/synd-tee-attestation-zk-proofs
