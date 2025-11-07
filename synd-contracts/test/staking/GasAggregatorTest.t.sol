@@ -13,11 +13,19 @@ contract MockSyndicateProxy {
     }
 }
 
+contract MockGasMeter {
+    function gasUsed(uint256 epoch, address chainContract) external view returns (uint256) {
+        return 100 ether;
+    }
+}
+
 contract GasAggregatorTest is Test, EpochTracker {
     GasAggregator public gasAggregator;
     MockSyndicateProxy public mockProxy1;
     MockSyndicateProxy public mockProxy2;
     MockSyndicateProxy public mockProxy3;
+
+    MockGasMeter public mockGasMeter;
 
     address public owner;
     address public user;
@@ -40,8 +48,10 @@ contract GasAggregatorTest is Test, EpochTracker {
         // Set timestamp to after epoch start
         vm.warp(getEpochStart(START_EPOCH) + 1 days);
 
+        mockGasMeter = new MockGasMeter();
+
         // Deploy GasAggregator
-        gasAggregator = new GasAggregator(START_EPOCH, ADD_CHAIN_FEE, MAX_APPCHAINS_TO_QUERY);
+        gasAggregator = new GasAggregator(address(mockGasMeter), START_EPOCH, ADD_CHAIN_FEE, MAX_APPCHAINS_TO_QUERY);
 
         // Deploy mock proxies
         mockProxy1 = new MockSyndicateProxy();
@@ -59,42 +69,42 @@ contract GasAggregatorTest is Test, EpochTracker {
         assertEq(gasAggregator.currentEpoch(), START_EPOCH);
         assertEq(gasAggregator.addChainFee(), ADD_CHAIN_FEE);
         assertEq(gasAggregator.maxAppchainsToQuery(), MAX_APPCHAINS_TO_QUERY);
-        assertEq(gasAggregator.VERSION(), 1_000_000);
+        assertEq(gasAggregator.VERSION(), 1_001_000);
         assertEq(gasAggregator.owner(), owner);
     }
 
     function testConstructorWithDefaults() public {
-        GasAggregator agg = new GasAggregator(1, 0, 0);
+        GasAggregator agg = new GasAggregator(address(mockGasMeter), 1, 0, 0);
         assertEq(agg.addChainFee(), 5 ether);
         assertEq(agg.maxAppchainsToQuery(), 100);
     }
 
     function testConstructorRevertsOnZeroEpoch() public {
         vm.expectRevert();
-        new GasAggregator(0, ADD_CHAIN_FEE, MAX_APPCHAINS_TO_QUERY);
+        new GasAggregator(address(mockGasMeter), 0, ADD_CHAIN_FEE, MAX_APPCHAINS_TO_QUERY);
     }
 
     /*//////////////////////////////////////////////////////////////
                     ADD LEGACY CHAIN TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testAddLegacyChain() public {
+    function testAdminAddChain() public {
         uint256 chainId = 1;
 
         vm.expectEmit(true, true, true, true);
         emit ChainAdded(START_EPOCH, chainId, address(mockProxy1), owner);
 
-        gasAggregator.addLegacyChain(chainId, address(mockProxy1));
+        gasAggregator.adminAddChain(chainId, address(mockProxy1), true);
 
         assertEq(gasAggregator.getTrackedChainCount(), 1);
         assertEq(gasAggregator.getTrackedChainId(0), chainId);
         assertEq(gasAggregator.appchainContract(chainId), address(mockProxy1));
     }
 
-    function testAddLegacyChainMultiple() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
-        gasAggregator.addLegacyChain(3, address(mockProxy3));
+    function testAdminAddChainMultiple() public {
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
+        gasAggregator.adminAddChain(3, address(mockProxy3), true);
 
         assertEq(gasAggregator.getTrackedChainCount(), 3);
 
@@ -102,45 +112,36 @@ contract GasAggregatorTest is Test, EpochTracker {
         assertEq(chainIds.length, 3);
     }
 
-    function testAddLegacyChainRevertsOnZeroChainId() public {
+    function testAdminAddChainRevertsOnZeroChainId() public {
         vm.expectRevert(abi.encodeWithSelector(GasAggregator.ZeroChainId.selector));
-        gasAggregator.addLegacyChain(0, address(mockProxy1));
+        gasAggregator.adminAddChain(0, address(mockProxy1), true);
     }
 
-    function testAddLegacyChainRevertsOnDuplicate() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+    function testAdminAddChainRevertsOnDuplicate() public {
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
 
         vm.expectRevert(abi.encodeWithSelector(GasAggregator.ChainAlreadyTracked.selector, 1));
-        gasAggregator.addLegacyChain(1, address(mockProxy2));
+        gasAggregator.adminAddChain(1, address(mockProxy2), true);
     }
 
-    function testAddLegacyChainRevertsOnNoCode() public {
+    function testAdminAddChainRevertsOnNoCode() public {
         address emptyAddress = address(0x9999);
 
         vm.expectRevert(abi.encodeWithSelector(GasAggregator.ChainNotFound.selector, 1));
-        gasAggregator.addLegacyChain(1, emptyAddress);
+        gasAggregator.adminAddChain(1, emptyAddress, true);
     }
 
-    function testAddLegacyChainRevertsOnNonOwner() public {
+    function testAdminAddChainRevertsOnNonOwner() public {
         vm.prank(user);
         vm.expectRevert();
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
     }
 
-    function testAddLegacyChainRevertsWhenPaused() public {
+    function testAdminAddChainRevertsWhenPaused() public {
         gasAggregator.pause();
 
         vm.expectRevert();
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-    }
-
-    function testAddLegacyChainRevertsAfterFactorySet() public {
-        // Set factory to a non-zero address
-        bytes32 bytecodeHash = keccak256("test");
-        gasAggregator.setFactory(address(0x1234), bytecodeHash);
-
-        vm.expectRevert(abi.encodeWithSelector(GasAggregator.FactoryAlreadySet.selector));
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -149,8 +150,8 @@ contract GasAggregatorTest is Test, EpochTracker {
 
     function testAggregateTokensSimple() public {
         // Add chains
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
 
         // Set token usage
         mockProxy1.setTokensUsedPerEpoch(START_EPOCH, 100 ether);
@@ -184,9 +185,9 @@ contract GasAggregatorTest is Test, EpochTracker {
 
     function testAggregateTokensSkipsZeroGasUsage() public {
         // Add chains
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
-        gasAggregator.addLegacyChain(3, address(mockProxy3));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
+        gasAggregator.adminAddChain(3, address(mockProxy3), true);
 
         // Set token usage (chain 2 has zero usage)
         mockProxy1.setTokensUsedPerEpoch(START_EPOCH, 100 ether);
@@ -215,7 +216,7 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testAggregateTokensRevertsWhenEpochNotOver() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
 
         uint256[] memory emptyChainIds = new uint256[](0);
         uint256[] memory emptyTokens = new uint256[](0);
@@ -236,7 +237,7 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testAggregateTokensPausesAndUnpauses() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
         mockProxy1.setTokensUsedPerEpoch(START_EPOCH, 100 ether);
 
         // Move to next epoch
@@ -300,8 +301,8 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testRemoveAppchains() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
 
         assertEq(gasAggregator.getTrackedChainCount(), 2);
 
@@ -318,9 +319,9 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testRemoveAppchainsMultiple() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
-        gasAggregator.addLegacyChain(3, address(mockProxy3));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
+        gasAggregator.adminAddChain(3, address(mockProxy3), true);
 
         uint256[] memory chainsToRemove = new uint256[](2);
         chainsToRemove[0] = 1;
@@ -333,7 +334,7 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testRemoveAppchainsRevertsOnNonOwner() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
 
         uint256[] memory chainsToRemove = new uint256[](1);
         chainsToRemove[0] = 1;
@@ -344,7 +345,7 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testRemoveAppchainsRevertsWhenPaused() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
         gasAggregator.pause();
 
         uint256[] memory chainsToRemove = new uint256[](1);
@@ -363,7 +364,7 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testWithdrawFees() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
 
         // Simulate some fees collected
         vm.deal(address(gasAggregator), 10 ether);
@@ -499,17 +500,17 @@ contract GasAggregatorTest is Test, EpochTracker {
     function testGetTrackedChainCount() public {
         assertEq(gasAggregator.getTrackedChainCount(), 0);
 
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
         assertEq(gasAggregator.getTrackedChainCount(), 1);
 
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
         assertEq(gasAggregator.getTrackedChainCount(), 2);
     }
 
     function testGetTrackedChainIds() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
-        gasAggregator.addLegacyChain(3, address(mockProxy3));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
+        gasAggregator.adminAddChain(3, address(mockProxy3), true);
 
         uint256[] memory chainIds = gasAggregator.getTrackedChainIds();
 
@@ -520,15 +521,15 @@ contract GasAggregatorTest is Test, EpochTracker {
     }
 
     function testGetTrackedChainId() public {
-        gasAggregator.addLegacyChain(10, address(mockProxy1));
-        gasAggregator.addLegacyChain(20, address(mockProxy2));
+        gasAggregator.adminAddChain(10, address(mockProxy1), true);
+        gasAggregator.adminAddChain(20, address(mockProxy2), true);
 
         assertEq(gasAggregator.getTrackedChainId(0), 10);
         assertEq(gasAggregator.getTrackedChainId(1), 20);
     }
 
     function testAggregatedEpochDataHash() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
         mockProxy1.setTokensUsedPerEpoch(START_EPOCH, 100 ether);
 
         // Move to next epoch and aggregate
@@ -548,8 +549,8 @@ contract GasAggregatorTest is Test, EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     function testSimulateAggregateTokens() public {
-        gasAggregator.addLegacyChain(1, address(mockProxy1));
-        gasAggregator.addLegacyChain(2, address(mockProxy2));
+        gasAggregator.adminAddChain(1, address(mockProxy1), true);
+        gasAggregator.adminAddChain(2, address(mockProxy2), true);
 
         mockProxy1.setTokensUsedPerEpoch(START_EPOCH, 100 ether);
         mockProxy2.setTokensUsedPerEpoch(START_EPOCH, 200 ether);

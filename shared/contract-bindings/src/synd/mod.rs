@@ -20,6 +20,7 @@ pub mod r#emissions_calculator;
 pub mod r#emissions_scheduler;
 pub mod r#gas_aggregator;
 pub mod r#gas_aggregator_utils;
+pub mod r#i_gas_meter;
 pub mod r#gas_archive;
 pub mod r#gas_meter;
 pub mod r#i_assertion_poster;
