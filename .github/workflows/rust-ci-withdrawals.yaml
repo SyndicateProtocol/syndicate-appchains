@@ -98,45 +98,6 @@ jobs:
         with:
           version: v1.3.5
 
-      - name: Install SP1 toolchain
-        if: steps.diff.outputs.run_tests == 'true'
-        run: |
-          set -e
-           for i in {1..3}; do
-             echo "Attempt $i to install SP1 toolchain..."
-             {
-               curl -L https://sp1.succinct.xyz | bash &&
-               $HOME/.sp1/bin/sp1up &&
-               $HOME/.sp1/bin/cargo-prove prove --version
-             } && break || {
-               echo "Attempt $i failed. Retrying in 5 seconds..."
-               sleep 5
-             }
-           done
-
-      - name: Build SP1 ELF program
-        if: steps.diff.outputs.run_tests == 'true'
-        run: |
-          cd synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program
-          $HOME/.sp1/bin/cargo-prove prove build
-
-      # NOTE: this is just a workaround and should be removed as soon as the repo/packages are made public
-      - name: Login to GitHub Container Registry
-        if: steps.diff.outputs.run_tests == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GITHUB_REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pre-download docker test docker images
-        if: steps.diff.outputs.run_tests == 'true'
-        run: |
-          docker pull ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.6.4-dev.4
-          docker pull ghcr.io/layr-labs/eigenda-proxy:2.1.0-rc.2@sha256:ed208a7cb8e31e5dd0f5c2340b6a6f9b9570f065da2659813b207c1206c65ce8
-          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:latest
-          docker pull ghcr.io/syndicateprotocol/syndicate-appchains/synd-enclave-test:v0.10.6-dev.1
-
       - name: Install nextest
         if: steps.diff.outputs.run_tests == 'true'
         uses: taiki-e/install-action@nextest
