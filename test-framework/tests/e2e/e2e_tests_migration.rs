@@ -1,5 +1,6 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
+    eips::BlockId,
     primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
 };
@@ -68,7 +69,7 @@ struct SyndicateStack {
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
     translator: E2EProcess,
-    migrated_appchain: ChainInfo,
+    appchain: ChainInfo,
     maestro: E2EProcess,
     batch_sequencer: E2EProcess,
     valkey: E2EProcess,
@@ -229,7 +230,7 @@ async fn spin_up_syndicate_stack(
         sequencing_chain_ingestor,
         settlement_chain_ingestor,
         translator,
-        migrated_appchain,
+        appchain: migrated_appchain,
         maestro,
         batch_sequencer,
         valkey,
@@ -246,6 +247,11 @@ async fn e2e_migration() -> Result<()> {
 
     let set_chain = start_base_chain(SETTLEMENT_CHAIN_ID).await?;
     let seq_chain = start_base_chain(SEQUENCING_CHAIN_ID).await?;
+
+
+    // TODO mine a few blocks so base chains diverge in block number
+
+    set_chain.pro
     let sequencing_contract =
         deploy_sequencing_contract(seq_chain.provider.clone(), U256::from(appchain_chain_id))
             .await?;
@@ -306,9 +312,16 @@ async fn e2e_migration() -> Result<()> {
     info!("batch_count: {batch_count}");
     let batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(1)).call().await?;
     let before_batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(2)).call().await?;
+    let before_appchain_block = appchain.provider.get_block(BlockId::latest()).await?.unwrap();
 
     // shutdown the nitro node
     drop(appchain);
+
+    // mine a few base chain blocks (to test edge cases)
+    for _ in 0..10 {
+        mine_block(&set_chain.provider.clone(), 100).await?;
+        mine_block(&seq_chain.provider.clone(), 100).await?;
+    }
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut migration_data: RollupState = Default::default();
@@ -353,21 +366,7 @@ async fn e2e_migration() -> Result<()> {
         deployed_at: 1,
     };
 
-    // Wake nitro up
-    // let migrated_appchain = launch_nitro_node(NitroNodeArgs {
-    //     chain_id: appchain_chain_id,
-    //     chain_owner: appchain_owner.address,
-    //     parent_chain_url: syndicate_stack.mchain_rpc_url.clone(),
-    //     parent_chain_id: MCHAIN_ID,
-    //     sequencer_mode: NitroSequencerMode::None,
-    //     chain_name: "appchain".to_string(),
-    //     deployment: migrated_appchain_deployment.clone(),
-    //     sequencer_private_key: None,
-    //     data_dir: Some(data_dir.clone()),
-    // })
-    // .await?;
-
-    let syndicate_stack = spin_up_syndicate_stack(
+    let synd_stack = spin_up_syndicate_stack(
         appchain_chain_id,
         appchain_owner.address,
         &set_chain.provider.clone(),
@@ -381,14 +380,17 @@ async fn e2e_migration() -> Result<()> {
     )
     .await?;
 
+    let appchain_block = synd_stack.appchain.provider.get_block(BlockId::latest()).await?.unwrap();
+    assert_eq!(appchain_block.header.number, before_appchain_block.number);
+    assert_eq!(appchain_block.hash(), before_appchain_block.hash());
+
     let storage_contract =
-        Storage::new(storage_contract_address, syndicate_stack.migrated_appchain.provider.clone());
+        Storage::new(storage_contract_address, synd_stack.appchain.provider.clone());
     let initial_value = storage_contract.get().call().await?;
     assert_eq!(initial_value, U256::from(42));
 
     // assert new txs work
-    let nonce =
-        syndicate_stack.migrated_appchain.provider.get_transaction_count(test_user.address).await?;
+    let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
     let update_val_raw_tx = storage_contract
         .set(U256::from(43))
         .nonce(nonce)
@@ -408,6 +410,11 @@ async fn e2e_migration() -> Result<()> {
     mine_block(&seq_chain.provider.clone(), 1).await?;
     wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
 
+    assert_eq!(
+        synd_stack.appchain.provider.get_block_number().await?,
+        before_appchain_block.header.number + 1
+    );
+
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
     mine_block(&seq_chain.provider.clone(), 70).await?;
@@ -415,48 +422,73 @@ async fn e2e_migration() -> Result<()> {
 
     wait_until!(
         // 10 + 10 - gas fees
-        syndicate_stack.migrated_appchain.provider.get_balance(test_user.address).await? >
-            parse_ether("19")?,
+        synd_stack.appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?,
         Duration::from_secs(10)
     );
 
+    assert_eq!(
+        synd_stack.appchain.provider.get_block_number().await?,
+        before_appchain_block.header.number + 2
+    );
+
     // assert `arbOwner.setL1PricePerUnit(0)`
-    let arb_owner =
-        ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &syndicate_stack.migrated_appchain.provider);
+    let arb_owner = ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &synd_stack.appchain.provider);
     let is_chain_owner = arb_owner
-        .isChainOwner(syndicate_stack.migrated_appchain.provider.default_signer_address())
+        .isChainOwner(synd_stack.appchain.provider.default_signer_address())
         .call()
         .await?;
     assert!(is_chain_owner);
 
     assert!(arb_owner.setL1PricePerUnit(U256::ZERO).send().await?.get_receipt().await?.status());
 
+    assert_eq!(
+        synd_stack.appchain.provider.get_block_number().await?,
+        before_appchain_block.header.number + 3
+    );
+
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
     assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
     assert!(storage_contract.get().call().await? == U256::from(44));
 
-    // // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
-    // let nonce = migrated_appchain.provider.get_transaction_count(test_user.address).await?;
-    // let update_val_raw_tx = storage_contract
-    //     .set(U256::from(45))
-    //     .nonce(nonce)
-    //     .gas(100_000)
-    //     .max_fee_per_gas(100000000)
-    //     .max_priority_fee_per_gas(0)
-    //     .chain_id(appchain_chain_id)
-    //     .build_raw_transaction(test_user.signer.clone())
-    //     .await?;
+    assert_eq!(
+        synd_stack.appchain.provider.get_block_number().await?,
+        before_appchain_block.header.number + 4
+    );
 
-    // // TODO this is not expected to pass yet
-    // assert!(inbox
-    //     .sendL2MessageFromOrigin(update_val_raw_tx.into())
-    //     .send()
-    //     .await?
-    //     .get_receipt()
-    //     .await?
-    //     .status());
-    // wait_until!(storage_contract.get().call().await? == U256::from(45), Duration::from_secs(10));
+    // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
+    let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
+    let update_val_raw_tx = storage_contract
+        .set(U256::from(45))
+        .nonce(nonce)
+        .gas(100_000)
+        .max_fee_per_gas(100000000)
+        .max_priority_fee_per_gas(0)
+        .chain_id(appchain_chain_id)
+        .build_raw_transaction(test_user.signer.clone())
+        .await?;
+
+    assert!(inbox
+        .sendL2MessageFromOrigin(update_val_raw_tx.into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?
+        .status());
+
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
+            storage_contract.get().call().await? == U256::from(45)
+        },
+        Duration::from_secs(10)
+    );
+
+    assert_eq!(
+        synd_stack.appchain.provider.get_block_number().await?,
+        before_appchain_block.header.number + 5
+    );
 
     // assert withdrawals work (TBD)
 

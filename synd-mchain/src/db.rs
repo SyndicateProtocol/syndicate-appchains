@@ -175,6 +175,7 @@ pub trait ArbitrumDB {
     /// Gets the block associated with the given key
     fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
         let state = self.get_state();
+        debug!("get_block: key: {key}, state.batch_count: {}", state.batch_count);
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
                 || Err(to_err(format!("could not find block {key}"))),
@@ -187,11 +188,15 @@ pub trait ArbitrumDB {
     }
 
     /// gets the block associated with the given key using the migration offset
-    fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64), ErrorObjectOwned> {
+    fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64, u64), ErrorObjectOwned> {
         let offset = self.get_migration_offset();
-        let batch_count = if key >= offset { key - offset } else { key };
+        let batch_count = if key >= offset {
+            key - offset
+        } else {
+            return Err(to_err(format!("key {key} is less than offset {offset}")))
+        };
         debug!("get_block_with_offset: key: {key}, offset: {offset}");
-        self.get_block(batch_count).map(|block| (block, batch_count))
+        self.get_block(batch_count).map(|block| (block, batch_count, offset))
     }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
@@ -385,8 +390,7 @@ pub trait ArbitrumDB {
             timestamp: block.timestamp,
             slot: block.slot,
         });
-        let offset = self.get_migration_offset();
-        Ok(Some(block_number + offset))
+        Ok(Some(block_number))
     }
 
     /// Applies a custom batch with appchain migration information
@@ -430,7 +434,8 @@ pub trait ArbitrumDB {
                 messages: vec![],
                 before_batch_acc,
                 after_batch_acc: batch_acc,
-                before_message_acc: delayed_msgs_acc,
+                before_message_acc: delayed_msgs_acc, /* TODO check if this causing issues
+                                                       * (probably not) */
                 before_message_count: delayed_msgs_count,
             },
         );
