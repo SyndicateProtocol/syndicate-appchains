@@ -236,7 +236,7 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 
 			gasWithBuffer, err := p.estimateGasWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress, 2)
 			if err != nil {
-				msg, wrappedErr := logger.WrapErrorWithMsg("Gas estimation exceeds configured max fee per gas, skipping transaction submission", err)
+				msg, wrappedErr := logger.WrapErrorWithMsg("Skipping transaction submission", err)
 				log.Error().Stack().Err(wrappedErr).Msg(msg)
 				continue
 			}
@@ -628,7 +628,7 @@ func (p *Proposer) estimateGasWithBuffer(
 	}
 
 	if tx.GasFeeCap() != nil && tx.GasFeeCap().Cmp(big.NewInt(p.Config.MaxFeePerGas)) > 0 {
-		return 0, errors.New("gas estimation exceeds configured max fee per gas")
+		return 0, fmt.Errorf("gas estimation exceeds configured max fee per gas: gasFeeCap=%s, maxFeePerGas=%d", tx.GasFeeCap().String(), p.Config.MaxFeePerGas)
 	}
 
 	estimatedGas := tx.Gas()
