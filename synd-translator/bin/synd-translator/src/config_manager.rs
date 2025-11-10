@@ -88,32 +88,6 @@ fn override_with_onchain_config(
             Some(onchain.default_sequencing_chain_ws_rpc_url.clone())
     }
 
-    if config.migrated_batch_acc.is_none() && onchain.migrated_batch_acc != U256::ZERO {
-        info!(
-            "using migration data from on-chain config: {} {} {} {} {}",
-            onchain.migrated_before_batch_acc,
-            onchain.migrated_batch_acc,
-            onchain.migrated_batch_count,
-            onchain.migrated_delayed_msgs_acc,
-            onchain.migrated_batch_count,
-        );
-        config.migrated_before_batch_acc = Some(onchain.migrated_before_batch_acc.into());
-        config.migrated_batch_acc = Some(onchain.migrated_batch_acc.into());
-        config.migrated_batch_count = Some(
-            onchain
-                .migrated_batch_count
-                .try_into()
-                .unwrap_or_else(|e| panic!("migrated_batch_count u64 overflow {e}")),
-        );
-        config.migrated_delayed_msgs_acc = Some(onchain.migrated_delayed_msgs_acc.into());
-        config.migrated_delayed_msgs_count = Some(
-            onchain
-                .migrated_delayed_msgs_count
-                .try_into()
-                .unwrap_or_else(|e| panic!("migrated_batch_count u64 overflow {e}")),
-        );
-    }
-
     config
 }
 
@@ -393,44 +367,5 @@ mod test {
             config.migrated_delayed_msgs_count,
             Some(onchain.migrated_delayed_msgs_count.try_into().unwrap())
         );
-    }
-
-    #[test]
-    fn test_override_with_onchain_config_migration_values_preserved() {
-        let mut config = TranslatorConfig {
-            // Set existing migration values that should NOT be overridden
-            migrated_before_batch_acc: Some([0x99u8; 32].into()),
-            migrated_batch_acc: Some([0x99u8; 32].into()),
-            migrated_batch_count: Some(1000),
-            migrated_delayed_msgs_acc: Some([0x88u8; 32].into()),
-            migrated_delayed_msgs_count: Some(2000),
-            ..Default::default()
-        };
-
-        // Create onchain config with different migration values
-        let onchain = ChainConfig {
-            arbitrum_bridge_address: address!("0x1111111111111111111111111111111111111111"),
-            arbitrum_inbox_address: address!("0x2222222222222222222222222222222222222222"),
-            settlement_delay: U256::from(30),
-            settlement_start_block: U256::from(100),
-            sequencing_start_block: U256::from(200),
-            sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
-            default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_before_batch_acc: U256::from(0x1234567890abefu64),
-            migrated_batch_acc: U256::from(0x1234567890abcdefu64),
-            migrated_batch_count: U256::from(42),
-            migrated_delayed_msgs_acc: U256::from(0xfedcba9876543210u64),
-            migrated_delayed_msgs_count: U256::from(99),
-        };
-
-        // Apply overrides
-        config = override_with_onchain_config(config, &onchain);
-
-        // Assert existing migration values are preserved (not overridden)
-        assert_eq!(config.migrated_before_batch_acc, Some([0x99u8; 32].into()));
-        assert_eq!(config.migrated_batch_acc, Some([0x99u8; 32].into()));
-        assert_eq!(config.migrated_batch_count, Some(1000));
-        assert_eq!(config.migrated_delayed_msgs_acc, Some([0x88u8; 32].into()));
-        assert_eq!(config.migrated_delayed_msgs_count, Some(2000));
     }
 }

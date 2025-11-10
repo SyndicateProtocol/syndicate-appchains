@@ -423,7 +423,7 @@ impl TestComponents {
         info!("Starting components...");
         info!("Starting synd-mchain...");
         let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.finality_delay).await?;
+            start_mchain(options.appchain_chain_id, options.finality_delay, None).await?;
 
         // Setup config manager and get chain config address
         let config_manager_address = setup_config_manager(

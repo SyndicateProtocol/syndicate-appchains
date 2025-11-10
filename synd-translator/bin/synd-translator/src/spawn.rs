@@ -75,13 +75,8 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     )
     .await?;
 
-    let safe_state = mchain
-        .reconcile_mchain_with_source_chains(
-            &sequencing_client,
-            &settlement_client,
-            config.migration_config(),
-        )
-        .await?;
+    let safe_state =
+        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
 
     let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
     let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();

@@ -1,9 +1,6 @@
 //! The `synd-mchain` client
 
-use crate::{
-    db::{MBlock, Slot},
-    methods::mchain_methods::MigrationParams,
-};
+use crate::db::{MBlock, Slot};
 use alloy::eips::BlockNumberOrTag;
 pub use jsonrpsee::{
     core::{async_trait, client::ClientT as _, traits::ToRpcParams, ClientError},
@@ -63,12 +60,6 @@ pub trait MchainProvider: Send + Sync {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
 
-    /// Gets the offset for the initial migration
-    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
-    async fn get_migration_offset(&self) -> eyre::Result<u64> {
-        Ok(self.request::<_, u64>("mchain_getMigrationOffset", [(); 0]).await?)
-    }
-
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
@@ -93,7 +84,6 @@ pub trait MchainProvider: Send + Sync {
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,
         settlement_client: &impl synd_chain_ingestor::client::Provider,
-        migration_params: Option<MigrationParams>,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -103,21 +93,7 @@ pub trait MchainProvider: Send + Sync {
             let mchain_block_after = self.get_block_number().await;
             warn!("rolled back to block {mchain_block_number:?}, before: {mchain_block_before:?}, after: {mchain_block_after:?}",);
         }
-        if safe_state.is_some() {
-            debug!("safe state found");
-            // TODO think about race condition nitro vs translator when starting from migration
-            return Ok(safe_state);
-        }
-        debug!("no safe state found, checking for migration_params");
-        let migration_params = migration_params.clone();
-
-        // mchain is empty, if there is migration_params data, proceed with migration
-        if let Some(migration_params) = migration_params {
-            debug!("migration found, proceeding with migration");
-            self.appchain_migration(migration_params).await?;
-        }
-
-        Ok(None)
+        Ok(safe_state)
     }
 
     /// `get_safe_state` gets the processed blocks from the appchain contract and validates them
@@ -165,12 +141,6 @@ pub trait MchainProvider: Send + Sync {
             }
             current_block = BlockNumberOrTag::Number(mchain_block_number - 1);
         }
-    }
-
-    /// Applies a migration to the mchain
-    #[instrument(skip_all, err, fields(otel.kind = ?SpanKind::Client))]
-    async fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
-        Ok(self.request("mchain_appchainMigration", [params]).await?)
     }
 }
 
@@ -268,7 +238,7 @@ mod tests {
 
     async fn setup() -> eyre::Result<(impl MchainProvider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
-        let mchain = start_mchain(10, 60, None, db.clone(), MchainMetrics::default());
+        let mchain = start_mchain(10, 60, None, None, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
     }
 

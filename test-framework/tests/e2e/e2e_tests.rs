@@ -807,7 +807,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         components
             .mchain_provider
-            .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client, None)
+            .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
             .await?;
 
         // synd-mchain should be on the same block since no reorgs occurred

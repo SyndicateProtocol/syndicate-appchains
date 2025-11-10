@@ -5,15 +5,14 @@ use crate::{
     methods::common::{create_header, err, Context},
     metrics::MchainMetrics,
 };
-use alloy::{eips::BlockNumberOrTag, primitives::B256};
+use alloy::eips::BlockNumberOrTag;
 use jsonrpsee::{
     server::SubscriptionMessage,
     types::{ErrorObjectOwned, Params},
     Extensions,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tracing::{debug, error};
+use tracing::error;
 
 /// `mchain_addBatch`
 #[allow(clippy::unwrap_used)]
@@ -136,46 +135,6 @@ pub fn rollback_to_block(
     Ok(())
 }
 
-/// `mchain_appchainMigration` params
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct MigrationParams {
-    /// The initial settlement block number at point of migration
-    pub settlement_start_block: u64,
-    /// The before batch accumulator at point of migration
-    pub before_batch_acc: B256,
-    /// The batch accumulator at point of migration
-    pub batch_acc: B256,
-    /// The batch count at point of migration
-    pub batch_count: u64,
-    /// The delayed message accumulator at point of migration
-    pub delayed_msgs_acc: B256,
-    /// The delayed message count at point of migration
-    pub delayed_msgs_count: u64,
-}
-
-/// `mchain_appchainMigration`
-pub fn appchain_migration(
-    params: Params<'_>,
-    (db, _metrics, mutex): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
-    _: &Extensions,
-) -> Result<(), ErrorObjectOwned> {
-    let (migration_params,): (MigrationParams,) = params.parse()?;
-    debug!("appchain migration: {:?}", migration_params);
-    let mut data =
-        mutex.lock().map_err(|e| to_err(format!("Failed to acquire mutex lock: {e}")))?;
-    db.appchain_migration(
-        migration_params.settlement_start_block,
-        migration_params.before_batch_acc,
-        migration_params.batch_acc,
-        migration_params.batch_count,
-        migration_params.delayed_msgs_acc,
-        migration_params.delayed_msgs_count,
-    )
-    .map_err(to_err)?;
-    data.finalized_batch = migration_params.batch_count + 1;
-    drop(data);
-    Ok(())
-}
 /// `mchain_getSourceChainsProcessedBlocks`
 pub fn get_source_chains_processed_blocks(
     params: Params<'_>,

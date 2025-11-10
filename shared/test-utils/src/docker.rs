@@ -23,7 +23,7 @@ use std::{
     process::{ExitStatus, Stdio},
     time::Duration,
 };
-use synd_mchain::client::MProvider;
+use synd_mchain::{client::MProvider, db::MigrationParams};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -216,12 +216,13 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2E
 pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
+    migration_params: Option<MigrationParams>,
 ) -> Result<(String, E2EProcess, MProvider)> {
     let tmp_dir = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
-    let args = vec![
+    let mut args = vec![
         "--appchain-chain-id".to_string(),
         appchain_chain_id.to_string(),
         "--port".to_string(),
@@ -231,6 +232,23 @@ pub async fn start_mchain(
         "--finality-delay".to_string(),
         finality_delay.to_string(),
     ];
+
+    if let Some(migration) = migration_params {
+        args.extend(vec![
+            "--settlement-start-block".to_string(),
+            migration.settlement_start_block.to_string(),
+            "--migrated-batch-acc".to_string(),
+            migration.batch_acc.to_string(),
+            "--migrated-before-batch-acc".to_string(),
+            migration.before_batch_acc.to_string(),
+            "--migrated-batch-count".to_string(),
+            migration.batch_count.to_string(),
+            "--migrated-delayed-msgs-acc".to_string(),
+            migration.delayed_msgs_acc.to_string(),
+            "--migrated-delayed-msgs-count".to_string(),
+            migration.delayed_msgs_count.to_string(),
+        ]);
+    }
 
     let docker = start_component(
         "synd-mchain",
