@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 /// @title IGasDataProvider
@@ -25,12 +25,14 @@ interface IGasDataProvider {
      * @param epochIndex The epoch index to query
      * @return _chainIDs Array of appchain IDs that were active in the specified epoch
      */
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
+    function getAppchainIds(uint256 epochIndex) external view returns (uint256[] memory _chainIDs);
 
-    /**
-     * @notice Get the rewards receiver address for a specific appchain
-     * @param appchainId The ID of the appchain
-     * @return The address that should receive rewards for the specified appchain
-     */
-    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address);
+    function getAppchainCount(uint256 epochIndex) external view returns (uint256);
+
+    // when count is zero, returns the full list of results
+    // count can be greater than the number of appchains that exist
+    function getAppchainInfo(uint256 epochIndex, uint256 startIndex, uint256 count)
+        external
+        view
+        returns (uint256[] memory chainId, uint256[] memory gasUsed);
 }

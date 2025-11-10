@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
@@ -8,73 +8,9 @@ import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {PerformancePool} from "src/staking/PerformancePool.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
-
-/// @notice Interface the pool expects for gas accounting
-interface IGasProvider {
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256);
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256);
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory);
-}
-
-/// @notice Mock gas provider: programmable per-epoch fees + active IDs
-contract MockGasProvider is IGasProvider {
-    // epoch => total fees
-    mapping(uint256 => uint256) public totals;
-    // epoch => appchainId => fees
-    mapping(uint256 => mapping(uint256 => uint256)) public fee;
-    // epoch => list of appchainIds (we keep exactly what tests set)
-    mapping(uint256 => uint256[]) private idsByEpoch;
-
-    function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
-        require(appchainIds.length == amounts.length, "length mismatch");
-
-        // reset ids list
-        delete idsByEpoch[epoch];
-
-        uint256 t;
-        for (uint256 i = 0; i < appchainIds.length; i++) {
-            uint256 id = appchainIds[i];
-            uint256 amt = amounts[i];
-            fee[epoch][id] = amt;
-            idsByEpoch[epoch].push(id);
-            t += amt;
-        }
-        totals[epoch] = t;
-    }
-
-    function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external {
-        // if appchainId not in ids list, push it
-        bool present = false;
-        uint256[] storage ids = idsByEpoch[epoch];
-        for (uint256 i = 0; i < ids.length; i++) {
-            if (ids[i] == appchainId) {
-                present = true;
-                break;
-            }
-        }
-        if (!present) ids.push(appchainId);
-
-        uint256 prev = fee[epoch][appchainId];
-        fee[epoch][appchainId] = amount;
-        totals[epoch] = totals[epoch] + amount - prev;
-    }
-
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
-        return totals[epochIndex];
-    }
-
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
-        return fee[epochIndex][appchainId];
-    }
-
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
-        uint256[] storage ids = idsByEpoch[epochIndex];
-        out = new uint256[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
-            out[i] = ids[i];
-        }
-    }
-}
+import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
+import {MockGasProvider} from "./MockGasProvider.t.sol";
+import {GasArchive} from "src/staking/GasArchive.sol";
 
 contract PerformancePoolTest is Test {
     SyndStaking public staking;
@@ -167,6 +103,10 @@ contract PerformancePoolTest is Test {
         return cur - 1;
     }
 
+    function stepDays(uint256 numDays) internal {
+        vm.warp(block.timestamp + numDays * 1 days);
+    }
+
     /* ---------- Basic Claim Tests ------------- */
 
     function test_claim_1_user_stake() public {
@@ -174,6 +114,7 @@ contract PerformancePoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 0, 0); // only chain1 has fees
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
 
@@ -191,6 +132,7 @@ contract PerformancePoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0); // chains 1 & 2 active
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
 
@@ -217,6 +159,7 @@ contract PerformancePoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 1); // symmetric gas activity
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         performancePool.deposit{value: 90 ether}(epoch);
 
@@ -248,6 +191,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 1, 1);
 
         performancePool.deposit{value: 90 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 30 ether);
         assertEq(performancePool.getClaimableAmount(epoch, user2, appchainId2), 30 ether);
@@ -266,6 +210,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 1, 1);
 
         performancePool.deposit{value: 90 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 30 ether);
         assertEq(performancePool.getClaimableAmount(epoch, user2, appchainId2), 30 ether);
@@ -300,6 +245,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
         assertEq(performancePool.getClaimableAmount(epoch, user2, appchainId1), 0 ether);
@@ -327,7 +273,7 @@ contract PerformancePoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(user1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.claim(currentEpoch, user1, appchainId1);
         vm.stopPrank();
     }
@@ -341,7 +287,7 @@ contract PerformancePoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         vm.startPrank(user1);
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.claim(currentEpoch + 1, user1, appchainId1);
         vm.stopPrank();
     }
@@ -353,6 +299,7 @@ contract PerformancePoolTest is Test {
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 0, 0, 0);
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 0);
 
@@ -368,6 +315,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // claimable must be zero and claim must revert
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 0, "should be zero when userStaked==0");
@@ -385,6 +333,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Try to claim for appchainId2 which has no stake
         assertEq(
@@ -406,6 +355,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
 
@@ -445,7 +395,7 @@ contract PerformancePoolTest is Test {
 
         // Should revert with ClaimNotAvailable when amount is 0
         vm.startPrank(address(staking));
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(RewardPoolBase.RewardComputationNotComplete.selector);
         performancePool.claimFor(epoch, user1, user2, appchainId1);
         vm.stopPrank();
     }
@@ -465,6 +415,7 @@ contract PerformancePoolTest is Test {
 
         uint256 pool = 1_030_904; // raw integer to mirror the doc
         performancePool.deposit{value: pool}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         uint256 a = performancePool.getClaimableAmount(epoch, user1, appchainId1);
         uint256 b = performancePool.getClaimableAmount(epoch, user2, appchainId2);
@@ -490,6 +441,7 @@ contract PerformancePoolTest is Test {
 
         // Fund pool
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Snapshot balances pre-claim
         uint256 poolBefore = address(performancePool).balance;
@@ -526,6 +478,7 @@ contract PerformancePoolTest is Test {
         uint256 e1 = _settledEpoch();
         setGasShares(e1, 1, 0, 0);
         performancePool.deposit{value: 40 ether}(e1);
+        performancePool.computeDiminishingFactors(e1, 0);
 
         uint256 userBefore1 = user1.balance;
         uint256 poolBefore1 = address(performancePool).balance;
@@ -547,6 +500,7 @@ contract PerformancePoolTest is Test {
         require(e2 != e1, "need a different epoch after warp");
         setGasShares(e2, 1, 0, 0);
         performancePool.deposit{value: 60 ether}(e2);
+        performancePool.computeDiminishingFactors(e2, 0);
 
         uint256 userBefore2 = user1.balance;
         uint256 poolBefore2 = address(performancePool).balance;
@@ -572,6 +526,7 @@ contract PerformancePoolTest is Test {
 
         // First deposit & first claim by user1
         performancePool.deposit{value: 90 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         uint256 before1 = user1.balance;
         uint256 expected1 = performancePool.getClaimableAmount(epoch, user1, appchainId1);
@@ -601,14 +556,18 @@ contract PerformancePoolTest is Test {
         uint256 currentEpoch = staking.getCurrentEpoch();
 
         // Configure data & deposit into currentEpoch (math fine, but reads should revert per gating)
-        setGasShares(currentEpoch, 1, 0, 0);
+        // do not set gas shares
         performancePool.deposit{value: 10 ether}(currentEpoch);
+        vm.expectRevert();
+        performancePool.computeDiminishingFactors(currentEpoch, 0);
 
         // Expect revert on getClaimableAmount for current
-        vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
+        vm.expectRevert(GasArchive.NotArchivedEpoch.selector);
         performancePool.getClaimableAmount(currentEpoch, user1, appchainId1);
 
         // Future epoch should also revert
+        vm.expectRevert();
+        performancePool.computeDiminishingFactors(currentEpoch + 1, 0);
         vm.expectRevert(RewardPoolBase.ClaimNotAvailable.selector);
         performancePool.getClaimableAmount(currentEpoch + 1, user1, appchainId1);
     }
@@ -623,6 +582,7 @@ contract PerformancePoolTest is Test {
 
         // Initial deposit
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Get initial claimable amounts
         uint256 initialUser1 = performancePool.getClaimableAmount(epoch, user1, appchainId1);
@@ -692,6 +652,7 @@ contract PerformancePoolTest is Test {
 
         // Very small deposit
         performancePool.deposit{value: 1 wei}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Should handle small amounts without reverting
         uint256 claimable1 = performancePool.getClaimableAmount(epoch, user1, appchainId1);
@@ -711,6 +672,7 @@ contract PerformancePoolTest is Test {
 
         // Large deposit
         performancePool.deposit{value: 1000 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Get claimable amounts
         uint256 claimable1 = performancePool.getClaimableAmount(epoch, user1, appchainId1);
@@ -757,6 +719,7 @@ contract PerformancePoolTest is Test {
 
         uint256 epoch = _settledEpoch();
         setGasShares(epoch, 1, 1, 0);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // Multiple deposits
         performancePool.deposit{value: 50 ether}(epoch);
@@ -807,6 +770,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 1, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         // First call should calculate and cache
         uint256 firstCall = performancePool.getClaimableAmount(epoch, user1, appchainId1);
@@ -833,6 +797,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
 
@@ -849,6 +814,7 @@ contract PerformancePoolTest is Test {
         setGasShares(epoch, 1, 0, 0);
 
         performancePool.deposit{value: 100 ether}(epoch);
+        performancePool.computeDiminishingFactors(epoch, 0);
 
         assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 100 ether);
 
@@ -857,5 +823,46 @@ contract PerformancePoolTest is Test {
         vm.expectRevert(RewardPoolBase.InvalidDestination.selector);
         performancePool.claimFor(epoch, user1, address(0), appchainId1);
         vm.stopPrank();
+    }
+
+    function test_getClaimableAmount_only_full_epoch_stake() public {
+        setupStake(100 ether, 0, 0);
+
+        // Epoch 1
+        uint256 e1 = _settledEpoch();
+        setGasShares(e1, 1, 0, 0);
+        performancePool.deposit{value: 40 ether}(e1);
+        performancePool.computeDiminishingFactors(e1, 0);
+
+        uint256 e1_user1_claimable = performancePool.getClaimableAmount(e1, user1, appchainId1);
+        uint256 e1_user2_claimable = performancePool.getClaimableAmount(e1, user2, appchainId1);
+
+        assertEq(40 ether, e1_user1_claimable);
+        assertEq(0, e1_user2_claimable);
+
+        // Advance time half way through the epoch
+        stepDays(15);
+
+        // User 2 deposits
+        vm.startPrank(user2);
+        staking.stakeSynd{value: 100 ether}(appchainId2);
+        vm.stopPrank();
+
+        // Advance time to the next epoch
+        stepDays(15);
+
+        // Epoch 2
+        uint256 e2 = _settledEpoch();
+        require(e2 != e1, "need a different epoch after warp");
+        setGasShares(e2, 1, 0, 0);
+        performancePool.deposit{value: 60 ether}(e2);
+        performancePool.computeDiminishingFactors(e2, 0);
+
+        uint256 e2_user1_claimable = performancePool.getClaimableAmount(e2, user1, appchainId1);
+        uint256 e2_user2_claimable = performancePool.getClaimableAmount(e2, user2, appchainId1);
+
+        assertEq(60 ether, e2_user1_claimable);
+        // Still expect 0 since user2 wasnt staked for the entire epoch
+        assertEq(0, e2_user2_claimable);
     }
 }

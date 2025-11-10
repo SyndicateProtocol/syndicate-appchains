@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
@@ -139,6 +139,7 @@ contract SyndicateSequencingChain is SequencingModuleChecker, ISyndicateSequenci
         }
         super.transferOwnership(newOwner);
     }
+
     /*//////////////////////////////////////////////////////////////
                          GAS TRACKING ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/

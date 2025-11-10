@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {ISyndStaking} from "./interfaces/ISyndStaking.sol";
@@ -6,6 +6,9 @@ import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {EpochTracker} from "./EpochTracker.sol";
+import {IPool} from "src/staking/interfaces/IPool.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title RewardPoolBase
@@ -17,7 +20,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * Key Features:
  * - Diminishing returns algorithm to prevent centralization
  * - Configurable weights for fee and stake multipliers
- * - Caching system for gas-efficient calculations
+ * - Pre-computed diminishing factors for gas-efficient calculations
  * - Shared reward calculation logic across pool types
  *
  * Algorithm Overview:
@@ -30,7 +33,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * - "claimed" accounting (tracking already claimed amounts)
  * - Pool-specific reward distribution logic
  */
-abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
+abstract contract RewardPoolBase is ReentrancyGuard, Ownable, EpochTracker, Pausable, IPool {
     /// @notice Weight multiplier for gas fee contribution (40% by default)
     /// @dev Higher values give more weight to gas fee performance in reward calculation
     UD60x18 public feeMultiplier = ud(0.4e18);
@@ -53,13 +56,25 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
     /// @dev Accumulates all deposits for each epoch
     mapping(uint256 epochIndex => uint256 epochTotal) public epochTotal;
 
+    // @notice When remainingAppchainsPlusOne is set to 1, this indicates the diminishing
+    // factor calculations are complete for the epoch
+    mapping(uint256 epochIndex => uint256) public remainingAppchainsPlusOne;
+
     /// @notice Cache for per-epoch/appchain diminishing factors
     /// @dev Stores calculated diminishing factors to avoid recalculation
-    mapping(uint256 epochIndex => mapping(uint256 appchainId => UD60x18 diminishingFactor)) internal diminishingFactor;
+    mapping(uint256 epochIndex => mapping(uint256 appchainId => UD60x18 diminishingFactor)) public diminishingFactor;
 
     /// @notice Cache for per-epoch sum of diminishing factors across all appchains
     /// @dev Stores total diminishing factor sum for each epoch
-    mapping(uint256 epochIndex => UD60x18 epochTotalDiminishingFactor) internal epochTotalDiminishingFactor;
+    mapping(uint256 epochIndex => UD60x18 epochTotalDiminishingFactor) public epochTotalDiminishingFactor;
+
+    /// @notice Index to keep track of the pre-computed appchains
+    /// @dev Stores an internal index for ability to pre-compute the diminishing factors for an epoch in batches
+    mapping(uint256 epochIndex => uint256 preComputeIndex) public preComputeIndex;
+
+    /// @notice Constant to indicate that the pre-compute is complete
+    /// @dev Used to indicate that the pre-compute is complete for an epoch
+    uint256 public constant PRE_COMPUTE_COMPLETE = type(uint256).max;
 
     /// @notice Event emitted when rewards are deposited for an epoch
     /// @param epochIndex The epoch index for which rewards were deposited
@@ -75,6 +90,10 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         uint256 indexed epochIndex, uint256 indexed appchainId, address indexed destination, uint256 amount
     );
 
+    /// @notice Error thrown when trying to compute diminishing factors when they are already computed
+    /// @dev Used to indicate that the diminishing factors are already computed
+    error AllDiminishingFactorsComputed();
+
     /// @notice Error thrown when attempting to claim from an unavailable epoch
     /// @dev Epoch must be past and have funding to be claimable
     error ClaimNotAvailable();
@@ -86,6 +105,10 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
     /// @notice Error thrown when destination address is zero
     /// @dev Prevents sending rewards to zero address
     error InvalidDestination();
+
+    /// @notice Error thrown when reward calculation is not complete
+    /// @dev Used to indicate that the reward calculation is not complete
+    error RewardComputationNotComplete();
 
     /**
      * @notice Constructor to initialize the RewardPoolBase
@@ -99,93 +122,95 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
         gasDataProvider = IGasDataProvider(_gas);
     }
 
-    /**
-     * @notice Internal function to deposit rewards for an epoch
-     * @dev Anyone can fund any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function _deposit(uint256 epochIndex) internal {
-        uint256 amount = msg.value;
-        epochTotal[epochIndex] += amount;
-        emit EpochDeposit(epochIndex, amount);
+    receive() external payable {
+        deposit(getCurrentEpoch());
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        SHARED MATH HELPERS (INTERNAL)
-    //////////////////////////////////////////////////////////////*/
+    // legacy function to satisfy the IPool interface
+    // depositing to past or future epochs is not recommended
+    function deposit(uint256 epoch) public payable {
+        epochTotal[epoch] += msg.value;
+        emit EpochDeposit(epoch, msg.value);
+    }
 
     /**
-     * @notice Internal function to perform pre-claim validation checks
-     * @dev Ensures epoch is past and has funding before allowing claims
-     * @param epochIndex The epoch index to validate
+     * @notice Compute appchain reward factors
+     * @dev To check if the computation is complete, call remainingAppchainsPlusOne(epochIndex)
+     * and ensure the return value is 1.
+     * @return True when computations are complete, false otherwise
      */
-    function _preChecks(uint256 epochIndex) internal view {
-        // must be a past epoch with funding
-        if (epochTotal[epochIndex] == 0 || stakingContract.getCurrentEpoch() <= epochIndex) {
-            revert ClaimNotAvailable();
+    function computeDiminishingFactors(uint256 epochIndex, uint256 count) public returns (bool) {
+        uint256 remainingPlusOne = remainingAppchainsPlusOne[epochIndex];
+        require(remainingPlusOne != 1, AllDiminishingFactorsComputed());
+
+        if (remainingPlusOne == 0) {
+            remainingPlusOne = gasDataProvider.getAppchainCount(epochIndex) + 1;
+            remainingAppchainsPlusOne[epochIndex] = remainingPlusOne;
+            if (remainingPlusOne == 1) {
+                return true;
+            }
+            _pause();
         }
-    }
 
-    /**
-     * @notice Calculate the diminishing factor for a specific appchain in an epoch
-     * @dev Implements the core diminishing returns algorithm:
-     *      1. Calculate fee share and stake share
-     *      2. Combine into dominance score
-     *      3. Apply diminishing factor = ln(1 + decayFactor * dominance)
-     * @param epochIndex The epoch index to calculate for
-     * @param appchainId The appchain ID to calculate for
-     * @param totalStake Total stake across all appchains
-     * @param totalGasFees Total gas fees across all appchains
-     * @return The diminishing factor for the appchain
-     */
-    function _getAppchainDiminishingFactor(
-        uint256 epochIndex,
-        uint256 appchainId,
-        UD60x18 totalStake,
-        UD60x18 totalGasFees
-    ) internal returns (UD60x18) {
-        UD60x18 cached = diminishingFactor[epochIndex][appchainId];
-        if (!cached.isZero()) return cached;
+        if (count == 0 || count >= remainingPlusOne) {
+            count = remainingPlusOne - 1;
+        }
 
-        UD60x18 appchainStake = convert(stakingContract.getAppchainStake(epochIndex, appchainId));
-        UD60x18 appchainGasFees = convert(gasDataProvider.getAppchainGasFees(epochIndex, appchainId));
+        remainingAppchainsPlusOne[epochIndex] -= count;
 
-        UD60x18 feeShare = appchainGasFees.mul(feeMultiplier).div(totalGasFees);
-        UD60x18 stakeShare = appchainStake.mul(stakeMultiplier).div(totalStake);
-        UD60x18 dominance = feeShare.add(stakeShare);
+        UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
+        if (totalStake.isZero()) {
+            remainingAppchainsPlusOne[epochIndex] = 1;
+            return true;
+        }
 
-        UD60x18 df = (convert(1).add(decayFactor.mul(dominance))).ln();
-        if (df.isZero()) return convert(0);
+        UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
+        if (totalGasFees.isZero()) {
+            remainingAppchainsPlusOne[epochIndex] = 1;
+            return true;
+        }
 
-        diminishingFactor[epochIndex][appchainId] = df;
-        return df;
-    }
-
-    /**
-     * @notice Calculate the sum of diminishing factors for all appchains in an epoch
-     * @dev Iterates through all active appchains and sums their diminishing factors
-     * @param epochIndex The epoch index to calculate for
-     * @param totalStake Total stake across all appchains
-     * @param totalGasFees Total gas fees across all appchains
-     * @return The sum of all appchain diminishing factors
-     */
-    function _getAllAppchainsDiminishingFactor(uint256 epochIndex, UD60x18 totalStake, UD60x18 totalGasFees)
-        internal
-        returns (UD60x18)
-    {
-        UD60x18 cached = epochTotalDiminishingFactor[epochIndex];
-        if (!cached.isZero()) return cached;
-
-        uint256[] memory ids = gasDataProvider.getActiveAppchainIds(epochIndex);
-        UD60x18 sum = convert(0);
-        for (uint256 i = 0; i < ids.length;) {
-            sum = sum.add(_getAppchainDiminishingFactor(epochIndex, ids[i], totalStake, totalGasFees));
-            unchecked {
-                ++i;
+        uint256[] memory appchainIds;
+        uint256[] memory appchainGasFees;
+        (appchainIds, appchainGasFees) =
+            gasDataProvider.getAppchainInfo(epochIndex, remainingAppchainsPlusOne[epochIndex] - 1, count);
+        UD60x18 dfSum = epochTotalDiminishingFactor[epochIndex];
+        for (uint256 i = 0; i < count; i++) {
+            uint256 appchainId = appchainIds[i];
+            UD60x18 df = _computeDiminishingFactor(
+                stakingContract.getAppchainStake(epochIndex, appchainId), totalStake, appchainGasFees[i], totalGasFees
+            );
+            if (!df.isZero()) {
+                diminishingFactor[epochIndex][appchainId] = df;
+                dfSum = dfSum.add(df);
             }
         }
-        epochTotalDiminishingFactor[epochIndex] = sum;
-        return sum;
+        epochTotalDiminishingFactor[epochIndex] = dfSum;
+
+        bool isComplete = remainingAppchainsPlusOne[epochIndex] == 1;
+        if (isComplete) {
+            _unpause();
+        }
+
+        return isComplete;
+    }
+
+    /// @notice Helper function to compute the diminishing factor
+    /// @param appchainStake The stake of the appchain
+    /// @param totalStake The total stake of all appchains
+    /// @param appchainGasFee The gas fee of the appchain
+    /// @param totalGasFees The total gas fees of all appchains
+    /// @return The diminishing factor for the appchain
+    function _computeDiminishingFactor(
+        uint256 appchainStake,
+        UD60x18 totalStake,
+        uint256 appchainGasFee,
+        UD60x18 totalGasFees
+    ) internal view returns (UD60x18) {
+        UD60x18 feeShare = convert(appchainGasFee).mul(feeMultiplier).div(totalGasFees);
+        UD60x18 stakeShare = convert(appchainStake).mul(stakeMultiplier).div(totalStake);
+        UD60x18 dominance = feeShare.add(stakeShare);
+        return (convert(1).add(decayFactor.mul(dominance))).ln();
     }
 
     /**
@@ -197,24 +222,46 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      * @param appchainId The appchain ID to calculate for
      * @return The total reward amount for the appchain in the epoch
      */
-    function _computeAppchainTotalReward(uint256 epochIndex, uint256 appchainId) internal returns (uint256) {
-        _preChecks(epochIndex);
-
-        UD60x18 poolAmount = convert(epochTotal[epochIndex]);
-
-        UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
-        if (totalStake.isZero()) return 0;
-
-        UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
-        if (totalGasFees.isZero()) return 0;
-
-        UD60x18 df = _getAppchainDiminishingFactor(epochIndex, appchainId, totalStake, totalGasFees);
+    function getAppchainTotalReward(uint256 epochIndex, uint256 appchainId) public view returns (uint256) {
+        require(epochTotal[epochIndex] > 0, ClaimNotAvailable());
+        UD60x18 df;
+        UD60x18 dfSum = epochTotalDiminishingFactor[epochIndex];
+        uint256 remainingPlusOne = remainingAppchainsPlusOne[epochIndex];
+        if (remainingPlusOne == 1) {
+            df = diminishingFactor[epochIndex][appchainId];
+        } else {
+            uint256 count;
+            if (remainingPlusOne == 0) {
+                count = gasDataProvider.getAppchainCount(epochIndex);
+            } else {
+                count = remainingPlusOne - 1;
+            }
+            UD60x18 totalStake = convert(stakingContract.getTotalStake(epochIndex));
+            if (totalStake.isZero()) return 0;
+            UD60x18 totalGasFees = convert(gasDataProvider.getTotalGasFees(epochIndex));
+            if (totalGasFees.isZero()) return 0;
+            uint256[] memory appchainIds;
+            uint256[] memory appchainGasFees;
+            (appchainIds, appchainGasFees) = gasDataProvider.getAppchainInfo(epochIndex, 0, count);
+            for (uint256 i = 0; i < count; i++) {
+                uint256 id = appchainIds[i];
+                UD60x18 factor = _computeDiminishingFactor(
+                    stakingContract.getAppchainStake(epochIndex, id), totalStake, appchainGasFees[i], totalGasFees
+                );
+                if (appchainId == id) {
+                    if (factor.isZero()) return 0;
+                    df = factor;
+                }
+                dfSum = dfSum.add(factor);
+            }
+            // If the diminishing factor was not seen in the remaining appchains, it must have been pre-computed
+            if (df.isZero()) {
+                df = diminishingFactor[epochIndex][appchainId];
+            }
+        }
         if (df.isZero()) return 0;
 
-        UD60x18 dfSum = _getAllAppchainsDiminishingFactor(epochIndex, totalStake, totalGasFees);
-        if (dfSum.isZero()) return 0;
-
-        return convert(poolAmount.mul(df).div(dfSum));
+        return convert(convert(epochTotal[epochIndex]).mul(df).div(dfSum));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -226,7 +273,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      * @dev Higher values give more weight to gas fee performance
      * @param _fee The new fee multiplier (in UD60x18 format)
      */
-    function setFeeMultiplier(uint256 _fee) external onlyOwner {
+    function setFeeMultiplier(uint256 _fee) external onlyOwner whenNotPaused {
         feeMultiplier = ud(_fee);
     }
 
@@ -235,7 +282,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      * @dev Higher values give more weight to stake amount
      * @param _stake The new stake multiplier (in UD60x18 format)
      */
-    function setStakeMultiplier(uint256 _stake) external onlyOwner {
+    function setStakeMultiplier(uint256 _stake) external onlyOwner whenNotPaused {
         stakeMultiplier = ud(_stake);
     }
 
@@ -244,7 +291,7 @@ abstract contract RewardPoolBase is ReentrancyGuard, Ownable {
      * @dev Higher values create stronger diminishing returns effect
      * @param _decay The new decay factor (in UD60x18 format)
      */
-    function setDecayFactor(uint256 _decay) external onlyOwner {
+    function setDecayFactor(uint256 _decay) external onlyOwner whenNotPaused {
         decayFactor = ud(_decay);
     }
 }

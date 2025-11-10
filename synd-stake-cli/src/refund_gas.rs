@@ -11,6 +11,7 @@ use shared::{
     types::new_provider,
 };
 use tracing::{error, info};
+use url::Url;
 
 /// Arguments for the `refund-gas` command.
 ///
@@ -39,7 +40,7 @@ pub struct RefundGasArgs {
 
     /// The RPC URL to use for the transaction.
     #[arg(short = 'r', long, env = "RPC_URL", default_value = "https://commons.rpc.syndicate.io", value_parser = parse_url)]
-    pub rpc_url: String,
+    pub rpc_url: Url,
 }
 
 /// Refunds gas from the refunder contract.
@@ -96,7 +97,7 @@ pub async fn refund_gas(args: &RefundGasArgs) {
         info!("Refunding gas...");
         match Refunder::new(
             args.refunder_address,
-            new_provider(args.rpc_url.as_str(), &args.private_key).await,
+            new_provider(&args.rpc_url, &args.private_key).await,
         )
         .recover()
         .send()

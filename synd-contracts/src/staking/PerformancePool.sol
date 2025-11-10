@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {RewardPoolBase} from "./RewardPoolBase.sol";
@@ -43,15 +43,6 @@ contract PerformancePool is IUserPool, RewardPoolBase {
     }
 
     /**
-     * @notice Deposit rewards for a specific epoch
-     * @dev Anyone can deposit rewards for any epoch. Rewards are additive.
-     * @param epochIndex The epoch index to deposit rewards for
-     */
-    function deposit(uint256 epochIndex) external payable override nonReentrant {
-        _deposit(epochIndex);
-    }
-
-    /**
      * @notice Claim rewards for a specific user on a specific appchain in a specific epoch
      * @dev Users can claim their proportional share of rewards based on their stake on the appchain.
      *      Rewards are calculated as: (user stake / total appchain stake) * appchain total rewards
@@ -60,6 +51,17 @@ contract PerformancePool is IUserPool, RewardPoolBase {
      * @param appchainId The appchain ID to claim rewards for
      */
     function claim(uint256 epochIndex, address destination, uint256 appchainId) external nonReentrant {
+        _claim(epochIndex, msg.sender, destination, appchainId);
+    }
+
+    /**
+     * @notice Variant of claim that reverts if diminishing factors need to be computed
+     * @param epochIndex The epoch index to claim rewards for
+     * @param appchainId The appchain ID to claim rewards for
+     * @param destination The destination address to send the rewards to
+     */
+    function claimWithoutCompute(uint256 epochIndex, uint256 appchainId, address destination) external nonReentrant {
+        require(remainingAppchainsPlusOne[epochIndex] == 1, RewardComputationNotComplete());
         _claim(epochIndex, msg.sender, destination, appchainId);
     }
 
@@ -78,6 +80,7 @@ contract PerformancePool is IUserPool, RewardPoolBase {
         nonReentrant
         onlyStakingContract
     {
+        require(remainingAppchainsPlusOne[epochIndex] == 1, RewardComputationNotComplete());
         _claim(epochIndex, user, destination, appchainId);
     }
 
@@ -90,9 +93,12 @@ contract PerformancePool is IUserPool, RewardPoolBase {
      * @param appchainId The appchain ID to claim rewards for
      */
     function _claim(uint256 epochIndex, address user, address destination, uint256 appchainId) internal {
-        _preChecks(epochIndex);
         if (destination == address(0)) {
             revert InvalidDestination();
+        }
+
+        if (remainingAppchainsPlusOne[epochIndex] != 1) {
+            computeDiminishingFactors(epochIndex, 0);
         }
 
         uint256 amount = getClaimableAmount(epochIndex, user, appchainId);
@@ -118,11 +124,11 @@ contract PerformancePool is IUserPool, RewardPoolBase {
      * @custom:example If user has 10% of appchain stake and appchain earned 1000 tokens, user can claim 100 tokens
      * @custom:example If user already claimed 50 tokens, returns 50 (remaining claimable amount)
      */
-    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) public returns (uint256) {
-        uint256 appchainTotal = _computeAppchainTotalReward(epochIndex, appchainId);
+    function getClaimableAmount(uint256 epochIndex, address user, uint256 appchainId) public view returns (uint256) {
+        uint256 appchainTotal = getAppchainTotalReward(epochIndex, appchainId);
         if (appchainTotal == 0) return 0;
 
-        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStakeShare(epochIndex, user);
+        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStake(epochIndex, user);
         if (userStaked == 0) return 0;
 
         uint256 appchainStaked = ISyndStaking(address(stakingContract)).getAppchainStake(epochIndex, appchainId);

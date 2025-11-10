@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 /**
@@ -9,16 +9,16 @@ pragma solidity 0.8.28;
 contract MockSyndicateToken {
     /// @notice Total supply of tokens currently minted
     uint256 public totalSupply;
-    
+
     /// @notice Maximum total supply (100M tokens)
-    uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10**18;
-    
+    uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10 ** 18;
+
     /// @notice Initial supply (20M tokens) = TOTAL_SUPPLY - EMISSIONS_CAP
-    uint256 public constant INITIAL_SUPPLY = 20_000_000 * 10**18;
-    
+    uint256 public constant INITIAL_SUPPLY = 20_000_000 * 10 ** 18;
+
     /// @notice Mapping of token balances
     mapping(address => uint256) public balanceOf;
-    
+
     /// @notice Track total minted for verification
     uint256 public totalMinted;
 
@@ -38,7 +38,7 @@ contract MockSyndicateToken {
     function mint(address to, uint256 amount) external {
         require(to != address(0), "Cannot mint to zero address");
         require(totalSupply + amount <= TOTAL_SUPPLY, "Would exceed total supply");
-        
+
         totalSupply += amount;
         balanceOf[to] += amount;
         totalMinted += amount;

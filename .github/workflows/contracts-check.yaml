@@ -1,5 +1,6 @@
 # This workflow runs our Foundry tests and contract checks on the smart contracts in both `synd-contracts/src`.
-# Whenever a change is made in those directories, this workflow makes sure everything still builds, passes tests, and that our Rust bindings are up to date.
+# Whenever a change is made in those directories, this workflow makes sure everything still builds, passes tests, and that our Rust & Go bindings are up to date.
+# This workflow also checks that the TypeScript ABI & bytecode files in create-chain are up to date.
 # Keeping the Rust bindings up to date makes sure your Rust code always knows how to talk to your smart contracts correctly.
 # https://github.com/foundry-rs/foundry
 
@@ -14,6 +15,7 @@ on:
       - staging
   # Only run on PRs that touch shared contracts
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -24,6 +26,7 @@ env:
 
 jobs:
   contracts-check:
+    if: github.event.pull_request.draft == false
     name: synd-contracts Check
     runs-on: ubuntu-latest
     defaults:
@@ -37,7 +40,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.3.5
 
       - name: Show Forge version
         run: |
@@ -64,18 +67,37 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Install abigen
         run: |
           go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 
-      - name: Check Rust contract bindings for synd-contracts
+      - name: Check Rust & Go contract bindings for synd-contracts
         working-directory: "."
         run: |
           make -C shared create-contract-bindings
           git diff --quiet || (echo "Error: Rust contract bindings are out of date. Please run 'make -C shared create-contract-bindings' to update them." && exit 1)
-          
+
+      - name: Check TypeScript ABI files for create-chain
+        working-directory: "."
+        run: |
+          make -C create-chain generate-contract-abis
+          git diff --exit-code create-chain/scripts/abi/synd/ || (
+            echo "❌ Error: TypeScript ABI files are out of date."
+            echo ""
+            echo "The committed ABI files don't match the ones generated from the contracts."
+            echo "Please run the following command to regenerate them:"
+            echo ""
+            echo "  cd create-chain && make generate-contract-abis"
+            echo ""
+            echo "Then commit the updated files."
+            echo ""
+            echo "Files that differ:"
+            git diff --name-only create-chain/scripts/abi/synd/
+            exit 1
+          )
+
       # Needs to be the last job step
       - name: Notify Slack on Failure
         # Only notify for workflow_run failures on main branch (not PRs)

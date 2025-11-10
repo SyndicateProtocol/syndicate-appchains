@@ -346,6 +346,17 @@ impl Batcher {
                 .into_transaction_request(),
         };
 
+        if let Some(txn_max_fee_per_gas) = transaction_request.max_fee_per_gas {
+            if txn_max_fee_per_gas > self.config.max_fee_per_gas {
+                let err_msg = "Batch txn not submitted because the network's current max fee per gas is above the configured threshold.";
+                error!(chain_id=%self.config.chain_id,
+                    %txn_max_fee_per_gas,
+                    config_max_fee_per_gas=%self.config.max_fee_per_gas,
+                    err_msg);
+                return Err(BatchError::SendBatchFailed(err_msg.to_string()));
+            }
+        }
+
         let pending_tx = self
             .sequencing_contract_instance
             .provider()
@@ -382,8 +393,9 @@ impl Batcher {
             let wallet_address = provider.signer_address();
 
             match provider.get_balance(wallet_address).await {
-                Ok(balance) => {
-                    metrics.record_wallet_balance(balance.to());
+                Ok(balance_wei) => {
+                    let balance_eth = balance_wei.to::<u128>() as f64 / 1_000_000_000_000_000_000.0;
+                    metrics.record_wallet_balance(balance_eth);
                 }
                 Err(e) => {
                     error!("Failed to get wallet balance: {:?}", e);

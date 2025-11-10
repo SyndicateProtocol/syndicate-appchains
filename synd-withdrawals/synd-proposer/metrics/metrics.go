@@ -71,7 +71,7 @@ func NewMetrics(registry *prometheus.Registry) *Metrics {
 		}),
 		WalletBalance: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "wallet_balance",
-			Help: "Wallet balance",
+			Help: "Wallet balance in ETH units",
 		}),
 
 		// Enclave call metrics

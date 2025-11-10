@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
@@ -7,18 +7,16 @@ import {TeeKeyManager} from "../../src/withdrawal/TeeKeyManager.sol";
 import {IAttestationDocVerifier} from "../../src/withdrawal/IAttestationDocVerifier.sol";
 
 // Mock for IAttestationDocVerifier
-contract MockAttestationDocVerifier is
-    IAttestationDocVerifier // Implements interface
-{
+contract MockAttestationDocVerifier is IAttestationDocVerifier {
+    // Implements interface
     address public mockPublicKeyToReturn;
     bool public shouldRevert;
 
-    function verifyAttestationDocProof(bytes calldata, /*_publicValues*/ bytes calldata /*_proofBytes*/ )
-        external
-        view
-        override
-        returns (address)
-    {
+    function verifyAttestationDocProof(
+        bytes calldata,
+        /*_publicValues*/
+        bytes calldata /*_proofBytes*/
+    ) external view override returns (address) {
         if (shouldRevert) {
             revert("MockAttestationDocVerifier: Forced revert");
         }

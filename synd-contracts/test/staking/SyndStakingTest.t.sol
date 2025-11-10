@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {SyndStaking} from "src/staking/SyndStaking.sol";
@@ -8,72 +8,7 @@ import {EpochTracker} from "src/staking/EpochTracker.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
-
-/// @notice Mock gas provider: programmable per-epoch fees + active IDs
-contract MockGasProvider is IGasDataProvider {
-    // epoch => total fees
-    mapping(uint256 => uint256) public totals;
-    // epoch => appchainId => fees
-    mapping(uint256 => mapping(uint256 => uint256)) public fee;
-    // epoch => list of appchainIds (we keep exactly what tests set)
-    mapping(uint256 => uint256[]) private idsByEpoch;
-    // appchainId => rewards receiver (latest epoch)
-    mapping(uint256 => address) public receiver;
-
-    function setFees(uint256 epoch, uint256[] memory appchainIds, uint256[] memory amounts) external {
-        require(appchainIds.length == amounts.length, "length mismatch");
-
-        // reset ids list
-        delete idsByEpoch[epoch];
-
-        uint256 t;
-        for (uint256 i = 0; i < appchainIds.length; i++) {
-            uint256 id = appchainIds[i];
-            uint256 amt = amounts[i];
-            fee[epoch][id] = amt;
-            idsByEpoch[epoch].push(id);
-            t += amt;
-        }
-        totals[epoch] = t;
-    }
-
-    function setFee(uint256 epoch, uint256 appchainId, uint256 amount) external {
-        // if appchainId not in ids list, push it
-        bool present = false;
-        uint256[] storage ids = idsByEpoch[epoch];
-        for (uint256 i = 0; i < ids.length; i++) {
-            if (ids[i] == appchainId) {
-                present = true;
-                break;
-            }
-        }
-        if (!present) ids.push(appchainId);
-
-        uint256 prev = fee[epoch][appchainId];
-        fee[epoch][appchainId] = amount;
-        totals[epoch] = totals[epoch] + amount - prev;
-    }
-
-    function getTotalGasFees(uint256 epochIndex) external view returns (uint256) {
-        return totals[epochIndex];
-    }
-
-    function getAppchainGasFees(uint256 epochIndex, uint256 appchainId) external view returns (uint256) {
-        return fee[epochIndex][appchainId];
-    }
-
-    function getActiveAppchainIds(uint256 epochIndex) external view returns (uint256[] memory out) {
-        uint256[] storage ids = idsByEpoch[epochIndex];
-        out = new uint256[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
-            out[i] = ids[i];
-        }
-    }
-
-    function getAppchainRewardsReceiver(uint256 appchainId) external view returns (address) {
-        return receiver[appchainId];
-    }
-}
+import {MockGasProvider} from "./MockGasProvider.t.sol";
 
 contract ReentrantContract {
     SyndStaking public staking;
@@ -1243,6 +1178,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 50 ether}(2);
@@ -1295,6 +1231,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 100 ether}(2);
@@ -1354,6 +1291,7 @@ contract SyndStakingTest is Test {
         appchainIds[0] = appchainId1;
         gasFees[0] = 100 ether; // Set gas fees for appchainId1
         gasProvider.setFees(2, appchainIds, gasFees);
+        performancePool.computeDiminishingFactors(2, 0);
 
         // Deposit rewards to both pools
         basePool.deposit{value: 50 ether}(2);

@@ -12,7 +12,7 @@
     nitro = {
       type = "git";
       url = "https://github.com/SyndicateProtocol/nitro.git";
-      rev = "2625cbb20485326af9f8c05bce6b025b42ba59b6";
+      rev = "c3d1012b2e23eb8121196e0f23dd0dea0855f6a6";
       submodules = true;
       flake = false;
     };
