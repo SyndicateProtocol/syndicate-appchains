@@ -137,6 +137,7 @@ func LoadConfig() (*Config, error) {
 			ClientCertPath: viper.GetString("mtls-client-cert-path"),
 			ClientKeyPath:  viper.GetString("mtls-client-key-path"),
 		},
+		MaxFeePerGas: maxFeePerGas,
 	}, nil
 }
 
