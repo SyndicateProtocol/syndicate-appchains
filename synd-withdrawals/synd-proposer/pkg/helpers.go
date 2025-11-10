@@ -47,6 +47,7 @@ var (
 	inboxMessageDeliveredEventHash           common.Hash
 	inboxMessageDeliveredFromOriginEventHash common.Hash
 	l2MessageFromOriginCallABI               abi.Method
+	l2MessageFromOriginCallSelector          common.Hash
 )
 
 var ArbSysPrecompileAddress = common.HexToAddress("0x0000000000000000000000000000000000000064")
@@ -68,6 +69,7 @@ func init() {
 		panic(err)
 	}
 	l2MessageFromOriginCallABI = parsedIInboxABI.Methods["sendL2MessageFromOrigin"]
+	l2MessageFromOriginCallSelector = common.BytesToHash(l2MessageFromOriginCallABI.ID)
 }
 
 // once the target qty is reached or exceeded, getLogs stops fetching logs
@@ -374,6 +376,9 @@ func GetDelayedMessages(
 			}
 			if len(tx.Data()) < 4 {
 				return common.Hash{}, nil, false, errors.New("tx data too short")
+			}
+			if l2MessageFromOriginCallSelector.Cmp(common.BytesToHash(tx.Data()[:4])) != 0 {
+				return common.Hash{}, nil, false, errors.New("invalid function selector")
 			}
 			args := make(map[string]interface{})
 			err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])

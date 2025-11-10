@@ -169,9 +169,7 @@ pub async fn fill_partial_block_with_l2msg_from_origin_txs(
                 .await
                 .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
 
-            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_raw_validate(
-                tx.input().get(4..).unwrap_or_else(|| panic!("tx input less than 4 bytes")),
-            )?;
+            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_validate(tx.input())?;
             let seq_num: U256 = log.topics()[1].into();
             block.log_txs.insert(seq_num, decoded_tx.messageData);
         };

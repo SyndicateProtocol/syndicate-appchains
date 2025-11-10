@@ -3,7 +3,7 @@ use alloy::{
     contract::CallBuilder,
     eips::{BlockNumberOrTag, Encodable2718},
     network::{Ethereum, TransactionBuilder as _},
-    primitives::{address, keccak256, utils::parse_ether, Address, B256, U160, U256},
+    primitives::{address, keccak256, utils::parse_ether, Address, B256, U256},
     providers::{
         ext::{AnvilApi, DebugApi},
         Provider, ProviderBuilder, WalletProvider as _,
@@ -33,7 +33,9 @@ use test_framework::components::{
 use test_utils::{
     chain_info::{test_account1, test_account2, test_account3, PRIVATE_KEY3},
     docker::{launch_enclave_server, start_component},
-    nitro_chain::{execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams},
+    nitro_chain::{
+        apply_l1_to_l2_alias, execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams,
+    },
     port_manager::PortManager,
     wait_until,
 };
@@ -96,7 +98,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             let inbox =
                 IInbox::new(components.appchain_deployment.inbox, &components.settlement_provider);
 
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = inbox
                 .depositEth()
                 .value(parse_ether("1")?)
@@ -237,7 +239,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 &components.settlement_provider,
             );
 
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = assertion_poster
                 .transferOwnership(tee_module_addr)
                 .nonce(
@@ -303,7 +305,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             let public_values = tee_public_key.abi_encode();
             let proof_bytes = vec![];
 
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = key_mgr
                 .addKey(public_values.into(), proof_bytes.into())
                 .nonce(
@@ -344,10 +346,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             // send 101 valid txs plus some invalid ones to trigger the block splitting code which
             // does not require the nitro fork to be enabled
             let latest = components.appchain_provider.get_block_number().await?;
-            let offset = address!("0x1000000000000000000000000000000000000001").into();
-            let alias_address = Address::from(
-                U160::from_be_slice(&test_account1().address[..]).wrapping_add(offset),
-            );
+            let alias_address = apply_l1_to_l2_alias(test_account1().address);
             let dummy_tx = vec![L2MessageKind::SignedTx as u8, 0xc0];
             let mut txs = vec![];
             for _ in 0..100 {
@@ -694,7 +693,7 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
     l1_provider: T,
     target_chain_provider: T,
 ) -> (JoinHandle<()>, Address) {
-    // NOTE: manually constructing the deployment tx shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+    // NOTE: manually constructing the deployment tx shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
     // instead should just be:
     // let oracle_contract = L1BlockOracle::deploy(target_chain_provider).await.unwrap();
     let receipt = L1BlockOracle::deploy_builder(target_chain_provider.clone())
@@ -717,7 +716,7 @@ async fn setup_l1_oracle<T: Provider<Ethereum> + Clone + Send + Sync + 'static>(
             println!("l1 block: {l1_block:?}");
             let l1_hash = l1_block.hash;
             let l1_timestamp = l1_block.timestamp;
-            // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+            // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
             let receipt = oracle_contract
                 .setL1Block(l1_timestamp, l1_hash)
                 .nonce(
