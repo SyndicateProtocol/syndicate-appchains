@@ -20,6 +20,7 @@ jobs:
     outputs:
       eif-hash: ${{ steps.artifact-hashes.outputs.eif-hash }}
       sp1-hash: ${{ steps.artifact-hashes.outputs.sp1-hash }}
+      risc0-hash: ${{ steps.artifact-hashes.outputs.risc0-hash }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +49,10 @@ jobs:
         run: |
           EIF_SHA512=$(sha512sum synd-withdrawals/out/eif.bin | awk '{print $1}')
           SP1_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-sp1-program | awk '{print $1}')
+          RISC0_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-risc0-program | awk '{print $1}')
           echo "eif-hash=$EIF_SHA512" >> $GITHUB_OUTPUT
           echo "sp1-hash=$SP1_SHA512" >> $GITHUB_OUTPUT
+          echo "risc0-hash=$RISC0_SHA512" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -92,7 +95,7 @@ jobs:
             echo "Got: $EIF_SHA512"
             exit 1
           else
-            echo "eif.bin hash verification succeeded, hash: $(cat eif.bin.sha512)"
+            echo "eif.bin hash verification succeeded, hash: $EIF_SHA512"
           fi
 
       - name: Verify that hashes of sp1 program files match
@@ -104,7 +107,19 @@ jobs:
             echo "Got: $SP1_SHA512"
             exit 1
           else
-            echo "sp1 program hash verification succeeded, hash: $(cat sp1-program.sha512)"
+            echo "sp1 program hash verification succeeded, hash: $SP1_SHA512"
+          fi
+
+      - name: Verify that hashes of risc0 program files match
+        run: |
+          RISC0_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-risc0-program | awk '{print $1}')
+          if [[ "$RISC0_SHA512" != "${{ needs.build.outputs.risc0-hash }}" ]]; then
+            echo "Error: risc0 program hash doesn't match the one from the build job"
+            echo "Expected: ${{ needs.build.outputs.risc0-hash }}"
+            echo "Got: $RISC0_SHA512"
+            exit 1
+          else
+            echo "risc0 program hash verification succeeded, hash: $RISC0_SHA512"
           fi
 
   publish-release:
@@ -126,6 +141,7 @@ jobs:
           mv synd-withdrawals/out/eif.bin eif-${{ env.TAG_NAME }}.bin
           mv synd-withdrawals/server/app/server server-${{ env.TAG_NAME }}.bin
           mv sp1-build/synd-tee-attestation-zk-proofs-sp1-program sp1-zk-${{ env.TAG_NAME }}.elf
+          mv sp1-build/synd-tee-attestation-zk-proofs-risc0-program risc0-zk-${{ env.TAG_NAME }}.elf
 
       - name: Attach binaries to release
         uses: softprops/action-gh-release@v1
@@ -135,6 +151,7 @@ jobs:
             eif-${{ env.TAG_NAME }}.bin
             server-${{ env.TAG_NAME }}.bin
             sp1-zk-${{ env.TAG_NAME }}.elf
+            risc0-zk-${{ env.TAG_NAME }}.elf
 
   notify-failure:
     name: Notify on failure

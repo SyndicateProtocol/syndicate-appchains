@@ -1,27 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISP1Verifier} from "@sp1-contracts/ISP1Verifier.sol";
 import {IAttestationDocVerifier} from "./IAttestationDocVerifier.sol";
 
-struct PublicValuesStruct {
-    bytes32 root_cert_hash;
-    uint64 validity_window_start;
-    uint64 validity_window_end;
-    // https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html#where
-    // each pcr is 48 bytes, that is subsequently keccak256'd
-    bytes32 pcr_0;
-    bytes32 pcr_1;
-    bytes32 pcr_2;
-    address tee_signing_key;
+/// @title SP1 Verifier Interface
+/// @author Succinct Labs
+/// @notice This contract is the interface for the SP1 Verifier.
+interface ISP1Verifier {
+    /// @notice Verifies a proof with given public values and vkey.
+    /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of
+    /// target verifier's VERIFIER_HASH.
+    /// @param programVKey The verification key for the RISC-V program.
+    /// @param publicValues The public values encoded as bytes.
+    /// @param proofBytes The proof of the program execution the SP1 zkVM encoded as bytes.
+    function verifyProof(bytes32 programVKey, bytes calldata publicValues, bytes calldata proofBytes) external view;
+}
+
+/// @notice Verifier interface for RISC Zero receipts of execution.
+interface IRiscZeroVerifier {
+    /// @notice Verify that the given seal is a valid RISC Zero proof of execution with the
+    ///     given image ID and journal digest. Reverts on failure.
+    /// @dev This method additionally ensures that the input hash is all-zeros (i.e. no
+    /// committed input), the exit code is (Halted, 0), and there are no assumptions (i.e. the
+    /// receipt is unconditional).
+    /// @param seal The encoded cryptographic proof (i.e. SNARK).
+    /// @param imageId The identifier for the guest program.
+    /// @param journalDigest The SHA-256 digest of the journal bytes.
+    function verify(bytes calldata seal, bytes32 imageId, bytes32 journalDigest) external view;
 }
 
 contract AttestationDocVerifier is IAttestationDocVerifier {
-    /// @notice The address of the SP1 verifier contract.
+    /// @notice The address of the verifier contract.
     /// @dev This can either be a specific SP1Verifier for a specific version, or the
     ///      SP1VerifierGateway which can be used to verify proofs for any version of SP1.
-    ///      For the list of supported verifiers on each chain, see:
+    ///      For the list of supported SP1 verifiers on each chain, see:
     ///      https://github.com/succinctlabs/sp1-contracts/tree/main/contracts/deployments
+    ///
+    ///      Risc0 verifiers are also supported, for more info see:
+    ///      https://dev.risczero.com/api/blockchain-integration/contracts/verifier
     address public immutable verifier;
 
     /// @notice The commit hash of the synd-appchains repo used to generate the proof circuit.
@@ -30,55 +46,54 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     /// @notice The verification key for the cert verifier.
     bytes32 public immutable attestationDocVerifierVKey;
 
-    /// @notice The expected values for the attestation document.
-    bytes32 public immutable rootCertHash;
-    bytes32 public immutable pcr0;
-    bytes32 public immutable pcr1;
-    bytes32 public immutable pcr2;
+    /// @notice The expected hash value for important fields in the attestation document.
+    bytes32 public immutable dataHash;
 
     uint64 public immutable expirationTolerance;
+
+    enum ProofSystem {
+        RISC0,
+        SP1
+    }
+
+    ProofSystem public immutable proofSystem;
 
     constructor(
         address _verifier, //#olympix-ignore-no-parameter-validation-in-constructor
         bytes32 _attestationDocVerifierVKey, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 _rootCertHash, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 _pcr0, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 _pcr1, //#olympix-ignore-no-parameter-validation-in-constructor
-        bytes32 _pcr2, //#olympix-ignore-no-parameter-validation-in-constructor
+        bytes32 _dataHash, //#olympix-ignore-no-parameter-validation-in-constructor
         uint64 _expirationTolerance, //#olympix-ignore-no-parameter-validation-in-constructor
-        string memory _syndCommitHash //#olympix-ignore-no-parameter-validation-in-constructor
+        string memory _syndCommitHash, //#olympix-ignore-no-parameter-validation-in-constructor
+        ProofSystem _proofSystem //#olympix-ignore-no-parameter-validation-in-constructor
     ) {
         verifier = _verifier;
         attestationDocVerifierVKey = _attestationDocVerifierVKey;
-        rootCertHash = _rootCertHash;
-        pcr0 = _pcr0;
-        pcr1 = _pcr1;
-        pcr2 = _pcr2;
+        dataHash = _dataHash;
         expirationTolerance = _expirationTolerance;
         syndCommitHash = _syndCommitHash;
+        proofSystem = _proofSystem;
+        require(proofSystem == ProofSystem.RISC0 || proofSystem == ProofSystem.SP1, "invalid proof system");
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
-    /// @param _proofBytes The encoded proof.
-    /// @param _publicValues The encoded public values.
-    function verifyAttestationDocProof(bytes calldata _publicValues, bytes calldata _proofBytes)
+    /// @param proofBytes The encoded proof.
+    /// @param publicValues The encoded public values.
+    function verifyAttestationDocProof(bytes calldata publicValues, bytes calldata proofBytes)
         public
         view
         returns (address)
     {
-        PublicValuesStruct memory publicValues = abi.decode(_publicValues, (PublicValuesStruct));
+        (uint64 validityWindowEnd, address teeSigningKey) = abi.decode(publicValues, (uint64, address));
+        require(block.timestamp <= validityWindowEnd + expirationTolerance, "Validity window has ended");
 
-        require(publicValues.root_cert_hash == rootCertHash, "Root cert hash mismatch");
+        bytes memory publicData = abi.encodePacked(dataHash, validityWindowEnd, teeSigningKey);
 
-        require(block.timestamp >= publicValues.validity_window_start, "Validity window has not started");
-        require(block.timestamp <= publicValues.validity_window_end + expirationTolerance, "Validity window has ended");
+        if (proofSystem == ProofSystem.SP1) {
+            ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, publicData, proofBytes);
+        } else {
+            IRiscZeroVerifier(verifier).verify(proofBytes, attestationDocVerifierVKey, sha256(publicData));
+        }
 
-        require(publicValues.pcr_0 == pcr0, "PCR0 mismatch");
-        require(publicValues.pcr_1 == pcr1, "PCR1 mismatch");
-        require(publicValues.pcr_2 == pcr2, "PCR2 mismatch");
-
-        ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, _publicValues, _proofBytes);
-
-        return publicValues.tee_signing_key;
+        return teeSigningKey;
     }
 }

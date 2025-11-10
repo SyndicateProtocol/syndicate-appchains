@@ -16,9 +16,8 @@ members = [
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro",
+  "synd-withdrawals/synd-tee-attestation-zk-proofs/program",
   "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter",
-  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/program",
-  "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script",
   "test-framework",
 ]
 
@@ -47,27 +46,26 @@ version      = "0.1.0"
 [workspace.dependencies]
 
 # workspace dependencies (members of the workspace)
-common                                    = { path = "synd-translator/crates/common" }
-contract-bindings                         = { path = "shared/contract-bindings" }
-metrics                                   = { path = "synd-translator/crates/metrics" }
-shared                                    = { path = "shared" }
-synd-block-builder                        = { path = "synd-translator/crates/synd-block-builder" }
-synd-chain-ingestor                       = { path = "synd-chain-ingestor" }
-synd-maestro                              = { path = "synd-maestro" }
-synd-mchain                               = { path = "synd-mchain" }
-synd-migration-cli                        = { path = "synd-migration-cli" }
-synd-slotter                              = { path = "synd-translator/crates/synd-slotter" }
-synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
-synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }
-synd-tee-attestation-zk-proofs-submitter  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
-synd-translator                           = { path = "synd-translator/bin/synd-translator" }
-test-framework                            = { path = "test-framework" }
-test-utils                                = { path = "shared/test-utils" }
+common                                   = { path = "synd-translator/crates/common" }
+contract-bindings                        = { path = "shared/contract-bindings" }
+metrics                                  = { path = "synd-translator/crates/metrics" }
+shared                                   = { path = "shared" }
+synd-block-builder                       = { path = "synd-translator/crates/synd-block-builder" }
+synd-chain-ingestor                      = { path = "synd-chain-ingestor" }
+synd-maestro                             = { path = "synd-maestro" }
+synd-mchain                              = { path = "synd-mchain" }
+synd-migration-cli                       = { path = "synd-migration-cli" }
+synd-slotter                             = { path = "synd-translator/crates/synd-slotter" }
+synd-tee-attestation-zk-proofs-aws-nitro = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
+synd-tee-attestation-zk-proofs-submitter = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter" }
+synd-translator                          = { path = "synd-translator/bin/synd-translator" }
+test-framework                           = { path = "test-framework" }
+test-utils                               = { path = "shared/test-utils" }
+
 
 # dependencies
 alloy                              = { version = "1.0.25", default-features = false }
-alloy-rlp                          = "0.3.11"
-alloy-trie                         = { version = "0.9.0" }
+alloy-primitives                   = { version = "1.4.1", default-features = false }
 arc-swap                           = "1.7.1"
 assert_matches                     = "1.5.0"
 async-trait                        = { version = "0.1" }
@@ -78,14 +76,13 @@ brotli                             = "8.0.1"
 byte-unit                          = "5.1.6"
 bytes                              = "1.9.0"
 clap                               = { version = "4.5.26" }
-const-oid                          = "0.9.6"                                                     # needs to be this version - newer ones are not compatible with the latest x509-cert dependency
 derivative                         = "2.2"
 dotenv                             = "0.15.0"
 eyre                               = { version = "0.6.12" }
 figment                            = { version = "0.10.19" }
 fs2                                = { version = "0.4.3" }
 futures-util                       = "0.3.31"
-hex                                = "0.4.3"
+hex                                = { version = "0.4.3", default-features = false }
 http                               = "1.2.0"
 http-body                          = "1.0.1"
 http-body-util                     = "0.1"
@@ -97,22 +94,22 @@ opentelemetry-otlp                 = "0.31.0"
 opentelemetry-semantic-conventions = { version = "0.31.0", features = ["semconv_experimental"] }
 opentelemetry-stdout               = "0.31.0"
 opentelemetry_sdk                  = { version = "0.31.0", features = ["trace"] }
-p384                               = "0.13.1"                                                    # NOTE: this lib is NOT AUDITED
+p384                               = { version = "0.13.1", default-features = false }            # NOTE: this lib is NOT AUDITED
 pin-project-lite                   = "0.2.16"
 prometheus-client                  = { version = "0.23.1" }
 rand                               = { version = "0.9.0" }
 redis                              = "0.32.2"
 reqwest                            = "0.12.12"
-risc0-build                        = "2.1.1"
-risc0-zkvm                         = "2.0.2"
+risc0-binfmt                       = "3.0.2"
+risc0-zkvm                         = { version = "3.0.3", default-features = false }
 rlp                                = "0.6.1"
 serde                              = { version = "1.0.219", default-features = false }
 serde-hex                          = "0.1.0"
+serde_bytes                        = { version = "0.11.19", default-features = false }
 serde_cbor                         = { version = "0.11.2", default-features = false }
 serde_json                         = { version = "1.0.135", default-features = false }
-sp1-build                          = "5.0.0"
-sp1-sdk                            = "5.0.3"
-sp1-zkvm                           = "5.0.0"
+sp1-sdk                            = "5.2.2"
+sp1-zkvm                           = { version = "5.2.2", default-features = false }
 strum                              = "0.27.1"
 strum_macros                       = "0.27.1"
 thiserror                          = { version = "2.0.11" }
@@ -126,7 +123,7 @@ tracing-opentelemetry              = "0.32.0"
 tracing-subscriber                 = "0.3.20"
 url                                = { version = "2.5.4" }
 wiremock                           = "0.6.3"
-x509-cert                          = "0.2.5"
+x509-cert                          = { version = "0.2.5", default-features = false }
 zeroize                            = "1.8.1"
 
 # dev dependencies
@@ -231,3 +228,8 @@ use_self                          = "warn"
 useless_let_if_seq                = "warn"
 while_float                       = "warn"
 zero_sized_map_values             = "warn"
+
+[profile.zkvm]
+codegen-units = 1
+inherits      = "release"
+lto           = "thin"

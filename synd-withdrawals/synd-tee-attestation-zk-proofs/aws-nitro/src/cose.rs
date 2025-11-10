@@ -1,26 +1,17 @@
+extern crate alloc;
+use alloc::vec::Vec;
 use p384::ecdsa::{signature::Verifier, Signature};
-use serde::{de::Error as SerdeDeError, Deserialize, Deserializer};
-use std::collections::HashMap;
-
-fn deserialize_protected_header<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<u8, serde_cbor::Value>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let protected_header_bytes: &[u8] = Deserialize::deserialize(deserializer)?;
-    serde_cbor::from_slice(protected_header_bytes).map_err(SerdeDeError::custom)
-}
+use serde::{Deserialize, Serialize};
 
 /// https://tools.ietf.org/html/rfc8152#section-4.2
 /// https://docs.aws.amazon.com/enclaves/latest/user/verify-root.html#validation-process
 #[derive(Deserialize)]
 pub struct CoseSign1<'a> {
-    #[serde(deserialize_with = "deserialize_protected_header")]
-    pub protected: HashMap<u8, serde_cbor::Value>,
+    #[serde(borrow)]
+    pub protected: &'a [u8],
 
     #[allow(dead_code)]
-    pub unprotected: serde_cbor::Value, // should be empty
+    pub unprotected: serde::de::IgnoredAny,
 
     // the attestation document
     #[serde(borrow)]
@@ -41,38 +32,22 @@ impl<'a> CoseSign1<'a> {
             Some(_) => return Err("Tag error: Expected CBOR Tag 18 or no tag for CoseSign1"),
         }
 
-        // protected is expected to have the signature algorithm {1: -35}
-        // Key 1: Algorithm
-        // Value -35: ES384 (ECDSA with SHA-384)
-        // Now check the parsed map
-        if tagged_cose_sign1
-            .value
-            .protected
-            .get(&1)
-            .is_none_or(|v| *v != serde_cbor::Value::Integer(-35i128))
-        {
-            return Err("Protected header algorithm mismatch or missing. Expected ES384 (-35).");
-        }
-
-        // unprotected is exptected to be empty
-        // if tagged_cose_sign1.value.unprotected != serde_cbor::Value::Null {
-        //     return Err("Unprotected header is not empty");
-        // }
-
         Ok(tagged_cose_sign1.value)
+    }
+
+    pub fn signed_message_bytes(&self) -> Vec<u8> {
+        serde_cbor::to_vec(&CoseSig("Signature1", self.protected, Default::default(), self.payload))
+            .unwrap()
     }
 
     pub fn verify_signature(
         &self,
         pub_key: &p384::ecdsa::VerifyingKey,
     ) -> Result<(), &'static str> {
-        // Call the unified signed_message_bytes
-        let signed_message_to_verify = signed_message_bytes(self);
-
         let signature = Signature::from_bytes(self.signature.into())
             .map_err(|_| "Signature deserialization error")?;
         pub_key
-            .verify(&signed_message_to_verify, &signature)
+            .verify(&self.signed_message_bytes(), &signature)
             .map_err(|_| "Signature verification failed")
     }
 }
@@ -86,33 +61,18 @@ impl<'a> CoseSign1<'a> {
 ///   external_aad: bstr,
 ///   payload: bstr
 /// ]
-fn signed_message_bytes(cose: &CoseSign1<'_>) -> Vec<u8> {
-    let protected_map_content_bytes = if cose.protected.is_empty() {
-        // If protected headers are empty, the Sig_structure requires an empty bstr (0x40).
-        // Create an empty byte vector for this case.
-        Vec::new()
-    } else {
-        // If protected headers are present, serialize the map (e.g., to A1013822).
-        // These bytes will be the content of the bstr.
-        serde_cbor::to_vec(&cose.protected).unwrap()
-    };
-
-    // Construct the Sig_structure as an array of serde_cbor::Value
-    let sig_structure_values: [serde_cbor::Value; 4] = [
-        serde_cbor::Value::Text("Signature1".to_string()),
-        serde_cbor::Value::Bytes(protected_map_content_bytes),
-        serde_cbor::Value::Bytes(Vec::new()), // external_aad is an empty bstr
-        serde_cbor::Value::Bytes(cose.payload.to_vec()),
-    ];
-
-    // Serialize the array of Values. serde_cbor will correctly form
-    // an array where each Value::Bytes becomes a bstr, and Value::Text a tstr.
-    serde_cbor::to_vec(&sig_structure_values).unwrap()
-}
+#[derive(Serialize)]
+struct CoseSig<'a>(
+    &'a str,
+    #[serde(with = "serde_bytes")] &'a [u8],
+    #[serde(with = "serde_bytes")] &'a [u8],
+    #[serde(with = "serde_bytes")] &'a [u8],
+);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     // Public domain work: Pride and Prejudice by Jane Austen, taken from https://www.gutenberg.org/files/1342/1342.txt
     const TEXT: &[u8] = b"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.";
@@ -148,25 +108,19 @@ mod tests {
         let cose_doc = CoseSign1::from_bytes(bytes).unwrap();
 
         assert_eq!(cose_doc.payload, TEXT);
-        // The protected field should contain the deserialized map
-        let mut expected_protected_map = HashMap::<u8, serde_cbor::Value>::new();
-        expected_protected_map.insert(1, serde_cbor::Value::Integer(-35));
-        assert_eq!(cose_doc.protected, expected_protected_map);
+        assert_eq!(cose_doc.protected, &[0xA1, 0x01, 0x38, 0x22]);
     }
 
     #[test]
     fn test_sig_structure_bytes_generation() {
-        let mut protected_map = HashMap::<u8, serde_cbor::Value>::new();
-        protected_map.insert(1, serde_cbor::Value::Integer(-35)); // ES384
-
         let cose_sign1_obj = CoseSign1 {
-            protected: protected_map,
-            unprotected: serde_cbor::Value::Map(std::collections::BTreeMap::new()), /* Empty map for unprotected */
+            protected: &[0xA1, 0x01, 0x38, 0x22],
+            unprotected: serde::de::IgnoredAny,
             payload: TEXT,
             signature: &[], // Signature not used for this test
         };
 
-        let sig_structure = signed_message_bytes(&cose_sign1_obj);
+        let sig_structure = cose_sign1_obj.signed_message_bytes();
 
         // Expected Sig_structure from RFC8152 C.2.1 (Sign1 example)
         // (

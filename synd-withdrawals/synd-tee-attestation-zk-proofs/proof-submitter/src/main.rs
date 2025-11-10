@@ -24,7 +24,7 @@
 use alloy::{
     hex,
     network::EthereumWallet,
-    primitives::{keccak256, Address},
+    primitives::{fixed_bytes, Address, Bytes, B256},
     providers::{Provider, ProviderBuilder},
     signers::local::PrivateKeySigner,
 };
@@ -34,16 +34,20 @@ use contract_bindings::synd::{
     tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance},
 };
 use shared::parse::parse_address;
-use sp1_sdk::{HashableKey, ProverClient};
 use std::{path::PathBuf, str::FromStr, time::Duration};
-use synd_tee_attestation_zk_proofs_aws_nitro::{verify_aws_nitro_attestation, ValidationResult};
+use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
 use synd_tee_attestation_zk_proofs_submitter::{
-    generate_proof, get_attestation_doc, pem_to_der, GenerateProofResult, ProofSubmitterError,
-    ProofSystem, AWS_NITRO_ROOT_CERT_PEM,
+    generate_proof, get_attestation_doc, get_vkey, ProofSubmitterError, ProofSystem,
 };
-use tracing::{info, level_filters::LevelFilter};
-use tracing_subscriber::EnvFilter;
+use tracing::{error, info};
 use zeroize::{Zeroize, Zeroizing};
+
+const ROOT_CERT_HASH: B256 =
+    fixed_bytes!("0x311d96fcd5c5e0ccf72ef548e2ea7d4c0cd53ad7c4cc49e67471aed41d61f185");
+
+/// from <https://docs.rs/risc0-zkos-v1compat/2.2.0/src/risc0_zkos_v1compat/lib.rs.html>
+/// the elf file is located in risc0/zkos/v1compat/elfs/v1compat.elf
+const V1COMPAT_ELF: &[u8] = include_bytes!("../elfs/v1compat.elf");
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -60,7 +64,7 @@ pub struct Args {
     #[arg(long)]
     root_certificate_path: Option<PathBuf>,
 
-    #[arg(long, value_enum, default_value = "groth16")]
+    #[arg(long, value_enum, default_value = "sp1")]
     proof_system: ProofSystem,
 
     /// The address of the `TeeKeyManager` contract to submit the proof to
@@ -94,14 +98,9 @@ pub struct Args {
 
 #[tokio::main]
 async fn main() {
-    // setup tracing subscriber, default to INFO level
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::builder().with_default_directive(LevelFilter::INFO.into()).from_env_lossy(),
-        )
-        .init();
+    _ = shared::tracing::setup_global_logging();
     let args = Args::parse();
-    match run(args, generate_proof).await {
+    match run(args, generate_proof, get_vkey, get_elf_bytes).await {
         Ok(_) => (),
         Err(e) => {
             eprintln!("Error: {e}");
@@ -114,11 +113,13 @@ async fn main() {
 async fn run(
     args: Args,
     generate_proof_fn: impl Fn(
-        Vec<u8>,
-        Vec<u8>,
+        &[u8],
         ProofSystem,
-        Vec<u8>,
-    ) -> Result<GenerateProofResult, ProofSubmitterError>,
+        &[u8],
+        &[u8; 60],
+    ) -> Result<Vec<u8>, ProofSubmitterError>,
+    get_vkey_fn: impl Fn(ProofSystem, &[u8]) -> [u8; 32],
+    get_elf_bytes_fn: impl Fn(PathBuf, ProofSystem) -> Result<Vec<u8>, ProofSubmitterError>,
 ) -> Result<(), ProofSubmitterError> {
     let attestation_doc_hex = match (args.attestation_document, args.enclave_rpc_url) {
         (Some(attestation_document), None) => attestation_document,
@@ -133,23 +134,35 @@ async fn run(
     info!("Attestation doc: {attestation_doc_hex}");
     let cbor_attestation_doc = hex::decode(attestation_doc_hex)?;
 
-    // get root certificate DER
-    let der_root_cert = get_der_root_cert(args.root_certificate_path).await?;
-
     // make sure the attestation is vaild for the provided root certificate
-    let attestation_result = verify_aws_nitro_attestation(&cbor_attestation_doc, &der_root_cert)
+    let attestation_result = verify_aws_nitro_attestation(&cbor_attestation_doc)
         .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
-    info!("Attestation valid. Signing key: {}", attestation_result.tee_signing_key);
+    let public_data = attestation_result.public_data();
 
-    let elf_bytes = get_elf_bytes(args.elf_file_path).await?;
+    if attestation_result.root_cert_hash != ROOT_CERT_HASH {
+        return Err(ProofSubmitterError::RootCertificateHashMismatch(
+            attestation_result.root_cert_hash,
+            ROOT_CERT_HASH,
+        ))
+    }
+
+    info!(
+        "Attestation valid - signing key: {}, public data: {}, root cert hash: {}",
+        attestation_result.tee_signing_key,
+        hex::encode(public_data),
+        attestation_result.root_cert_hash
+    );
+
+    let elf_bytes = get_elf_bytes_fn(args.elf_file_path, args.proof_system)?;
+    let vk_bytes = get_vkey_fn(args.proof_system, &elf_bytes);
+    info!("Vkey: 0x{}", hex::encode(vk_bytes));
 
     let Some(chain_rpc_url) = args.chain_rpc_url else {
         info!("Skipping submission to chain");
 
         let proof =
-            generate_proof_fn(cbor_attestation_doc, der_root_cert, args.proof_system, elf_bytes)?;
-        info!("Public values: 0x{}", hex::encode(&proof.public_values));
-        info!("Proof: 0x{}", hex::encode(&proof.proof));
+            generate_proof_fn(&cbor_attestation_doc, args.proof_system, &elf_bytes, &public_data)?;
+        info!("Proof: 0x{}", hex::encode(&proof));
         return Ok(());
     };
     info!("Submitting proof to chain");
@@ -160,15 +173,6 @@ async fn run(
         .connect(chain_rpc_url.as_str())
         .await?;
     private_key.zeroize(); // zeroize the private key after use
-
-    let vk_bytes = if cfg!(not(debug_assertions)) {
-        // only in release builds, otherwise `ProviderClient` setup will fail
-        let (_, vk) = ProverClient::from_env().setup(&elf_bytes);
-        info!("using vkey: {}", vk.bytes32());
-        vk.bytes32_raw()
-    } else {
-        [0u8; 32]
-    };
 
     let contract_address = match (args.contract_address, args.deploy_new_contract_with_sp1_verifier)
     {
@@ -183,16 +187,14 @@ async fn run(
                 provider.clone(),
                 verifier_address,
                 vk_bytes.into(),
-                keccak256(&der_root_cert),
-                keccak256(&attestation_result.pcr_0),
-                keccak256(&attestation_result.pcr_1),
-                keccak256(&attestation_result.pcr_2),
+                attestation_result.data_hash(),
                 args.deploy_expiration_tolerance.as_secs(),
                 git_hash.into(),
+                args.proof_system as u8,
             )
             .await
             .map_err(|e| {
-                info!("Error deploying attestation doc verifier contract: {e}");
+                error!("Error deploying attestation doc verifier contract: {e}");
                 ProofSubmitterError::DeployNewContract(e)
             })?;
             info!(
@@ -206,7 +208,7 @@ async fn run(
             )
             .await
             .map_err(|e| {
-                info!("Error deploying tee key manager contract: {e}");
+                error!("Error deploying tee key manager contract: {e}");
                 ProofSubmitterError::DeployNewContract(e)
             })?;
             info!("Tee key manager contract deployed to: {}", contract.address());
@@ -218,90 +220,82 @@ async fn run(
         }
     };
 
+    info!("contract address: {}", contract_address);
     let contract = TeeKeyManager::new(contract_address, provider);
 
     // assert our ELF file matches the contract's vkey before generating the proof
-    assert_vkey_and_prc_values_match(&vk_bytes, attestation_result, contract.clone()).await?;
+    assert_vkey_and_data_hash_match(
+        &vk_bytes,
+        &attestation_result.data_hash(),
+        args.proof_system,
+        contract.clone(),
+    )
+    .await?;
 
     let proof =
-        generate_proof_fn(cbor_attestation_doc, der_root_cert, args.proof_system, elf_bytes)?;
-
-    info!("Public values: 0x{}", hex::encode(&proof.public_values));
-    info!("Proof: 0x{}", hex::encode(&proof.proof));
-
-    submit_proof_to_chain(contract, proof).await?;
+        generate_proof_fn(&cbor_attestation_doc, args.proof_system, &elf_bytes, &public_data)?;
+    info!("Proof: 0x{}", hex::encode(&proof));
+    submit_proof_to_chain(contract, attestation_result.calldata().into(), proof.into()).await?;
     Ok(())
 }
 
-async fn get_elf_bytes(elf_file_path: PathBuf) -> Result<Vec<u8>, ProofSubmitterError> {
-    std::fs::read(elf_file_path).map_err(|e| {
-        info!("Error reading ELF file: {e}");
+fn get_elf_bytes(
+    elf_file_path: PathBuf,
+    proof_system: ProofSystem,
+) -> Result<Vec<u8>, ProofSubmitterError> {
+    let elf = std::fs::read(elf_file_path).map_err(|e| {
+        error!("Error reading ELF file: {e}");
         ProofSubmitterError::ReadElfFile(e)
+    })?;
+    Ok(match proof_system {
+        ProofSystem::RISC0 => risc0_binfmt::ProgramBinary::new(&elf, V1COMPAT_ELF).encode(),
+        ProofSystem::SP1 => elf,
     })
 }
 
-async fn get_der_root_cert(
-    root_certificate_path: Option<PathBuf>,
-) -> Result<Vec<u8>, ProofSubmitterError> {
-    let pem_root_cert = if let Some(root_certificate_path) = root_certificate_path {
-        std::fs::read(root_certificate_path).map_err(|e| {
-            info!("Error reading root certificate: {e}");
-            ProofSubmitterError::ReadRootCertificate(e)
-        })?
-    } else {
-        AWS_NITRO_ROOT_CERT_PEM.to_vec()
-    };
-
-    pem_to_der(&pem_root_cert)
-}
-
-async fn assert_vkey_and_prc_values_match<P: Provider>(
+async fn assert_vkey_and_data_hash_match<P: Provider>(
     vkey: &[u8; 32],
-    attestation_result: ValidationResult,
+    data_hash: &B256,
+    proof_system: ProofSystem,
     contract: TeeKeyManagerInstance<P>,
 ) -> Result<(), ProofSubmitterError> {
     let att_doc_verifier_address = contract.attestationDocVerifier().call().await.map_err(|e| {
-        info!("Error getting attestation doc verifier address: {e}");
+        error!("Error getting attestation doc verifier address: {e}");
         ProofSubmitterError::GetAttestationDocVerifierAddress(e)
     })?;
     let att_doc_verifier_contract =
         AttestationDocVerifier::new(att_doc_verifier_address, contract.provider());
 
+    let att_doc_proof_system =
+        att_doc_verifier_contract.proofSystem().call().await.map_err(|e| {
+            error!("Error getting attestation doc verifier proof system: {e}");
+            ProofSubmitterError::GetAttestationDocVerifierProofSystem(e)
+        })?;
+
+    // match proof system
+    if att_doc_proof_system != proof_system as u8 {
+        return Err(ProofSubmitterError::ProofSystemMismatch);
+    }
+
     let att_doc_verifier_vkey =
         att_doc_verifier_contract.attestationDocVerifierVKey().call().await.map_err(|e| {
-            info!("Error getting attestation doc verifier vkey hash: {e}");
+            error!("Error getting attestation doc verifier vkey hash: {e}");
             ProofSubmitterError::GetAttestationDocVerifierVKeyHash(e)
         })?;
 
-    //match vkey (only in release builds)
-    if cfg!(not(debug_assertions)) && vkey != att_doc_verifier_vkey {
+    // match vkey
+    if vkey != att_doc_verifier_vkey {
         return Err(ProofSubmitterError::VkeyMismatch);
     }
 
-    //match pcr values
-    if keccak256(attestation_result.pcr_0) !=
-        att_doc_verifier_contract.pcr0().call().await.map_err(|e| {
-            info!("Error getting pcr0: {e}");
-            ProofSubmitterError::Pcr0Mismatch
-        })?
-    {
-        return Err(ProofSubmitterError::Pcr0Mismatch);
-    }
-    if keccak256(attestation_result.pcr_1) !=
-        att_doc_verifier_contract.pcr1().call().await.map_err(|e| {
-            info!("Error getting pcr1: {e}");
-            ProofSubmitterError::Pcr1Mismatch
-        })?
-    {
-        return Err(ProofSubmitterError::Pcr1Mismatch);
-    }
-    if keccak256(attestation_result.pcr_2) !=
-        att_doc_verifier_contract.pcr2().call().await.map_err(|e| {
-            info!("Error getting pcr2: {e}");
-            ProofSubmitterError::Pcr2Mismatch
-        })?
-    {
-        return Err(ProofSubmitterError::Pcr2Mismatch);
+    // match data hash
+    let expected_data_hash = att_doc_verifier_contract.dataHash().call().await.map_err(|e| {
+        error!("Error getting data hash: {e}");
+        ProofSubmitterError::DataHashMismatch
+    })?;
+    if data_hash != &expected_data_hash {
+        error!("Data hash mismatch: got {}, expected {}", data_hash, expected_data_hash);
+        return Err(ProofSubmitterError::DataHashMismatch);
     }
 
     Ok(())
@@ -309,21 +303,22 @@ async fn assert_vkey_and_prc_values_match<P: Provider>(
 
 async fn submit_proof_to_chain<P: Provider>(
     contract: TeeKeyManagerInstance<P>,
-    proof: GenerateProofResult,
+    public_values: Bytes,
+    proof: Bytes,
 ) -> Result<(), ProofSubmitterError> {
-    let tx = contract.addKey(proof.public_values.into(), proof.proof.into());
+    let tx = contract.addKey(public_values, proof);
 
     let receipt = tx
         .send()
         .await
         .map_err(|e| {
-            info!("Error sending transaction: {e}");
+            error!("Error sending transaction: {e}");
             ProofSubmitterError::SubmitProofToChain(e.to_string())
         })?
         .get_receipt()
         .await
         .map_err(|e| {
-            info!("Error getting receipt: {e}");
+            error!("Error getting receipt: {e}");
             ProofSubmitterError::SubmitProofToChain(e.to_string())
         })?;
 
@@ -339,92 +334,37 @@ async fn submit_proof_to_chain<P: Provider>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{
-        primitives::FixedBytes,
-        providers::{ext::AnvilApi, WalletProvider},
+    use alloy::providers::ext::AnvilApi;
+    use contract_bindings::synd::{
+        attestation_doc_verifier::AttestationDocVerifier, dummy_sp1_verifier::DummySP1Verifier,
+        tee_key_manager::TeeKeyManager,
     };
-    use contract_bindings::{
-        sp1::{sp1_verifier_gateway::SP1VerifierGateway, sp1_verifier_groth16::SP1VerifierGroth16},
-        synd::{attestation_doc_verifier::AttestationDocVerifier, tee_key_manager::TeeKeyManager},
-    };
-    use serde::Deserialize;
-    use synd_tee_attestation_zk_proofs_sp1_script::shared::TEE_ATTESTATION_VALIDATION_ELF_FILE;
     use test_utils::{anvil::start_anvil, chain_info::PRIVATE_KEY};
 
-    // NOTE this test relies on the groth16 fixture in synd-contracts (that is generated by
-    // executing the binary in sp1/script/evm )
     #[tokio::test]
     async fn post_attestation_proof_onchain() {
+        shared::tracing::setup_global_logging().unwrap();
+
         let chain_info = start_anvil(1).await.unwrap();
         let provider = chain_info.provider;
         provider.anvil_set_auto_mine(true).await.unwrap();
         provider.anvil_set_time(1748509951).await.unwrap();
 
-        let sp1_verifier_gateway_contract =
-            SP1VerifierGateway::deploy(provider.clone(), provider.default_signer_address())
-                .await
-                .unwrap();
-        let sp1_verifier_contract = SP1VerifierGroth16::deploy(provider.clone()).await.unwrap();
-
-        let version = sp1_verifier_contract.VERSION().call().await.unwrap();
-        assert_eq!(version, "v5.0.0");
-
-        sp1_verifier_gateway_contract
-            .addRoute(*sp1_verifier_contract.address())
-            .send()
-            .await
-            .unwrap()
-            .watch()
-            .await
-            .unwrap();
-
-        #[derive(Deserialize, Debug)]
-        #[serde(rename_all = "camelCase")]
-        struct Groth16Fixture {
-            vkey: String,
-            public_values: String,
-            proof: String,
-            root_cert_hash: String,
-            pcr0: String,
-            pcr1: String,
-            pcr2: String,
-        }
-
-        let fixture_str = include_str!(
-            "../../../../synd-contracts/test/withdrawal/fixtures/groth16-fixture.json"
-        );
-        let fixture: Groth16Fixture = serde_json::from_str(fixture_str).unwrap();
-
-        let attestation_doc_verifier_v_key = FixedBytes::from_str(&fixture.vkey).unwrap();
-        let root_cert_hash = FixedBytes::from_str(&fixture.root_cert_hash).unwrap();
-        let pcr0 = FixedBytes::from_str(&fixture.pcr0).unwrap();
-        let pcr1 = FixedBytes::from_str(&fixture.pcr1).unwrap();
-        let pcr2 = FixedBytes::from_str(&fixture.pcr2).unwrap();
-
-        let proof_bytes =
-            hex::decode(fixture.proof.strip_prefix("0x").unwrap_or(&fixture.proof)).unwrap();
-        let public_values_bytes =
-            hex::decode(fixture.public_values.strip_prefix("0x").unwrap_or(&fixture.public_values))
-                .unwrap();
-
-        let expiration_tolerance = 3600; // 1 hour
-
+        let verifier = DummySP1Verifier::deploy(&provider).await.unwrap();
         let attestation_doc_verifier_contract = AttestationDocVerifier::deploy(
-            provider.clone(),
-            *sp1_verifier_gateway_contract.address(),
-            attestation_doc_verifier_v_key,
-            root_cert_hash,
-            pcr0,
-            pcr1,
-            pcr2,
-            expiration_tolerance,
+            &provider,
+            verifier.address().to_owned(),
+            Default::default(),
+            fixed_bytes!("0xb81743c43da8243554a4c316218f9ae15786a3e5c2e19ed404244df90fc5edc5"),
+            0,
             String::new(),
+            ProofSystem::SP1 as u8,
         )
         .await
         .unwrap();
 
         let key_mgr_contract =
-            TeeKeyManager::deploy(provider.clone(), *attestation_doc_verifier_contract.address())
+            TeeKeyManager::deploy(&provider, *attestation_doc_verifier_contract.address())
                 .await
                 .unwrap();
 
@@ -450,27 +390,30 @@ mod tests {
             enclave_rpc_url: Some(mock_enclave_server.url()),
             attestation_document: None,
             root_certificate_path: None,
-            proof_system: ProofSystem::Groth16,
+            proof_system: ProofSystem::SP1,
             contract_address: Some(*key_mgr_contract.address()),
             deploy_new_contract_with_sp1_verifier: None,
             deploy_expiration_tolerance: Duration::from_secs(3600),
             chain_rpc_url: Some(chain_info.ws_url.clone()),
             private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
-            elf_file_path: TEE_ATTESTATION_VALIDATION_ELF_FILE.into(),
+            elf_file_path: "".into(),
         };
 
-        let mock_generate_proof = |_: Vec<u8>,
-                                   _: Vec<u8>,
-                                   _: ProofSystem,
-                                   _: Vec<u8>|
-         -> Result<GenerateProofResult, ProofSubmitterError> {
-            Ok(GenerateProofResult {
-                proof: proof_bytes.clone(),
-                public_values: public_values_bytes.clone(),
-            })
-        };
+        let mock_generate_proof =
+            |_: &[u8],
+             _: ProofSystem,
+             _: &[u8],
+             _: &[u8; 60]|
+             -> Result<Vec<u8>, ProofSubmitterError> { Ok(Default::default()) };
 
-        let result = run(args, mock_generate_proof).await;
+        let mock_get_vkey = |_: ProofSystem, _: &[u8]| -> [u8; 32] { Default::default() };
+
+        let mock_get_elf_bytes =
+            |_: PathBuf, _: ProofSystem| -> Result<Vec<u8>, ProofSubmitterError> {
+                Ok(Default::default())
+            };
+
+        let result = run(args, mock_generate_proof, mock_get_vkey, mock_get_elf_bytes).await;
         drop(mock_enclave_server);
 
         assert!(result.is_ok(), "run function failed: {:?}", result.err());

@@ -1,8 +1,10 @@
 //! The `proof-submitter` library contains the functions for obtaining TEE
 //! attestation and generating ZK proofs.
+#![allow(clippy::unwrap_used)]
 
 use alloy::{
     hex,
+    primitives::B256,
     providers::PendingTransactionError,
     signers::local::LocalSignerError,
     transports::{RpcError, TransportErrorKind},
@@ -12,9 +14,9 @@ use jsonrpsee::{
     core::client::ClientT,
     http_client::{HeaderMap, HeaderValue, HttpClientBuilder},
 };
-use sp1_sdk::{ProverClient, SP1Stdin};
+use sp1_sdk::{HashableKey as _, ProverClient, SP1Stdin};
 use std::time::Duration;
-use x509_cert::der::{DecodePem, Encode};
+use tracing::{error, info};
 
 #[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
@@ -36,11 +38,8 @@ pub enum ProofSubmitterError {
     #[error("Failed to decode attestation doc")]
     DecodeAttestationDoc(#[from] hex::FromHexError),
 
-    #[error("Failed to read root certificate")]
-    ReadRootCertificate(std::io::Error),
-
-    #[error("Failed to parse root certificate")]
-    ParseRootCertificate(#[from] x509_cert::der::Error),
+    #[error("Root certificate hash mismatch: got {0}, expected {1}")]
+    RootCertificateHashMismatch(B256, B256),
 
     #[error("Invalid attestation document: {0:?}")]
     InvalidAttestationDocument(synd_tee_attestation_zk_proofs_aws_nitro::VerificationError),
@@ -69,17 +68,23 @@ pub enum ProofSubmitterError {
     #[error("Failed to get attestation doc verifier vkey hash")]
     GetAttestationDocVerifierVKeyHash(alloy::contract::Error),
 
+    #[error("Failed to get attestation doc verifier proof system")]
+    GetAttestationDocVerifierProofSystem(alloy::contract::Error),
+
+    #[error("Vkey mismatch")]
+    ProofSystemMismatch,
+
     #[error("Vkey mismatch")]
     VkeyMismatch,
 
-    #[error("Pcr0 mismatch")]
-    Pcr0Mismatch,
+    #[error("Data hash mismatch")]
+    DataHashMismatch,
 
-    #[error("Pcr1 mismatch")]
-    Pcr1Mismatch,
+    #[error("Public data mismatch")]
+    PublicDataMismatch,
 
-    #[error("Pcr2 mismatch")]
-    Pcr2Mismatch,
+    #[error("Receipt not Groth16")]
+    ReceiptNotGroth16,
 
     #[error("Failed to deploy new contracts: {0}")]
     DeployNewContract(alloy::contract::Error),
@@ -95,40 +100,85 @@ pub enum ProofSubmitterError {
 /// Enum representing the available proof systems
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum ProofSystem {
-    Plonk,
-    Groth16,
+    RISC0,
+    SP1,
 }
 
-#[allow(missing_docs)]
-#[derive(Debug)]
-pub struct GenerateProofResult {
-    pub proof: Vec<u8>,
-    pub public_values: Vec<u8>,
+/// Get vkey
+pub fn get_vkey(proof_system: ProofSystem, elf_bytes: &[u8]) -> [u8; 32] {
+    match proof_system {
+        ProofSystem::RISC0 => {
+            risc0_binfmt::compute_image_id(elf_bytes).unwrap().as_bytes().try_into().unwrap()
+        }
+        ProofSystem::SP1 => {
+            let client = ProverClient::from_env();
+            let (_, vk) = client.setup(elf_bytes);
+            vk.bytes32_raw()
+        }
+    }
 }
 
 /// Generate a ZK proof for the TEE attestation document
+#[allow(clippy::cognitive_complexity)]
 pub fn generate_proof(
-    cbor_attestation_doc: Vec<u8>,
-    der_root_cert: Vec<u8>,
+    cbor_attestation_doc: &[u8],
     proof_system: ProofSystem,
-    elf_bytes: Vec<u8>,
-) -> Result<GenerateProofResult, ProofSubmitterError> {
-    // Set up the prover client.
-    let client = ProverClient::from_env();
+    elf_bytes: &[u8],
+    public_data: &[u8; 60],
+) -> Result<Vec<u8>, ProofSubmitterError> {
+    match proof_system {
+        ProofSystem::SP1 => {
+            // Set up the prover client.
+            let client = ProverClient::from_env();
+            let (pk, _) = client.setup(elf_bytes);
 
-    let (pk, _) = client.setup(&elf_bytes);
+            let mut stdin = SP1Stdin::new();
+            stdin.write(&cbor_attestation_doc);
+            let proof = client
+                .prove(&pk, &stdin)
+                .groth16()
+                .run()
+                .map_err(|e| ProofSubmitterError::GenerateProof(e.to_string()))?;
+            info!("sp1 zkvm version: {}", proof.sp1_version);
+            if public_data != proof.public_values.as_slice() {
+                error!(
+                    "public data mismatch: got {}, expected {}",
+                    hex::encode(proof.public_values),
+                    hex::encode(public_data),
+                );
+                return Err(ProofSubmitterError::PublicDataMismatch)
+            }
 
-    let mut stdin = SP1Stdin::new();
-    stdin.write(&cbor_attestation_doc);
-    stdin.write(&der_root_cert);
+            Ok(proof.bytes())
+        }
+        ProofSystem::RISC0 => {
+            let env = risc0_zkvm::ExecutorEnv::builder()
+                .write(&cbor_attestation_doc)
+                .unwrap()
+                .build()
+                .map_err(|e| ProofSubmitterError::GenerateProof(e.to_string()))?;
+            let prover = risc0_zkvm::default_prover();
 
-    let proof = match proof_system {
-        ProofSystem::Plonk => client.prove(&pk, &stdin).plonk().run(),
-        ProofSystem::Groth16 => client.prove(&pk, &stdin).groth16().run(),
+            let receipt = prover
+                .prove_with_opts(env, elf_bytes, &risc0_zkvm::ProverOpts::groth16())
+                .map_err(|e| ProofSubmitterError::GenerateProof(e.to_string()))?
+                .receipt;
+            info!("risc0 verifier parameters digest: {}", receipt.metadata.verifier_parameters);
+            receipt.verify(get_vkey(ProofSystem::RISC0, elf_bytes)).unwrap();
+            if public_data != receipt.journal.bytes.as_slice() {
+                error!(
+                    "public data mismatch: got {}, expected {}",
+                    hex::encode(receipt.journal.bytes),
+                    hex::encode(public_data),
+                );
+                return Err(ProofSubmitterError::PublicDataMismatch)
+            }
+            match receipt.inner {
+                risc0_zkvm::InnerReceipt::Groth16(x) => Ok(x.seal),
+                _ => Err(ProofSubmitterError::ReceiptNotGroth16),
+            }
+        }
     }
-    .map_err(|e| ProofSubmitterError::GenerateProof(e.to_string()))?;
-
-    Ok(GenerateProofResult { proof: proof.bytes(), public_values: proof.public_values.to_vec() })
 }
 
 /// Get the TEE attestation document from the enclave RPC server
@@ -154,16 +204,6 @@ pub async fn get_signer_public_key(enclave_rpc_url: String) -> Result<String, Pr
         .build(enclave_rpc_url)?;
 
     Ok(client.request::<String, [(); 0]>("enclave_signerPublicKey", []).await?)
-}
-
-/// The AWS Nitro root certificate in PEM format
-pub const AWS_NITRO_ROOT_CERT_PEM: &[u8] =
-    include_bytes!("../../aws-nitro/src/testdata/aws_nitro_root.pem");
-
-/// Convert a PEM-encoded certificate to DER-encoded certificate
-pub fn pem_to_der(pem: &[u8]) -> Result<Vec<u8>, ProofSubmitterError> {
-    let cert = x509_cert::Certificate::from_pem(pem)?;
-    Ok(cert.to_der()?)
 }
 
 #[cfg(test)]

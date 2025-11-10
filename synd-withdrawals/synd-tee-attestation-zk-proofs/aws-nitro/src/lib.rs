@@ -1,3 +1,5 @@
+#![no_std]
+
 mod attestation_document;
 mod cose;
 

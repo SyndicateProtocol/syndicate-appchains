@@ -1,73 +1,51 @@
 use crate::cose::CoseSign1;
-use alloy::{primitives::Address, sol};
-use const_oid::db::rfc5912::ECDSA_WITH_SHA_384;
+use alloy_primitives::{keccak256, Address, Keccak256, B256};
 use p384::{
     ecdsa::{signature::Verifier as P384Verifier, Signature as P384Signature},
-    pkcs8::DecodePublicKey,
+    pkcs8::DecodePublicKey as _,
 };
 use serde::Deserialize;
-use std::collections::HashMap;
 use x509_cert::{
     certificate::CertificateInner,
-    der::{Decode, Encode},
+    der::{oid::db::rfc5912::ECDSA_WITH_SHA_384, Decode, Encode},
 };
-
-// SP1 specific
-sol! {
-  /// The public values encoded as a struct that can be easily deserialized inside Solidity.
-  /// must match the definition in `synd-contracts/src/withdrawal/AttestationDocVerifier.sol`
-  struct PublicValuesStruct {
-      bytes32 root_cert_hash;
-      uint64 validity_window_start;
-      uint64 validity_window_end;
-      // https://docs.aws.amazon.com/enclaves/latest/user/set-up-attestation.html#where
-      // each pcr is 48 bytes, that is subsequently keccak256'd
-      bytes32 pcr_0;
-      bytes32 pcr_1;
-      bytes32 pcr_2;
-      address tee_signing_key;
-  }
-}
 
 #[derive(Debug)]
 pub enum VerificationError {
-    InvalidCoseSign1Signature(String),
-    DocumentParseError(String),
-    CoseSign1ParseError(String),
-    CaBundleParseError(String),
-    CertificateParseError(String),
+    DocumentParseError(serde_cbor::Error),
+    CoseSign1ParseError(&'static str),
+    CertificateParseError(x509_cert::spki::Error),
+    CertificateSignatureError(p384::ecdsa::Error),
     InvalidRootCert,
-    ValidityError(String),
-    InvalidCertSignatureAlgorithm(String),
+    InvalidSignature,
     MandatoryFieldsMissing,
     BadDigest,
-    BadTimestamp,
-    BadPCRsLen,
-    BadPCRIndex,
     BadPCRValue,
     BadCABundleItemLen,
     BadPublicKeyLen,
-    BadUserDataLen,
-    BadNonceLen,
     PublicKeyMissing,
 }
 
-const MAX_PCR_COUNT: usize = 32;
 const MAX_CABUNDLE_COUNT: usize = 4;
+
+// order matters here - CBOR uses the int offset as the deserialization key
+#[derive(Deserialize)]
+struct Pcrs<'a> {
+    pcr_0: &'a [u8],
+    pcr_1: &'a [u8],
+    pcr_2: &'a [u8],
+}
 
 /// https://docs.aws.amazon.com/enclaves/latest/user/verify-root.html#doc-def
 #[derive(Deserialize)]
 struct AwsNitroAttestationDocument<'a> {
-    #[serde(borrow)]
-    module_id: &'a str,
+    timestamp: u64,
 
     #[serde(borrow)]
     digest: &'a str,
 
-    timestamp: u64,
-
     #[serde(borrow)]
-    pcrs: HashMap<u8, &'a [u8]>, // SHA384 hash is 384 bits = 48 bytes
+    pcrs: Pcrs<'a>,
 
     #[serde(borrow)]
     certificate: &'a [u8], // encoded as DER
@@ -78,25 +56,17 @@ struct AwsNitroAttestationDocument<'a> {
     //--- optional fields---
     #[serde(borrow)]
     public_key: Option<&'a [u8]>,
-
-    #[serde(borrow)]
-    user_data: Option<&'a [u8]>,
-
-    #[serde(borrow)]
-    nonce: Option<&'a [u8]>,
 }
 
 impl AwsNitroAttestationDocument<'_> {
     fn parse_document(
         input: &mut [u8],
     ) -> Result<AwsNitroAttestationDocument<'_>, VerificationError> {
-        let doc: AwsNitroAttestationDocument = serde_cbor::de::from_mut_slice(input)
-            .map_err(|e| VerificationError::DocumentParseError(e.to_string()))?;
+        let doc: AwsNitroAttestationDocument =
+            serde_cbor::de::from_mut_slice(input).map_err(VerificationError::DocumentParseError)?;
 
-        if doc.module_id.is_empty() ||
-            doc.digest.is_empty() ||
+        if doc.digest.is_empty() ||
             doc.timestamp == 0 ||
-            doc.pcrs.is_empty() ||
             doc.certificate.is_empty() ||
             doc.cabundle.is_empty()
         {
@@ -107,97 +77,42 @@ impl AwsNitroAttestationDocument<'_> {
             return Err(VerificationError::BadDigest);
         }
 
-        if doc.pcrs.len() > MAX_PCR_COUNT {
-            return Err(VerificationError::BadPCRsLen);
-        }
-
-        for (key, value) in &doc.pcrs {
-            if *key > 31 {
-                return Err(VerificationError::BadPCRIndex);
-            }
-
-            if value.is_empty() || value.len() != 48 {
-                return Err(VerificationError::BadPCRValue);
-            }
-        }
-
         for item in &doc.cabundle {
             if item.is_empty() || item.len() > 1024 {
                 return Err(VerificationError::BadCABundleItemLen);
             }
         }
 
-        if let Some(public_key) = doc.public_key {
-            if public_key.len() > 1024 {
-                return Err(VerificationError::BadPublicKeyLen);
-            }
-        }
-
-        if let Some(user_data) = doc.user_data {
-            if user_data.len() > 1024 {
-                return Err(VerificationError::BadUserDataLen);
-            }
-        }
-
-        if let Some(nonce) = doc.nonce {
-            if nonce.len() > 1024 {
-                return Err(VerificationError::BadNonceLen);
-            }
-        }
         Ok(doc)
     }
 
-    fn verify_cert_chain(
-        &self,
-        trusted_root_cert_der: &[u8],
-    ) -> Result<(CertificateInner, u64, u64), VerificationError> {
-        // assert the cert chain starts with the trusted root cert
-        if self.cabundle.first().is_none_or(|&cert| cert != trusted_root_cert_der) {
-            return Err(VerificationError::InvalidRootCert);
-        }
-
-        let mut validity_start = u64::MIN;
+    fn verify_cert_chain(&self) -> Result<(CertificateInner, u64), VerificationError> {
         let mut validity_end = u64::MAX;
 
-        let mut certs = self
-            .cabundle
-            .iter()
-            .map(|cert_data| {
-                x509_cert::Certificate::from_der(cert_data)
-                    .map_err(|e| VerificationError::CaBundleParseError(e.to_string()))
+        let end_idx = self.cabundle.len();
+        let mut parent_cert = None;
+        for i in 0..=end_idx {
+            let child_cert = x509_cert::Certificate::from_der(if i == end_idx {
+                self.certificate
+            } else {
+                self.cabundle[i]
             })
-            .collect::<Result<Vec<x509_cert::Certificate>, VerificationError>>()?;
+            .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
 
-        let cert = x509_cert::Certificate::from_der(self.certificate)
-            .map_err(|e| VerificationError::CertificateParseError(e.to_string()))?;
+            let not_after =
+                child_cert.tbs_certificate.validity.not_after.to_unix_duration().as_secs();
 
-        certs.push(cert.clone());
-
-        for i in 1..certs.len() {
-            let cert = &certs[i];
-
-            let validity = cert.tbs_certificate.validity;
-            let not_before = validity.not_before.to_unix_duration().as_secs();
-            let not_after = validity.not_after.to_unix_duration().as_secs();
-
-            if not_before > validity_start {
-                validity_start = not_before;
-            }
             if not_after < validity_end {
                 validity_end = not_after;
             }
 
-            let parent_cert = &certs[i - 1];
-            verify_x509_parent(cert, parent_cert)?;
-        }
+            if let Some(parent_cert) = parent_cert {
+                verify_x509_parent(&child_cert, &parent_cert)?;
+            }
 
-        if validity_start >= validity_end {
-            return Err(VerificationError::ValidityError(format!(
-                "Validity window is invalid: validity_start: {validity_start}, validity_end: {validity_end}"
-            )));
+            parent_cert = Some(child_cert);
         }
-
-        Ok((cert, validity_start, validity_end))
+        Ok((parent_cert.unwrap(), validity_end))
     }
 }
 
@@ -208,53 +123,80 @@ pub fn verify_x509_parent(
     parent_cert: &CertificateInner,
 ) -> Result<(), VerificationError> {
     if cert.signature_algorithm.oid != ECDSA_WITH_SHA_384 {
-        return Err(VerificationError::InvalidCertSignatureAlgorithm(
-            cert.signature_algorithm.oid.to_string(),
+        return Err(VerificationError::CertificateParseError(
+            x509_cert::der::Error::from(x509_cert::der::ErrorKind::OidUnknown {
+                oid: cert.signature_algorithm.oid,
+            })
+            .into(),
         ));
     }
 
-    let parent_spki_der =
-        parent_cert.tbs_certificate.subject_public_key_info.to_der().map_err(|e| {
-            VerificationError::CertificateParseError(format!(
-                "Failed to DER-encode parent's SubjectPublicKeyInfo: {e}"
-            ))
-        })?;
+    let parent_spki_der = parent_cert
+        .tbs_certificate
+        .subject_public_key_info
+        .to_der()
+        .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
 
     let parent_verifying_key = p384::ecdsa::VerifyingKey::from_public_key_der(&parent_spki_der)
-        .map_err(|e| {
-            VerificationError::CertificateParseError(format!(
-                "Failed to parse parent's public key from SubjectPublicKeyInfo: {e}"
-            ))
-        })?;
+        .map_err(VerificationError::CertificateParseError)?;
 
-    let msg_to_verify = cert.tbs_certificate.to_der().map_err(|e| {
-        VerificationError::CertificateParseError(format!(
-            "Failed to DER-encode TBS certificate: {e}"
-        ))
-    })?;
+    let msg_to_verify = cert
+        .tbs_certificate
+        .to_der()
+        .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
 
-    let signature_bytes = cert.signature.as_bytes().ok_or_else(|| {
-        VerificationError::CertificateParseError("Signature is not a valid BIT STRING".to_string())
-    })?;
+    let signature_bytes =
+        cert.signature.as_bytes().ok_or_else(|| VerificationError::InvalidSignature)?;
 
-    let signature = P384Signature::from_der(signature_bytes).map_err(|e| {
-        VerificationError::CertificateParseError(format!("Failed to parse signature: {e}"))
-    })?;
+    let signature = P384Signature::from_der(signature_bytes)
+        .map_err(VerificationError::CertificateSignatureError)?;
 
-    parent_verifying_key.verify(&msg_to_verify, &signature).map_err(|e| {
-        VerificationError::CertificateParseError(format!("Signature verification failed: {e}"))
-    })?;
+    parent_verifying_key
+        .verify(&msg_to_verify, &signature)
+        .map_err(VerificationError::CertificateSignatureError)?;
 
     Ok(())
 }
 
 pub struct ValidationResult {
+    pub root_cert_hash: B256,
     pub tee_signing_key: Address,
-    pub validity_window_start: u64,
     pub validity_window_end: u64,
-    pub pcr_0: Vec<u8>,
-    pub pcr_1: Vec<u8>,
-    pub pcr_2: Vec<u8>,
+    pub pcr_0: [u8; 48],
+    pub pcr_1: [u8; 48],
+    pub pcr_2: [u8; 48],
+}
+
+fn keccak(data: &[&[u8]]) -> B256 {
+    let mut hasher = Keccak256::new();
+    for elem in data {
+        hasher.update(elem);
+    }
+    hasher.finalize()
+}
+
+impl ValidationResult {
+    pub fn data_hash(&self) -> B256 {
+        keccak(&[
+            self.root_cert_hash.as_slice(),
+            self.pcr_0.as_slice(),
+            self.pcr_1.as_slice(),
+            self.pcr_2.as_slice(),
+        ])
+    }
+    pub fn public_data(&self) -> [u8; 60] {
+        let mut buffer = [0; 60];
+        buffer[0..32].copy_from_slice(self.data_hash().as_slice());
+        buffer[32..40].copy_from_slice(&self.validity_window_end.to_be_bytes());
+        buffer[40..60].copy_from_slice(self.tee_signing_key.as_slice());
+        buffer
+    }
+    pub fn calldata(&self) -> [u8; 64] {
+        let mut buffer = [0; 64];
+        buffer[24..32].copy_from_slice(&self.validity_window_end.to_be_bytes());
+        buffer[44..64].copy_from_slice(self.tee_signing_key.as_slice());
+        buffer
+    }
 }
 
 /// https://github.com/aws/aws-nitro-enclaves-nsm-api/blob/main/docs/attestation_process.md#32-syntactical-validation
@@ -266,68 +208,52 @@ pub struct ValidationResult {
 ///
 /// returns the pub key generated by the TEE and the validity window for the attestation document's
 /// certificate
-pub fn verify_aws_nitro_attestation(
-    input: &[u8],
-    trusted_root_cert_der: &[u8],
-) -> Result<ValidationResult, VerificationError> {
+pub fn verify_aws_nitro_attestation(input: &[u8]) -> Result<ValidationResult, VerificationError> {
     let mut input = input.to_vec();
-    let cose_sign1 = CoseSign1::from_bytes(&mut input)
-        .map_err(|e| VerificationError::CoseSign1ParseError(e.to_string()))?;
+    let cose_sign1 =
+        CoseSign1::from_bytes(&mut input).map_err(VerificationError::CoseSign1ParseError)?;
 
     let mut payload_data = cose_sign1.payload.to_vec();
     let doc = AwsNitroAttestationDocument::parse_document(&mut payload_data)?;
-    let (cert, validity_window_start, validity_window_end) =
-        doc.verify_cert_chain(trusted_root_cert_der)?;
+    let (cert, validity_window_end) = doc.verify_cert_chain()?;
 
-    let spki_der = cert.tbs_certificate.subject_public_key_info.to_der().map_err(|e| {
-        VerificationError::CertificateParseError(format!(
-            "Failed to DER-encode SubjectPublicKeyInfo: {e}"
-        ))
-    })?;
+    let spki_der = cert
+        .tbs_certificate
+        .subject_public_key_info
+        .to_der()
+        .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
 
-    let pub_key = p384::ecdsa::VerifyingKey::from_public_key_der(&spki_der).map_err(|e| {
-        VerificationError::CertificateParseError(format!(
-            "Failed to parse public key from SubjectPublicKeyInfo: {e}"
-        ))
-    })?;
+    let pub_key = p384::ecdsa::VerifyingKey::from_public_key_der(&spki_der)
+        .map_err(VerificationError::CertificateParseError)?;
 
-    cose_sign1
-        .verify_signature(&pub_key)
-        .map_err(|e| VerificationError::InvalidCoseSign1Signature(e.to_string()))?;
+    cose_sign1.verify_signature(&pub_key).map_err(VerificationError::CoseSign1ParseError)?;
 
     let pub_key = doc.public_key.ok_or(VerificationError::PublicKeyMissing)?;
 
     // pub key comes with a recovery byte suffix https://github.com/ethereum/go-ethereum/blob/c87b856c1a7daff56b46be70cdb7092adc519b7c/crypto/crypto.go#L40
-    assert_eq!(pub_key.len(), 65);
+    if pub_key.len() != 65 || pub_key[0] != 0x04 {
+        return Err(VerificationError::BadPublicKeyLen);
+    }
 
     Ok(ValidationResult {
+        root_cert_hash: keccak256(*doc.cabundle.first().unwrap_or(&doc.certificate)),
         // exclude the leading 0x04 byte prefix
         tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
-        validity_window_start,
         validity_window_end,
-        pcr_0: doc.pcrs.get(&0).unwrap().to_vec(),
-        pcr_1: doc.pcrs.get(&1).unwrap().to_vec(),
-        pcr_2: doc.pcrs.get(&2).unwrap().to_vec(),
+        pcr_0: doc.pcrs.pcr_0.try_into().map_err(|_| VerificationError::BadPCRValue)?,
+        pcr_1: doc.pcrs.pcr_1.try_into().map_err(|_| VerificationError::BadPCRValue)?,
+        pcr_2: doc.pcrs.pcr_2.try_into().map_err(|_| VerificationError::BadPCRValue)?,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::hex;
-    use x509_cert::der::DecodePem;
-
-    fn der_from_pem(pem: &[u8]) -> Vec<u8> {
-        let cert = x509_cert::Certificate::from_pem(pem).unwrap();
-        cert.to_der().unwrap()
-    }
 
     #[test]
-    fn test_verify_aws_nitro_attestation_emtpy_pub_key() {
+    fn test_verify_aws_nitro_attestation_empty_pub_key() {
         let doc_cbor = include_bytes!("testdata/att_doc_sample.bin");
-        let trusted_root_cert_der = der_from_pem(include_bytes!("testdata/aws_nitro_root.pem"));
-
-        let res = verify_aws_nitro_attestation(doc_cbor, &trusted_root_cert_der);
+        let res = verify_aws_nitro_attestation(doc_cbor);
         //all validation passes, but it attests to no pub key
         assert!(matches!(res, Err(VerificationError::PublicKeyMissing)));
     }
@@ -336,15 +262,10 @@ mod tests {
     fn test_verify_aws_nitro_attestation_with_pub_key() {
         let doc_hex = include_bytes!("testdata/att_doc_sample_2.hex");
         let doc_cbor = hex::decode(doc_hex).unwrap();
-        let trusted_root_cert_der = der_from_pem(include_bytes!("testdata/aws_nitro_root.pem"));
 
-        let res = verify_aws_nitro_attestation(&doc_cbor, &trusted_root_cert_der).unwrap();
+        let res = verify_aws_nitro_attestation(&doc_cbor).unwrap();
         let pub_key = &hex::decode("040697cfa9437ccd8db7b2f2ff47dee17a5269b0e8600b6a8334339f28dddae716edcc41ebf70dec757d0ee9fa55448bd01b98fd7cf1676ad82f7b60e04b72cb36").unwrap();
-        assert_eq!(
-            res.tee_signing_key,
-            alloy::primitives::Address::from_raw_public_key(&pub_key[1..])
-        );
-        assert_eq!(res.validity_window_start, 1748509950);
+        assert_eq!(res.tee_signing_key, Address::from_raw_public_key(&pub_key[1..]));
         assert_eq!(res.validity_window_end, 1748520753);
     }
 }

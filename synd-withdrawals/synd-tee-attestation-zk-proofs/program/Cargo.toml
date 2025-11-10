@@ -1,0 +1,21 @@
+[package]
+edition.workspace    = true
+exclude.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "synd-tee-attestation-zk-proofs-program"
+repository.workspace = true
+version.workspace    = true
+
+[dependencies]
+synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }
+
+[features]
+std = ["synd-tee-attestation-zk-proofs-aws-nitro/std"]
+
+[target.riscv32im-succinct-zkvm-elf.dependencies]
+sp1-zkvm = { workspace = true, features = ["lib"] }
+
+[target.riscv32im-risc0-zkvm-elf.dependencies]
+# the tiny-keccak precompile is unstable - see https://dev.risczero.com/api/zkvm/precompiles for details
+risc0-zkvm = { features = ["unstable"], workspace = true }

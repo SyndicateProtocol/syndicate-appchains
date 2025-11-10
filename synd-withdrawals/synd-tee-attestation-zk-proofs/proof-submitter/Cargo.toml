@@ -15,16 +15,17 @@ path = "src/lib.rs"
 name = "proof-submitter"
 path = "src/main.rs"
 
-
 [dependencies]
 alloy                                    = { workspace = true, features = ["contract", "provider-ws", "signer-local", "signers"] }
 clap                                     = { workspace = true, features = ["derive"] }
 contract-bindings                        = { workspace = true }
 humantime                                = { workspace = true }
 jsonrpsee                                = { workspace = true, features = ["http-client"] }
+risc0-binfmt                             = { workspace = true }
+risc0-zkvm                               = { workspace = true, features = ["prove"] }
 shared                                   = { workspace = true }
 sp1-sdk                                  = { workspace = true }
-synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }
+synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true, features = ["std"] }
 thiserror                                = { workspace = true }
 tokio                                    = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tracing                                  = { workspace = true }
@@ -33,11 +34,10 @@ x509-cert                                = { workspace = true }
 zeroize                                  = { workspace = true }
 
 [dev-dependencies]
-mockito                                   = { workspace = true }
-serde                                     = { workspace = true, features = ["derive"] }
-serde_json                                = { workspace = true }
-synd-tee-attestation-zk-proofs-sp1-script = { workspace = true }
-test-utils                                = { workspace = true }
+mockito    = { workspace = true }
+serde      = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true

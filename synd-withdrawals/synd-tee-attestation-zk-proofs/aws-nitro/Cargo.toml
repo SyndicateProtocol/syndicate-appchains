@@ -7,18 +7,19 @@ name                 = "synd-tee-attestation-zk-proofs-aws-nitro"
 repository.workspace = true
 version.workspace    = true
 
-# pinned because of sp1 toolchain
-rust-version = "1.85"
-
-
 [dependencies]
-alloy      = { workspace = true, features = ["sol-types"] }
-const-oid  = { workspace = true, features = ["db"] }
-p384       = { workspace = true }
-serde      = { workspace = true, features = ["derive"] }
-serde_cbor = { workspace = true, default-features = true }
-x509-cert  = { workspace = true }
+alloy-primitives = { workspace = true }
+p384             = { workspace = true, features = ["ecdsa", "pkcs8"] }
+serde            = { workspace = true, features = ["derive"] }
+serde_bytes      = { workspace = true }
+serde_cbor       = { workspace = true, features = ["alloc"] }
+x509-cert        = { workspace = true }
 
+[package.metadata.cargo-machete]
+ignored = ["serde_bytes"]
 
 [dev-dependencies]
-alloy = { workspace = true }
+hex = { workspace = true }
+
+[features]
+std = ["serde_cbor/std"]
