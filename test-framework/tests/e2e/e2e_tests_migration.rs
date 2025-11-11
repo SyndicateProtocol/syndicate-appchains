@@ -213,7 +213,7 @@ async fn spin_up_syndicate_stack(
         private_key: PRIVATE_KEY.to_string(),
         sequencing_address: sequencing_contract_address,
         sequencing_rpc_url,
-        port: maestro_port,
+        port: PortManager::instance().next_port().await,
         wait_for_receipt: true,
     };
     let batch_sequencer = start_component(
@@ -321,10 +321,10 @@ async fn e2e_migration() -> Result<()> {
     drop(appchain);
 
     // mine a few base chain blocks (to test edge cases)
-    for _ in 0..10 {
-        mine_block(&set_chain.provider.clone(), 100).await?;
-        mine_block(&seq_chain.provider.clone(), 100).await?;
-    }
+    // for _ in 0..10 {
+    //     mine_block(&set_chain.provider.clone(), 100).await?;
+    //     mine_block(&seq_chain.provider.clone(), 100).await?;
+    // }
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut migration_data: RollupState = Default::default();

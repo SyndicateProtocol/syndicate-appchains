@@ -397,7 +397,7 @@ pub trait ArbitrumDB {
     fn appchain_migration(
         &self,
         settlement_start_block: u64,
-        before_batch_acc: B256, // TODO remove me
+        before_batch_acc: B256,
         batch_acc: B256,
         batch_count: u64,
         delayed_msgs_acc: B256,
@@ -418,21 +418,7 @@ pub trait ArbitrumDB {
         // nitro asks for block 30 --> 30-27 = 3 --> block 3
 
         debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
-        //
-        // let data_hash = keccak256(
-        //     (
-        //         0u64,     // minTimestamp
-        //         u64::MAX, // maxTimestamp
-        //         0u64,     // minBlockNumber
-        //         u64::MAX, // maxBlockNumber
-        //         delayed_msgs_count,
-        //         // batch is empty
-        //     )
-        //         .abi_encode_packed(),
-        // );
-        // let after_batch_acc =
-        //     keccak256((batch_acc, data_hash, delayed_msgs_acc).abi_encode_packed());
-        //
+
         self.put_block(
             batch_count,
             &Block {
@@ -445,11 +431,10 @@ pub trait ArbitrumDB {
                     set_block_hash: B256::ZERO,
                 },
                 messages: vec![],
-                // before_batch_acc: batch_acc,
+                before_batch_acc,
                 after_batch_acc: batch_acc,
                 before_message_acc: delayed_msgs_acc,
                 before_message_count: delayed_msgs_count,
-                ..Default::default()
             },
         );
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
