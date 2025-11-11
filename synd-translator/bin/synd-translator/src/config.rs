@@ -3,14 +3,13 @@
 //! This module contains all possible configuration options for the `synd-translator`. Different
 //! crates each inherit a subset of these options to configure themselves
 
-use alloy::primitives::{Address, B256};
+use alloy::primitives::Address;
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
-use shared::parse::{parse_address, parse_hash};
+use shared::parse::parse_address;
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
-use synd_mchain::methods::mchain_methods::MigrationParams;
 use thiserror::Error;
 use tracing::{debug, error};
 
@@ -181,26 +180,6 @@ pub struct TranslatorConfig {
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
 
-    /// The batch accumulator at the point of migration
-    #[arg(long, env = "MIGRATED_BATCH_ACC", value_parser = parse_hash)]
-    pub migrated_batch_acc: Option<B256>,
-
-    /// The batch accumulator at the point of migration
-    #[arg(long, env = "MIGRATED_BEFORE_BATCH_ACC", value_parser = parse_hash)]
-    pub migrated_before_batch_acc: Option<B256>,
-
-    /// The batch accumulator at the point of migration
-    #[arg(long, env = "MIGRATED_BATCH_COUNT")]
-    pub migrated_batch_count: Option<u64>,
-
-    /// The delayed messages accumulator at the point of migration
-    #[arg(long, env = "MIGRATED_DELAYED_MSGS_ACC", value_parser = parse_hash)]
-    pub migrated_delayed_msgs_acc: Option<B256>,
-
-    /// The delayed messages count at the point of migration
-    #[arg(long, env = "MIGRATED_DELAYED_MSGS_COUNT")]
-    pub migrated_delayed_msgs_count: Option<u64>,
-
     /// The address of the ConfigManager contract on the settlement chain
     #[arg(
         long = "config-manager-address",
@@ -286,34 +265,6 @@ impl TranslatorConfig {
         // Remove the trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{cmd}");
-    }
-
-    pub fn migration_config(&self) -> Option<MigrationParams> {
-        self.migrated_batch_acc?;
-
-        let settlement_start_block = self
-            .settlement
-            .settlement_start_block
-            .unwrap_or_else(|| panic!("migration initial settlement block is none"));
-        let batch_acc = self.migrated_batch_acc.unwrap_or_else(|| panic!("batch acc is none"));
-        let before_batch_acc =
-            self.migrated_before_batch_acc.unwrap_or_else(|| panic!("before batch acc is none"));
-        let batch_count =
-            self.migrated_batch_count.unwrap_or_else(|| panic!("batch count is none"));
-        let delayed_msgs_acc =
-            self.migrated_delayed_msgs_acc.unwrap_or_else(|| panic!("delayed msgs acc is none"));
-        let delayed_msgs_count = self
-            .migrated_delayed_msgs_count
-            .unwrap_or_else(|| panic!("delayed msgs count is none"));
-
-        Some(MigrationParams {
-            settlement_start_block,
-            before_batch_acc,
-            batch_acc,
-            batch_count,
-            delayed_msgs_acc,
-            delayed_msgs_count,
-        })
     }
 }
 

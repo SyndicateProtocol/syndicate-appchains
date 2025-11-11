@@ -393,16 +393,18 @@ pub trait ArbitrumDB {
         Ok(Some(block_number))
     }
 
+    // TODO think about make this a config param
+
     /// Applies a custom batch with appchain migration information
-    fn appchain_migration(
-        &self,
-        settlement_start_block: u64,
-        before_batch_acc: B256, // TODO remove me
-        batch_acc: B256,
-        batch_count: u64,
-        delayed_msgs_acc: B256,
-        delayed_msgs_count: u64,
-    ) -> eyre::Result<()> {
+    fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
+        let MigrationParams {
+            settlement_start_block,
+            before_batch_acc,
+            batch_acc,
+            batch_count,
+            delayed_msgs_acc,
+            delayed_msgs_count,
+        } = params;
         // the offset is the difference between the initial settlement block and the batch count
         let offset = settlement_start_block - batch_count;
         self.put_migration_offset(offset);
@@ -418,21 +420,7 @@ pub trait ArbitrumDB {
         // nitro asks for block 30 --> 30-27 = 3 --> block 3
 
         debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
-        //
-        // let data_hash = keccak256(
-        //     (
-        //         0u64,     // minTimestamp
-        //         u64::MAX, // maxTimestamp
-        //         0u64,     // minBlockNumber
-        //         u64::MAX, // maxBlockNumber
-        //         delayed_msgs_count,
-        //         // batch is empty
-        //     )
-        //         .abi_encode_packed(),
-        // );
-        // let after_batch_acc =
-        //     keccak256((batch_acc, data_hash, delayed_msgs_acc).abi_encode_packed());
-        //
+
         self.put_block(
             batch_count,
             &Block {
@@ -445,13 +433,14 @@ pub trait ArbitrumDB {
                     set_block_hash: B256::ZERO,
                 },
                 messages: vec![],
-                // before_batch_acc: batch_acc,
+                before_batch_acc: batch_acc,
                 after_batch_acc: batch_acc,
                 before_message_acc: delayed_msgs_acc,
                 before_message_count: delayed_msgs_count,
-                ..Default::default()
             },
         );
+
+        //prepare the state so add_batch is able to add an empty batch
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
         self.put_state(&State {
             batch_count,
@@ -471,6 +460,23 @@ pub trait ArbitrumDB {
         });
         Ok(())
     }
+}
+
+/// params for an appchain migration
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct MigrationParams {
+    /// The initial settlement block number at point of migration
+    pub settlement_start_block: u64,
+    /// The before batch accumulator at point of migration
+    pub before_batch_acc: B256, // TODO remove me
+    /// The batch accumulator at point of migration
+    pub batch_acc: B256,
+    /// The batch count at point of migration
+    pub batch_count: u64,
+    /// The delayed message accumulator at point of migration
+    pub delayed_msgs_acc: B256,
+    /// The delayed message count at point of migration
+    pub delayed_msgs_count: u64,
 }
 
 pub(crate) fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {

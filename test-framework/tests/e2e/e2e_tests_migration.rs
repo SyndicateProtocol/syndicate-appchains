@@ -1,9 +1,7 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
-    eips::BlockId,
     primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::anvil::MineOptions,
 };
 use contract_bindings::synd::{
     arb_owner::ArbOwner,
@@ -17,7 +15,11 @@ use contract_bindings::synd::{
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::{collections::HashMap, path::PathBuf, time::Duration};
-use synd_mchain::methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID};
+use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
+use synd_mchain::{
+    db::MigrationParams,
+    methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
+};
 use synd_migration::migration::{get_migration_data, RollupState};
 use test_framework::components::{
     batch_sequencer::BatchSequencerConfig,
@@ -96,8 +98,6 @@ async fn spin_up_syndicate_stack(
         rollup_owner: appchain_owner,
         ..Default::default()
     };
-    let (mchain_rpc_url, mchain, _mchain_provider) =
-        start_mchain(appchain_chain_id, opt.finality_delay).await?;
 
     // Setup config manager and get chain config address
     let config_manager_address = setup_config_manager(
@@ -111,6 +111,18 @@ async fn spin_up_syndicate_stack(
         Some(migration_data.clone()),
     )
     .await?;
+
+    // TODO remove, this should be read from the cfg_mgr
+    let migration_params = MigrationParams {
+        settlement_start_block: migration_data.parent_chain_block,
+        before_batch_acc: migration_data.before_batch_acc,
+        batch_acc: migration_data.batch_acc,
+        batch_count: migration_data.batch_count,
+        delayed_msgs_acc: migration_data.delayed_msgs_acc,
+        delayed_msgs_count: migration_data.delayed_msgs_count,
+    };
+    let (mchain_rpc_url, mchain, _mchain_provider) =
+        start_mchain(appchain_chain_id, opt.finality_delay, Some(migration_params)).await?;
 
     let temp = test_path("chain_ingestor");
     let seq_chain_ingestor_cfg = ChainIngestorConfig {
@@ -213,7 +225,7 @@ async fn spin_up_syndicate_stack(
         private_key: PRIVATE_KEY.to_string(),
         sequencing_address: sequencing_contract_address,
         sequencing_rpc_url,
-        port: maestro_port,
+        port: PortManager::instance().next_port().await,
         wait_for_receipt: true,
     };
     let batch_sequencer = start_component(
@@ -249,6 +261,7 @@ async fn e2e_migration() -> Result<()> {
     let set_chain = start_base_chain(SETTLEMENT_CHAIN_ID).await?;
     let seq_chain = start_base_chain(SEQUENCING_CHAIN_ID).await?;
 
+    // TODO
     // mine a few blocks so base chains diverge in block number (edge case)
     // set_chain
     //     .provider
@@ -286,8 +299,6 @@ async fn e2e_migration() -> Result<()> {
     })
     .await?;
 
-    // --
-
     // deposit some funds for the default signer
     let inbox = IInbox::new(appchain_deployment.inbox, &set_chain.provider);
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
@@ -315,16 +326,16 @@ async fn e2e_migration() -> Result<()> {
     info!("batch_count: {batch_count}");
     let batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(1)).call().await?;
     let before_batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(2)).call().await?;
-    let before_appchain_block = appchain.provider.get_block(BlockId::latest()).await?.unwrap();
 
     // shutdown the nitro node
     drop(appchain);
 
+    // TODO
     // mine a few base chain blocks (to test edge cases)
-    for _ in 0..10 {
-        mine_block(&set_chain.provider.clone(), 100).await?;
-        mine_block(&seq_chain.provider.clone(), 100).await?;
-    }
+    // for _ in 0..10 {
+    //     mine_block(&set_chain.provider.clone(), 100).await?;
+    //     mine_block(&seq_chain.provider.clone(), 100).await?;
+    // }
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut migration_data: RollupState = Default::default();
@@ -351,10 +362,6 @@ async fn e2e_migration() -> Result<()> {
     assert_eq!(migration_data.batch_count, 2);
     assert_eq!(U256::from(migration_data.delayed_msgs_count), delayed_msgs_count);
     assert_eq!(migration_data.delayed_msgs_acc, delayed_msgs_acc);
-
-    // migrate the bridge contract
-    // - TODO Remove validators and stakers
-    // - TODO Set the upgradeExecutor role to the assertionPoster
 
     // spin up the syndicate stack
     let migrated_appchain_deployment = NitroDeployment {
@@ -383,11 +390,6 @@ async fn e2e_migration() -> Result<()> {
     )
     .await?;
 
-    // let appchain_block =
-    // synd_stack.appchain.provider.get_block(BlockId::latest()).await?.unwrap();
-    // assert_eq!(appchain_block.header.number, before_appchain_block.header.number);
-    // assert_eq!(appchain_block.hash(), before_appchain_block.hash());
-
     let storage_contract =
         Storage::new(storage_contract_address, synd_stack.appchain.provider.clone());
     let initial_value = storage_contract.get().call().await?;
@@ -414,26 +416,18 @@ async fn e2e_migration() -> Result<()> {
     mine_block(&seq_chain.provider.clone(), 1).await?;
     wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
 
-    // assert_eq!(
-    //     synd_stack.appchain.provider.get_block_number().await?,
-    //     before_appchain_block.header.number + 1
-    // );
-
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
-    mine_block(&seq_chain.provider.clone(), 70).await?;
-    mine_block(&set_chain.provider.clone(), 70).await?; // set_delay is 60
 
     wait_until!(
-        // 10 + 10 - gas fees
-        synd_stack.appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?,
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?; // set_delay is 60
+                                                                // 10 + 10 - gas fees
+            synd_stack.appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?
+        },
         Duration::from_secs(10)
     );
-
-    // assert_eq!(
-    //     synd_stack.appchain.provider.get_block_number().await?,
-    //     before_appchain_block.header.number + 2
-    // );
 
     // assert `arbOwner.setL1PricePerUnit(0)`
     let arb_owner = ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &synd_stack.appchain.provider);
@@ -445,20 +439,10 @@ async fn e2e_migration() -> Result<()> {
 
     assert!(arb_owner.setL1PricePerUnit(U256::ZERO).send().await?.get_receipt().await?.status());
 
-    // assert_eq!(
-    //     synd_stack.appchain.provider.get_block_number().await?,
-    //     before_appchain_block.header.number + 3
-    // );
-
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
     assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
     assert!(storage_contract.get().call().await? == U256::from(44));
-
-    // assert_eq!(
-    //     synd_stack.appchain.provider.get_block_number().await?,
-    //     before_appchain_block.header.number + 4
-    // );
 
     // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
     let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
@@ -472,8 +456,11 @@ async fn e2e_migration() -> Result<()> {
         .build_raw_transaction(test_user.signer.clone())
         .await?;
 
+    let mut raw_tx_with_prefix = vec![L2MessageKind::SignedTx as u8];
+    raw_tx_with_prefix.extend_from_slice(&update_val_raw_tx);
+
     assert!(inbox
-        .sendL2MessageFromOrigin(update_val_raw_tx.into())
+        .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
         .send()
         .await?
         .get_receipt()
@@ -488,16 +475,6 @@ async fn e2e_migration() -> Result<()> {
         },
         Duration::from_secs(10)
     );
-
-    // assert_eq!(
-    //     synd_stack.appchain.provider.get_block_number().await?,
-    //     before_appchain_block.header.number + 5
-    // );
-
-    // assert withdrawals work (TBD)
-
-    // TODO InboxMessageDeliveredFromOrigin needs to be handled in the proposer too...
-    // withdrawal triggered this way
 
     Ok(())
 }

@@ -139,7 +139,7 @@ fn handle_subscription(
         }
     };
 
-    if start_block < db.start_block {
+    if start_block <= db.start_block {
         return Err(eyre!(
             "subscription start block {} before ingestor start block {}",
             start_block,

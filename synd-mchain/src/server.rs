@@ -4,7 +4,7 @@
 #[cfg(test)]
 use crate::methods::common::test_utils::SystemTime;
 use crate::{
-    db::{ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock},
+    db::{ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock, MigrationParams},
     methods::{
         common::{appchain_config, Context},
         eth_methods::{
@@ -12,8 +12,7 @@ use crate::{
             eth_get_logs, eth_subscribe,
         },
         mchain_methods::{
-            add_batch, appchain_migration, get_migration_offset,
-            get_source_chains_processed_blocks, rollback_to_block,
+            add_batch, get_migration_offset, get_source_chains_processed_blocks, rollback_to_block,
         },
     },
     metrics::MchainMetrics,
@@ -37,6 +36,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     finality_delay: u64,
     genesis_config: Option<String>,
+    migration_params: Option<MigrationParams>,
     db: T,
     metrics: MchainMetrics,
 ) -> RpcModule<(T, MchainMetrics, Mutex<Context>)> {
@@ -55,10 +55,14 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         base_fee_l1: U256::ZERO,
     };
     let mut pending_ts: VecDeque<u64> = Default::default();
-    let mut finalized_block = 1u64;
+    let mut finalized_batch = 1u64;
     if db.get_state().batch_count == 0 {
         let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
+        if let Some(migration_params) = migration_params {
+            db.appchain_migration(migration_params).unwrap();
+            finalized_batch = 2;
+        }
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;
         if db_init != &init_msg {
@@ -69,33 +73,29 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             );
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
-        finalized_block = db.get_state().batch_count;
+        finalized_batch = db.get_state().batch_count;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        while finalized_block > 1 {
-            let block_ts = db.get_block(finalized_block).unwrap().timestamp;
+        while finalized_batch > 1 {
+            let block_ts = db.get_block(finalized_batch).unwrap().timestamp;
             if block_ts + finality_delay <= now {
                 break;
             }
-            finalized_block -= 1;
+            finalized_batch -= 1;
             pending_ts.push_front(block_ts);
         }
     }
     assert_eq!(
-        finalized_block + pending_ts.len() as u64,
+        finalized_batch + pending_ts.len() as u64,
         db.get_state().batch_count,
         "Finalized block count ({}) + pending timestamps ({}) doesn't equal total batch count ({})",
-        finalized_block,
+        finalized_batch,
         pending_ts.len(),
         db.get_state().batch_count
     );
     let mut module = RpcModule::new((
         db,
         metrics,
-        Mutex::new(Context {
-            finalized_batch: finalized_block,
-            pending_ts,
-            subs: Default::default(),
-        }),
+        Mutex::new(Context { finalized_batch, pending_ts, subs: Default::default() }),
     ));
 
     // -------------------------------------------------
@@ -124,7 +124,6 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             get_source_chains_processed_blocks,
         )
         .unwrap();
-    module.register_method("mchain_appchainMigration", appchain_migration).unwrap();
     module.register_method("mchain_getMigrationOffset", get_migration_offset).unwrap();
 
     // -------------------------------------------------
