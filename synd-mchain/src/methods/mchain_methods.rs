@@ -71,6 +71,7 @@ pub fn rollback_to_block(
 
     // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
+    // TODO: use settlement block number if migration
     let l1_block_number = block.slot.seq_block_number;
     let block_message_count = block.after_message_count();
     let timestamp = block.timestamp;

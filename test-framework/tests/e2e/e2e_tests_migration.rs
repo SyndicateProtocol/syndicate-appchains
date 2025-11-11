@@ -413,8 +413,14 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
-    mine_block(&seq_chain.provider.clone(), 1).await?;
-    wait_until!(storage_contract.get().call().await? == U256::from(43), Duration::from_secs(10));
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 60).await?;
+            mine_block(&set_chain.provider.clone(), 60).await?;
+            storage_contract.get().call().await? == U256::from(43)
+        },
+        Duration::from_secs(10)
+    );
 
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;

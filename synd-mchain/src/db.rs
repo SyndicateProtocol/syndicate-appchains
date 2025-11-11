@@ -353,6 +353,7 @@ pub trait ArbitrumDB {
                 (
                     [msg.kind],
                     msg.sender,
+                    // TODO: use settlement block number if migration
                     block.slot.seq_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
@@ -405,21 +406,15 @@ pub trait ArbitrumDB {
             delayed_msgs_acc,
             delayed_msgs_count,
         } = params;
-        // the offset is the difference between the initial settlement block and the batch count
+        // NOTE: The offset is the difference between the initial settlement block and the batch
+        // count We use settlement_start_block as the block number as the batch count
+        // because that's what Nitro expects. Because mchain is designed so that block
+        // number = batch count we need to have an offset in order to get the correct block
+        // from a given batch count.
         let offset = settlement_start_block - batch_count;
         self.put_migration_offset(offset);
-        // NOTE: We use settlement_start_block as the block number as the batch count because that's
-        // what Nitro expects. Because mchain is designed so that block number = batch count
-        // we need to have an offset in order to get the correct block from a given batch
-        // count.
 
-        // Batch count 2
-        // Settlement start block 29
-        // Offset 29 - 2 = 27
-
-        // nitro asks for block 30 --> 30-27 = 3 --> block 3
-
-        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
+        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, before_batch_acc: {before_batch_acc}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
 
         self.put_block(
             batch_count,
@@ -433,7 +428,7 @@ pub trait ArbitrumDB {
                     set_block_hash: B256::ZERO,
                 },
                 messages: vec![],
-                before_batch_acc: batch_acc,
+                before_batch_acc,
                 after_batch_acc: batch_acc,
                 before_message_acc: delayed_msgs_acc,
                 before_message_count: delayed_msgs_count,

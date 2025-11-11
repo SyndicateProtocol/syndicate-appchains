@@ -201,6 +201,7 @@ pub fn eth_get_block_by_hash(
         header: create_header(
             number,
             db.get_migration_offset(),
+            // TODO: use settlement block number if migration
             block.slot.seq_block_number,
             block.timestamp,
         ),
@@ -244,6 +245,7 @@ pub fn eth_get_block_by_number(
         header: create_header(
             number,
             db.get_migration_offset(),
+            // TODO: use settlement block number if migration
             block.slot.seq_block_number,
             block.timestamp,
         ),
