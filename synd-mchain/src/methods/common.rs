@@ -36,8 +36,7 @@ pub fn create_log(
 
 /// Helper function to create a mock header object
 pub fn create_header(batch_count: u64, offset: u64, block: &Block) -> alloy::rpc::types::Header {
-    let l1_block_num =
-        if offset == 0 { block.slot.seq_block_number } else { block.slot.set_block_number };
+    let l1_block_num = block.slot.seq_block_number;
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
             number: batch_count + offset,

@@ -351,8 +351,7 @@ pub trait ArbitrumDB {
         let mut inbox_acc = block.before_message_acc;
         let offset = self.get_migration_offset();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
-            let l1_block_number =
-                if offset == 0 { block.slot.seq_block_number } else { block.slot.set_block_number };
+            let l1_block_number = block.slot.seq_block_number;
             let message_hash = keccak256(
                 (
                     [msg.kind],

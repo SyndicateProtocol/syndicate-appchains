@@ -495,17 +495,5 @@ async fn e2e_migration() -> Result<()> {
         .await
         .unwrap();
 
-    let l1_block_number = block.l1_block_number;
-    let set_chain_block_number = set_chain
-        .provider
-        .get_block_by_number(BlockNumberOrTag::Latest)
-        .await?
-        .unwrap()
-        .header
-        .number;
-    // Make sure the l1 block number is the same as the set chain block number - 1
-    // We use the set block number as the L1 block number for migrated appchains
-    assert_eq!(l1_block_number, set_chain_block_number - 1);
-
     Ok(())
 }
