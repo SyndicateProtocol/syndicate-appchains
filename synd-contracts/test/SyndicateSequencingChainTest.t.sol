@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {L2MessageType_SignedTx, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
@@ -45,33 +44,27 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
-    SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
 
     address public admin;
     address public gasMeter;
 
-    function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
+    function deployChain(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
 
-        GasMeter gasMeterImpl = new GasMeter();
-        gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
-
-        SyndicateFactory implementation = new SyndicateFactory();
-        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        factory = SyndicateFactory(address(proxy));
+        address gasMeterImpl = address(new GasMeter());
+        gasMeter = address(new ERC1967Proxy(gasMeterImpl, abi.encodeCall(GasMeter.initialize, ())));
 
         address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
-        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
+        address chainAddress = address(
+            new ERC1967Proxy(
+                sequencingChainImpl,
+                abi.encodeCall(SyndicateSequencingChain.initialize, (admin, address(_permissionModule), appchainId))
+            )
+        );
 
-        address syndicateChainImpl = factory.syndicateChainImpl();
-        assertEq(syndicateChainImpl, address(sequencingChainImpl));
-
-        (address chainAddress,) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, _permissionModule);
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
     }
@@ -83,7 +76,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
         admin = address(0x1);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
-        chain = deployFromFactory(permissionModule);
+        chain = deployChain(permissionModule);
     }
 }
 
@@ -207,17 +200,10 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     function testUpgradeAuthorizationOnlyOwner() public {
         SyndicateSequencingChain newImpl = new SyndicateSequencingChain(gasMeter);
 
-        // Deploy chain through factory
+        // Deploy chain
         RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory implementation2 = new SyndicateFactory();
-        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
-        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
 
-        vm.startPrank(admin);
-        testFactory.setSyndicateSequencingChainImplementation(address(newImpl));
-
-        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
+        address chainAddr = address(deployChain(testPermissionModule));
         vm.stopPrank();
 
         address nonOwner = makeAddr("nonOwner");
@@ -226,39 +212,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.prank(nonOwner);
         vm.expectRevert(); // Ownable revert from _authorizeUpgrade
         SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
-    }
-
-    function testUpgradeChecksImplementationCorrectly() public {
-        // Deploy chain through factory
-        RequireAndModule testPermissionModule = new RequireAndModule(admin);
-        SyndicateFactory implementation2 = new SyndicateFactory();
-        bytes memory initData2 = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy2 = new ERC1967Proxy(address(implementation2), initData2);
-        SyndicateFactory testFactory = SyndicateFactory(address(proxy2));
-        SyndicateSequencingChain impl0 = new SyndicateSequencingChain(gasMeter);
-
-        vm.startPrank(admin);
-        testFactory.setSyndicateSequencingChainImplementation(address(impl0));
-
-        (address chainAddr,) = testFactory.createSyndicateSequencingChainWithCustomId(123, admin, testPermissionModule);
-        vm.stopPrank();
-
-        // Create two different implementations
-        SyndicateSequencingChain impl1 = new SyndicateSequencingChain(gasMeter);
-        SyndicateSequencingChain impl2 = new SyndicateSequencingChain(gasMeter);
-
-        // allow only impl1
-        vm.prank(admin);
-        testFactory.setSyndicateSequencingChainImplementation(address(impl1));
-
-        // Verify impl1 upgrade works
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl1), "");
-
-        // All upgrades are now allowed regardless of implementation
-        vm.prank(admin);
-        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(impl2), "");
-        vm.stopPrank();
     }
 
     function testProcessTransactionsBulkAllAllowed() public {
@@ -332,7 +285,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
-        chain = deployFromFactory(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
+        chain = deployChain(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
 
         bytes[] memory txns = new bytes[](3);
         txns[0] = abi.encodePacked("valid");

@@ -5,7 +5,6 @@ import {Test, console2} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // Core contracts
-import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {GasAggregator} from "src/staking/GasAggregator.sol";
 import {EpochTracker} from "src/staking/EpochTracker.sol";
@@ -13,7 +12,6 @@ import {GasMeter} from "src/staking/GasMeter.sol";
 
 // Test upgrades
 import {SyndicateSequencingChainUpgradeV2} from "./helpers/SyndicateSequencingChainUpgradeV2.sol";
-import {SyndicateFactoryUpgradeV2} from "./helpers/SyndicateFactoryUpgradeV2.sol";
 
 // Interfaces and modules
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
@@ -22,11 +20,9 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 /// @title UpgradeFlowIntegrationTest
 /// @notice Comprehensive integration test for the full upgrade flow
 /// @dev Tests the complete upgrade process:
-///      1. Deploy factory via proxy pattern
-///      2. Create sequencing chains
-///      3. Upgrade factory to V2
-///      4. Upgrade sequencing chain to V2
-///      5. Verify all storage preserved and new functionality works
+///      1. Create sequencing chains
+///      2. Upgrade sequencing chain to V2
+///      3. Verify all storage preserved and new functionality works
 /// @dev This test runs as a fork test against risa_devnet
 /// @dev Run with: forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vv
 contract UpgradeFlowIntegrationTest is Test, EpochTracker {
@@ -44,9 +40,8 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     // V1 Contracts
-    SyndicateFactory factoryV1;
-    SyndicateFactory factoryProxy;
     GasAggregator gasAggregator;
+    address sequencingChainImpl;
     AlwaysAllowedModule permissionModule;
     address gasMeter;
 
@@ -55,7 +50,6 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     uint256 chain1Id;
 
     // V2 Upgrades
-    SyndicateFactoryUpgradeV2 factoryV2;
     SyndicateSequencingChainUpgradeV2 chainV2;
 
     /*//////////////////////////////////////////////////////////////
@@ -90,37 +84,32 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         // Deploy as ADMIN (simulating the deterministic deployment process)
         vm.startPrank(ADMIN);
 
-        // 1. Deploy SyndicateFactory and SyndicateSequencingChain implementation
-        factoryV1 = new SyndicateFactory();
-        console2.log("Factory implementation deployed:", address(factoryV1));
-
-        // 2. Deploy SyndicateFactory proxy with initialization
-        bytes memory factoryInitData = abi.encodeCall(SyndicateFactory.initialize, (ADMIN));
-        ERC1967Proxy factoryProxyContract = new ERC1967Proxy(address(factoryV1), factoryInitData);
-        factoryProxy = SyndicateFactory(address(factoryProxyContract));
-        console2.log("Factory proxy deployed:", address(factoryProxy));
-
-        // 3. Deploy GasMeter
+        // 1. Deploy GasMeter
         GasMeter gasMeterImpl = new GasMeter();
         gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
 
-        // 4. Deploy SyndicateSequencingChain implementation
-        SyndicateSequencingChain sequencingChainImpl = new SyndicateSequencingChain(gasMeter);
+        // 2. Deploy SyndicateSequencingChain implementation
+        sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
         console2.log("Sequencing chain implementation deployed:", address(sequencingChainImpl));
 
-        // 5. Set SyndicateSequencingChain implementation in factory
-        factoryProxy.setSyndicateSequencingChainImplementation(address(sequencingChainImpl));
-        console2.log("Sequencing chain implementation set in factory");
-
-        // 6. Deploy permission module
+        // 3. Deploy permission module
         permissionModule = new AlwaysAllowedModule();
         console2.log("Permission module deployed:", address(permissionModule));
 
         vm.stopPrank();
+    }
 
-        // Verify deployment
-        assertTrue(
-            factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Admin should have DEFAULT_ADMIN_ROLE"
+    function deployChain(address admin, address _permissionModule, uint256 nonce)
+        public
+        returns (SyndicateSequencingChain)
+    {
+        return SyndicateSequencingChain(
+            address(
+                new ERC1967Proxy(
+                    sequencingChainImpl,
+                    abi.encodeCall(SyndicateSequencingChain.initialize, (admin, _permissionModule, nonce))
+                )
+            )
         );
     }
 
@@ -129,20 +118,9 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     //////////////////////////////////////////////////////////////*/
 
     function test_InitialDeployment() public view {
-        // Verify factory
-        assertTrue(address(factoryProxy) != address(0), "Factory should be deployed");
-        assertEq(factoryProxy.version(), 1_000_000, "Factory version should be 1.0.0");
-
         // Verify gas meter
         assertTrue(gasMeter != address(0), "GasMeter should be deployed");
         assertEq(GasMeter(gasMeter).VERSION(), 1_000_000, "GasMeter VERSION should be 1.0.0");
-
-        // Verify admin/owner
-        assertTrue(
-            factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN),
-            "Admin should have DEFAULT_ADMIN_ROLE on factory"
-        );
-        assertEq(GasMeter(gasMeter).owner(), ADMIN, "Admin should be owner of gas meter");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -153,18 +131,14 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.startPrank(ADMIN);
 
         // Create chain
-        (address chainAddress, uint256 chainId) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
+        chain1Id = chain1.appchainId();
 
-        chain1 = SyndicateSequencingChain(chainAddress);
-        chain1Id = chainId;
-
-        console2.log("Chain created:", chainAddress);
-        console2.log("Chain ID:", chainId);
+        console2.log("Chain created:", address(chain1));
+        console2.log("Chain ID:", chain1Id);
 
         // Verify chain
-        assertEq(chain1.appchainId(), chainId, "Chain ID should match");
+        assertEq(chain1.appchainId(), chain1Id, "Chain ID should match");
         assertEq(chain1.owner(), ADMIN, "Chain owner should be admin");
         assertEq(
             address(chain1.permissionRequirementModule()), address(permissionModule), "Permission module should match"
@@ -179,10 +153,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_ProcessTransactionV1() public {
         // Create chain first
         vm.prank(ADMIN);
-        (address chainAddress,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        chain1 = SyndicateSequencingChain(chainAddress);
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
 
         // Process transaction
         bytes memory txData = hex"1234567890";
@@ -192,49 +163,13 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     }
 
     /*//////////////////////////////////////////////////////////////
-            TEST: UPGRADE FACTORY TO V2
-    //////////////////////////////////////////////////////////////*/
-
-    function test_UpgradeFactoryToV2() public {
-        // Store pre-upgrade state
-        uint256 preUpgradeVersion = factoryProxy.version();
-
-        vm.startPrank(ADMIN);
-
-        // Deploy V2 implementation
-        factoryV2 = new SyndicateFactoryUpgradeV2();
-        console2.log("Factory V2 implementation deployed:", address(factoryV2));
-
-        // Upgrade
-        factoryProxy.upgradeToAndCall(address(factoryV2), "");
-        console2.log("Factory upgraded to V2");
-
-        // Cast to V2 interface
-        SyndicateFactoryUpgradeV2 factoryProxyV2 = SyndicateFactoryUpgradeV2(address(factoryProxy));
-
-        vm.stopPrank();
-
-        // Verify storage preserved
-        assertEq(factoryProxy.version(), preUpgradeVersion, "Version should be preserved");
-        assertTrue(factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Admin role should be preserved");
-
-        // Verify new V2 functionality
-        assertEq(factoryProxyV2.factoryVersion(), "2.0.0", "Factory V2 version should be 2.0.0");
-        assertEq(factoryProxyV2.totalChainsCreated(), 0, "Initial totalChainsCreated should be 0");
-        assertFalse(factoryProxyV2.chainCreationEnabled(), "Chain creation should be disabled by default");
-    }
-
-    /*//////////////////////////////////////////////////////////////
         TEST: UPGRADE SEQUENCING CHAIN TO V2
     //////////////////////////////////////////////////////////////*/
 
     function test_UpgradeSequencingChainToV2() public {
         // Create chain first
         vm.prank(ADMIN);
-        (address chainAddress,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        chain1 = SyndicateSequencingChain(chainAddress);
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
 
         // Store pre-upgrade state
         uint256 preAppchainId = chain1.appchainId();
@@ -247,16 +182,12 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         chainV2 = new SyndicateSequencingChainUpgradeV2(gasMeter);
         console2.log("Chain V2 implementation deployed:", address(chainV2));
 
-        // Set as allowed implementation in factory
-        factoryProxy.setSyndicateSequencingChainImplementation(address(chainV2));
-        console2.log("V2 implementation set in factory");
-
         // Upgrade chain
         chain1.upgradeToAndCall(address(chainV2), "");
         console2.log("Chain upgraded to V2");
 
         // Cast to V2 interface
-        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(chainAddress);
+        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(address(chain1));
 
         vm.stopPrank();
 
@@ -283,10 +214,8 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_FullUpgradeFlowWithFunctionality() public {
         // 1. Create chain on V1
         vm.prank(ADMIN);
-        (address chainAddress, uint256 chainId) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        chain1 = SyndicateSequencingChain(chainAddress);
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
+        chain1Id = chain1.appchainId();
         console2.log("=== Step 1: Chain created on V1 ===");
 
         // 2. Process transaction on V1
@@ -295,25 +224,10 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         chain1.processTransaction(txData);
         console2.log("=== Step 2: Transaction processed on V1 ===");
 
-        // 3. Upgrade Factory to V2
-        vm.startPrank(ADMIN);
-        factoryV2 = new SyndicateFactoryUpgradeV2();
-        factoryProxy.upgradeToAndCall(address(factoryV2), "");
-        SyndicateFactoryUpgradeV2 factoryProxyV2 = SyndicateFactoryUpgradeV2(address(factoryProxy));
-        console2.log("=== Step 3: Factory upgraded to V2 ===");
-
-        // 4. Test new Factory V2 functionality
-        vm.expectEmit(true, true, true, true);
-        emit ChainCreationToggled(true);
-        factoryProxyV2.toggleChainCreation();
-        assertTrue(factoryProxyV2.chainCreationEnabled(), "Chain creation should be enabled");
-        console2.log("=== Step 4: Factory V2 functionality tested ===");
-
         // 5. Upgrade Chain to V2
         chainV2 = new SyndicateSequencingChainUpgradeV2(gasMeter);
-        factoryProxy.setSyndicateSequencingChainImplementation(address(chainV2));
         chain1.upgradeToAndCall(address(chainV2), "");
-        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(chainAddress);
+        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(address(chain1));
         console2.log("=== Step 5: Chain upgraded to V2 ===");
 
         // 6. Test new Chain V2 functionality
@@ -342,11 +256,8 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         console2.log("=== Step 8: Old functionality verified ===");
 
         // 9. Verify all storage preserved
-        assertEq(chainProxyV2.appchainId(), chainId, "AppchainId should be preserved");
+        assertEq(chainProxyV2.appchainId(), chain1Id, "AppchainId should be preserved");
         assertEq(chainProxyV2.owner(), ADMIN, "Owner should be preserved");
-        assertTrue(
-            factoryProxy.hasRole(factoryProxy.DEFAULT_ADMIN_ROLE(), ADMIN), "Factory admin role should be preserved"
-        );
         console2.log("=== Step 9: All storage verified ===");
 
         console2.log("\n=== FULL UPGRADE FLOW COMPLETED SUCCESSFULLY ===");
@@ -360,18 +271,13 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
         vm.startPrank(ADMIN);
 
         // Create multiple chains on V1
-        (address chain1Addr,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        (address chain2Addr,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_2, ADMIN, IRequirementModule(address(permissionModule))
-        );
+        address chain1Addr = address(deployChain(ADMIN, address(permissionModule), TEST_NONCE_1));
+        address chain2Addr = address(deployChain(ADMIN, address(permissionModule), TEST_NONCE_2));
 
         console2.log("Two chains created");
 
         // Deploy V2 implementation
         chainV2 = new SyndicateSequencingChainUpgradeV2(gasMeter);
-        factoryProxy.setSyndicateSequencingChainImplementation(address(chainV2));
 
         // Upgrade both chains
         SyndicateSequencingChain(chain1Addr).upgradeToAndCall(address(chainV2), "");
@@ -399,10 +305,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
     function test_RevertWhen_UnauthorizedUpgradeAttempt() public {
         vm.prank(ADMIN);
-        (address chainAddress,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        chain1 = SyndicateSequencingChain(chainAddress);
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
 
         // Deploy V2
         vm.prank(ADMIN);
@@ -421,10 +324,7 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
     function test_StorageLayoutPreservation() public {
         // Create chain and set various storage values
         vm.startPrank(ADMIN);
-        (address chainAddress,) = factoryProxy.createSyndicateSequencingChain(
-            TEST_NONCE_1, ADMIN, IRequirementModule(address(permissionModule))
-        );
-        chain1 = SyndicateSequencingChain(chainAddress);
+        chain1 = deployChain(ADMIN, address(permissionModule), TEST_NONCE_1);
 
         // Capture all storage
         uint256 preAppchainId = chain1.appchainId();
@@ -433,9 +333,8 @@ contract UpgradeFlowIntegrationTest is Test, EpochTracker {
 
         // Upgrade
         chainV2 = new SyndicateSequencingChainUpgradeV2(gasMeter);
-        factoryProxy.setSyndicateSequencingChainImplementation(address(chainV2));
         chain1.upgradeToAndCall(address(chainV2), "");
-        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(chainAddress);
+        SyndicateSequencingChainUpgradeV2 chainProxyV2 = SyndicateSequencingChainUpgradeV2(address(chain1));
 
         vm.stopPrank();
 

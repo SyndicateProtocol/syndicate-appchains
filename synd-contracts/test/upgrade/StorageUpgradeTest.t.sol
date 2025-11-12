@@ -8,28 +8,6 @@ import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
 import {SyndicateSequencingChainTestingUpgradeability} from
     "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 
-/// @notice Mock factory contract for testing upgrades
-contract MockFactory {
-    function isImplementationAllowed(address) external pure returns (bool) {
-        return true; // Allow all implementations for testing
-    }
-
-    function notifyChainUpgrade(uint256, address) external pure {
-        // No-op for testing
-    }
-}
-
-/// @notice Mock gas aggregator contract for testing upgrades
-contract MockGasAggregator {
-    function allowedImplementations(address) external pure returns (bool) {
-        return true; // Allow all implementations for testing
-    }
-
-    function notifyChainUpgrade(uint256, address) external pure {
-        // No-op for testing
-    }
-}
-
 /// @title StorageUpgradeTest
 /// @notice Comprehensive test for storage layout safety during contract upgrades
 /// @dev Tests both traditional storage append and ERC-7201 namespaced storage patterns
@@ -44,7 +22,6 @@ contract StorageUpgradeTest is Test {
     SyndicateSequencingChain syndicateV1;
     SyndicateSequencingChainTestingUpgradeability syndicateV2;
     ERC1967Proxy proxy;
-    MockFactory factory;
 
     // Storage verification data
     struct OriginalStorageData {
@@ -56,7 +33,7 @@ contract StorageUpgradeTest is Test {
     event MaxGasPerTransactionUpdated(uint256 newMax);
 
     function setUp() public {
-        vm.startPrank(address(factory));
+        vm.startPrank(ADMIN);
         // Deploy V1 implementation
         syndicateV1 = new SyndicateSequencingChain(GAS_METER);
 

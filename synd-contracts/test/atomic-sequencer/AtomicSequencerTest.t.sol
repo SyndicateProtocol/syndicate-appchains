@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
 import {GasMeter} from "src/staking/GasMeter.sol";
@@ -43,26 +42,25 @@ contract AtomicSequencerTest is Test {
 
         vm.startPrank(admin);
         permissionModule = new RequireAndModule(admin);
-        chainA = deployFromFactory(appchainIdA);
-        chainB = deployFromFactory(appchainIdB);
+        chainA = deployChain(appchainIdA);
+        chainB = deployChain(appchainIdB);
         atomicSequencer = new AtomicSequencer();
         permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
     }
 
-    function deployFromFactory(uint256 appchainId) public returns (SyndicateSequencingChain) {
-        SyndicateFactory implementation = new SyndicateFactory();
-        bytes memory initData = abi.encodeCall(SyndicateFactory.initialize, (admin));
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        SyndicateFactory factory = SyndicateFactory(address(proxy));
+    function deployChain(uint256 appchainId) public returns (SyndicateSequencingChain) {
+        address gasMeterImpl = address(new GasMeter());
+        address gasMeter = address(new ERC1967Proxy(gasMeterImpl, abi.encodeCall(GasMeter.initialize, ())));
 
-        GasMeter gasMeterImpl = new GasMeter();
-        address gasMeter = address(new ERC1967Proxy(address(gasMeterImpl), abi.encodeCall(GasMeter.initialize, ())));
         address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
-        factory.setSyndicateSequencingChainImplementation(sequencingChainImpl);
+        address chainAddress = address(
+            new ERC1967Proxy(
+                sequencingChainImpl,
+                abi.encodeCall(SyndicateSequencingChain.initialize, (admin, address(permissionModule), appchainId))
+            )
+        );
 
-        (address chainAddress,) =
-            factory.createSyndicateSequencingChainWithCustomId(appchainId, admin, permissionModule);
         return SyndicateSequencingChain(chainAddress);
     }
 
@@ -113,7 +111,7 @@ contract AtomicSequencerTest is Test {
 
     function testProcessMultipleChains() public {
         vm.startPrank(admin);
-        SyndicateSequencingChain chainC = deployFromFactory(10042003);
+        SyndicateSequencingChain chainC = deployChain(10042003);
         vm.stopPrank();
 
         SyndicateSequencingChain[] memory chains = new SyndicateSequencingChain[](3);

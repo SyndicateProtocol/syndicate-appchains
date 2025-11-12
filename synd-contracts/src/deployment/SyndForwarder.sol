@@ -15,7 +15,7 @@ contract SyndForwarder {
     error NotAllowedSender();
 
     /// @notice Constructor
-    /// @param _source The source address that is allowed to call the base forwarder on ETH mainnet
+    /// @param _sourceSender The source address that is allowed to call the base forwarder on ETH mainnet
     /// @param _sourceChainId The chain ID of the source chain
     constructor(address _sourceSender, uint256 _sourceChainId) {
         if (block.chainid == _sourceChainId) {
@@ -43,7 +43,7 @@ contract SyndForwarder {
         }
     }
 
-    function deploy(bytes32 salt, address impl, bytes calldata init) external onlyAllowedSender {
+    function deploy(bytes32 salt, address impl, bytes calldata init) external onlyAllowedSender returns (address) {
         address deployAddress = Create2.deploy(0, salt, getProxyBytecode());
         (bool upgradeSuccess, bytes memory result) =
             deployAddress.call(abi.encodeWithSignature("upgradeToAndCall(address,bytes)", impl, init));
@@ -52,6 +52,7 @@ contract SyndForwarder {
                 revert(add(result, 32), mload(result))
             }
         }
+        return deployAddress;
     }
 
     /// @notice Returns the consistent proxy bytecode used for all deployments
