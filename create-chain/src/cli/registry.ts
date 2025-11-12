@@ -7,30 +7,38 @@ import type {
 } from "./types";
 
 /**
+ * Type alias for a command with any schema (used for storage)
+ * We use `any` here because the registry stores commands with different schema types.
+ * Type safety is preserved at registration (via the generic function) and at runtime (via the parser).
+ */
+type AnyCommandDefinition = CommandDefinition<any>;
+
+/**
  * Global registry of all commands
  */
-const commands = new Map<string, CommandDefinition<any>>();
+const commands = new Map<string, AnyCommandDefinition>();
 
 /**
  * Register a command
+ * The generic T preserves type safety at the call site
  */
 export function registerCommand<T extends CommandSchema>(
 	command: CommandDefinition<T>,
 ): void {
-	commands.set(command.name, command as CommandDefinition<any>);
+	commands.set(command.name, command);
 }
 
 /**
  * Get a registered command by name
  */
-export function getCommand(name: string): CommandDefinition<any> | undefined {
+export function getCommand(name: string): AnyCommandDefinition | undefined {
 	return commands.get(name);
 }
 
 /**
  * Get all registered commands
  */
-export function getAllCommands(): CommandDefinition<any>[] {
+export function getAllCommands(): AnyCommandDefinition[] {
 	return Array.from(commands.values());
 }
 

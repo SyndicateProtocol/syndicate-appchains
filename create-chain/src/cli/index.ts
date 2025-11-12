@@ -1,5 +1,5 @@
 import { aliasCommand } from "./commands/alias";
-import { configureL3Command } from "./commands/configureL3";
+import { configureL3Command } from "./commands/configureL3/index";
 import { parseArgs } from "./parser";
 import {
 	generateCommandHelp,
