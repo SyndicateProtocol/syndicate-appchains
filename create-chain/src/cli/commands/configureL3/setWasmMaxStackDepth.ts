@@ -7,7 +7,6 @@ import { UpgradeExecutorABI } from "../../../abi/nitro/UpgradeExecutor";
 import { applyL1ToL2Alias } from "../../../utils/alias";
 import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../../utils/constants";
 import { print } from "../../../utils/print";
-import type { CommandSchema, SubcommandDefinition } from "../../types";
 
 interface SetWasmMaxStackDepthParams {
 	parentChainRpcUrl: string;
@@ -21,7 +20,7 @@ interface SetWasmMaxStackDepthParams {
 	customGasTokenAddress?: Address;
 }
 
-async function generateSetWasmMaxStackDepthTx({
+export async function generateSetWasmMaxStackDepthTx({
 	parentChainRpcUrl,
 	parentUpgradeExecutorAddress,
 	parentInboxAddress,
@@ -247,101 +246,3 @@ async function generateSetWasmMaxStackDepthTx({
 	print("    This usually happens automatically.\n");
 	print(`${"=".repeat(80)}\n`);
 }
-
-/**
- * Schema for setWasmMaxStackDepth subcommand
- */
-const setWasmMaxStackDepthSchema = {
-	positional: [
-		{
-			position: 0,
-			name: "depth",
-			description: "The maximum WASM stack depth",
-			type: "number",
-			required: true,
-		},
-	],
-	flags: {
-		parentRpc: {
-			flag: "--parent-rpc",
-			description: "Parent chain RPC URL",
-			type: "string",
-			required: true,
-		},
-		parentUpgradeExecutor: {
-			flag: "--parent-upgrade-executor",
-			description: "Parent chain UpgradeExecutor address",
-			type: "address",
-			required: true,
-		},
-		parentInbox: {
-			flag: "--parent-inbox",
-			description: "Parent chain Inbox address",
-			type: "address",
-			required: true,
-		},
-		l3UpgradeExecutor: {
-			flag: "--l3-upgrade-executor",
-			description: "L3 UpgradeExecutor address",
-			type: "address",
-			required: true,
-		},
-		refundAddress: {
-			flag: "--refund-address",
-			description: "Address on L3 to receive excess fees",
-			type: "address",
-			required: true,
-		},
-		gasLimit: {
-			flag: "--gas-limit",
-			description: "Gas limit for retryable ticket",
-			type: "bigint",
-			default: BigInt(1_000_000),
-		},
-		maxFeePerGas: {
-			flag: "--max-fee-per-gas",
-			description: "Max fee per gas in gwei",
-			type: "bigint",
-			default: BigInt(100000000),
-			transform: (value: string) => BigInt(value) * BigInt(1_000_000_000),
-		},
-		customGasToken: {
-			flag: "--custom-gas-token",
-			description:
-				"Custom gas token contract address for chains using ERC20 gas tokens",
-			type: "address",
-		},
-	},
-} as const satisfies CommandSchema;
-
-/**
- * Subcommand definition for setWasmMaxStackDepth
- */
-export const setWasmMaxStackDepthSubcommand: SubcommandDefinition<
-	typeof setWasmMaxStackDepthSchema
-> = {
-	name: "setWasmMaxStackDepth",
-	description: "Set the WASM max stack depth on L3",
-	schema: setWasmMaxStackDepthSchema,
-	handler: async (args) => {
-		await generateSetWasmMaxStackDepthTx({
-			parentChainRpcUrl: args.parentRpc,
-			parentUpgradeExecutorAddress: args.parentUpgradeExecutor,
-			parentInboxAddress: args.parentInbox,
-			l3UpgradeExecutorAddress: args.l3UpgradeExecutor,
-			refundAddress: args.refundAddress,
-			wasmMaxStackDepth: args.depth,
-			gasLimit: args.gasLimit,
-			maxFeePerGas: args.maxFeePerGas,
-			customGasTokenAddress: args.customGasToken,
-		});
-	},
-	examples: [
-		`bun cli configureL3 setWasmMaxStackDepth 22000 \\
-  --parent-rpc <RPC_URL> \\
-  --parent-upgrade-executor <ADDRESS> \\
-  --parent-inbox <ADDRESS> \\
-  --l3-upgrade-executor <ADDRESS> \\
-  --refund-address <ADDRESS>`,
-	],
-};

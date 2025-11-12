@@ -137,6 +137,15 @@ export async function upsertToSyndObject(
   return Bun.write(syndFilePath, stringify(syndObject, null, 2))
 }
 
+export function isValidAddress(address: string) {
+  try {
+    getAddress(address)
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
 export function isAddressEq(
   address1: Address | Hex | string,
   address2: Address | Hex | string
