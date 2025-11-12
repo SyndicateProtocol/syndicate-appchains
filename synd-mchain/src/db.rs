@@ -330,6 +330,7 @@ pub trait ArbitrumDB {
         let arbitrum_batch = match mblock.payload {
             Some(batch) => batch,
             None => {
+                debug!("POTATO db.add_batch: no payload, updating state: {mblock:?}");
                 self.put_state(&State { timestamp: mblock.timestamp, slot: mblock.slot, ..state });
                 return Ok(None);
             }
@@ -394,6 +395,7 @@ pub trait ArbitrumDB {
             timestamp: block.timestamp,
             slot: block.slot,
         });
+        debug!("POTATO db.add_batch: state: {state:?}, batch_count: {batch_count:?}, offset: {offset:?}, block: {block_clone:?}");
         Ok(Some((batch_count, offset, block_clone)))
     }
 

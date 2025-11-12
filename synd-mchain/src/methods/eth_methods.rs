@@ -118,7 +118,13 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            let (block, batch_count, offset) = match db.get_block_with_offset(i) {
+                Ok((block, batch_count, offset)) => (block, batch_count, offset),
+                Err(e) => {
+                    debug!("eth_get_logs (expected for migrations): error getting block with offset {i}: {e}");
+                    continue;
+                }
+            };
             let mut before_acc = block.before_message_acc;
             for (msg_idx, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
@@ -142,7 +148,13 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            let (block, batch_count, offset) = match db.get_block_with_offset(i) {
+                Ok((block, batch_count, offset)) => (block, batch_count, offset),
+                Err(e) => {
+                    debug!("eth_get_logs (expected for migrations): error getting block with offset {i}: {e}");
+                    continue;
+                }
+            };
             events.push(create_log(
                 batch_count,
                 offset,
@@ -249,7 +261,7 @@ pub fn eth_call(
     (db, _, _): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> Result<Bytes, ErrorObjectOwned> {
-    let (input, _): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
+    let (input, block_number): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
     if input.to != Some(alloy::primitives::TxKind::Call(APPCHAIN_CONTRACT)) {
         return Ok(Default::default());
     }
@@ -260,9 +272,12 @@ pub fn eth_call(
         IBridge::delayedMessageCountCall::SELECTOR => {
             Ok(db.get_state().message_count.abi_encode().into())
         }
-        ISequencerInbox::batchCountCall::SELECTOR => {
-            Ok((db.get_state().batch_count).abi_encode().into())
+        ISequencerInbox::batchCountCall::SELECTOR => Ok(match block_number {
+            BlockNumberOrTag::Number(number) => db.get_block_with_offset(number)?.1,
+            _ => db.get_state().batch_count,
         }
+        .abi_encode()
+        .into()),
         IBridge::delayedInboxAccsCall::SELECTOR => {
             let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index = data.0.try_into().map_err(to_err)?;
