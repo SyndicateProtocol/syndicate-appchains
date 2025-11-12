@@ -3,7 +3,7 @@ import { parseAbiItem } from "viem"
 import {
   assertionPosterABI,
   assertionPosterBytecode
-} from "@/scripts/abi/synd/AssertionPoster"
+} from "@/src/abi/synd/AssertionPoster"
 import { sleep } from "bun"
 import { getFeaturesConfig } from "../utils/config"
 import { getChainExplorerUrl } from "../utils/helpers"

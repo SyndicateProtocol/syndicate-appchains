@@ -1,4 +1,4 @@
-import { arbConfigManagerABI } from "@/scripts/abi/synd/ArbConfigManager"
+import { arbConfigManagerABI } from "@/src/abi/synd/ArbConfigManager"
 import type { CoreContracts } from "@arbitrum/orbit-sdk"
 import { type Hex, parseEventLogs } from "viem"
 import { getFoundationConfig } from "../utils/config"

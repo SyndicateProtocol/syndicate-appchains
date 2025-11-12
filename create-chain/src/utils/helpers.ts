@@ -11,7 +11,7 @@ import {
   zeroAddress
 } from "viem"
 
-import type { ChainNativeCurrency, GetChainsResponse } from "@/scripts/types"
+import type { ChainNativeCurrency, GetChainsResponse } from "@/src/types"
 import type { SyndObjectPaths } from "./schema"
 
 export async function getDoesChainExist(chainId: number) {
