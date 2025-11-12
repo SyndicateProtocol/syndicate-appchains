@@ -265,16 +265,12 @@ contract StorageUpgradeTest is Test {
         syndicateV1.upgradeToAndCall(address(syndicateV2), "");
         syndicateV2 = SyndicateSequencingChainTestingUpgradeability(address(proxy));
 
-        // Verify original values are still intact
-        assertEq(syndicateV2.version(), 1_000_000, "V1 storage should not be affected by V2 upgrade");
-
         // Set new V2 values
         syndicateV2.setMaxGasPerTransaction(999999);
         syndicateV2.setMaxTransactionsPerBatch(77);
         syndicateV2.setMinTimeBetweenTxs(123);
 
         // Verify V1 storage is still intact after V2 modifications
-        assertEq(syndicateV2.version(), 1_000_000, "V1 storage should not be affected by V2 storage modifications");
         assertEq(syndicateV2.appchainId(), TEST_APPCHAIN_ID, "V1 storage should remain intact");
 
         // Verify V2 storage is working correctly

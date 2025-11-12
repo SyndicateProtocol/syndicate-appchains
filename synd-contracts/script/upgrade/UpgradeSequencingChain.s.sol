@@ -69,7 +69,7 @@ contract UpgradeSequencingChain is Script {
         vm.stopBroadcast();
 
         // Verify upgrade
-        uint256 version = chain.version();
+        uint256 version = chain.VERSION();
         console2.log("=== Upgrade Complete ===");
         console2.log("Chain proxy:", chainAddress);
         console2.log("Implementation:", address(newImplementation));

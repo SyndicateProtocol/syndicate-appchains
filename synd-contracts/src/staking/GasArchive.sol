@@ -43,6 +43,8 @@ struct GasArchiveStorage {
 /// @notice Lives on the staking appchain and trustlessly validates and stores gas usage data from multiple sequencing chains using storage proofs
 /// @dev This contract supports arbitrum-based sequencing chains only (with the exception of the settlement chain, which can be any chain)
 contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPSUpgradeable {
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
+
     using EnumerableSet for EnumerableSet.UintSet;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
