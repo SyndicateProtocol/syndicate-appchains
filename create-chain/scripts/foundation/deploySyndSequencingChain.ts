@@ -1,14 +1,11 @@
-import { type Account, type Hex, parseEventLogs, toBytes, toHex } from "viem"
+import { type Account, type Hex, zeroAddress } from "viem"
 
 import {
   allowlistSequencingModuleABI,
   allowlistSequencingModuleBytecode
 } from "@/scripts/abi/synd/AllowlistSequencingModule"
 import { requireAndModuleABI } from "@/scripts/abi/synd/RequireAndModule"
-import { requireAndModuleFactoryABI } from "@/scripts/abi/synd/RequireAndModuleFactory"
-import { syndicateFactoryABI } from "@/scripts/abi/synd/SyndicateFactory"
 import { syndicateSequencingChainABI } from "@/scripts/abi/synd/SyndicateSequencingChain"
-import { supportedSequencingChains } from "@/scripts/utils/constants"
 import { getFoundationConfig } from "../utils/config"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"
@@ -47,93 +44,102 @@ export async function deploySyndSequencingChain(sequencerAccount: Account) {
 }
 
 async function createRequireAndModule() {
-  const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
-    await getFoundationConfig()
+  // const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
+  //   await getFoundationConfig()
 
-  const requireAndFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id]
-      .requireAndFactoryAddress
+  // const requireAndFactoryAddress =
+  //   supportedSequencingChains[sequencingPublicClient.chain.id]
+  //     .requireAndFactoryAddress
 
-  const { request: requireAndModuleRequest } =
-    await sequencingPublicClient.simulateContract({
-      account: deployerSequencingWalletClient.account,
-      address: requireAndFactoryAddress,
-      abi: requireAndModuleFactoryABI,
-      functionName: "createRequireAndModule",
-      args: [
-        deployerSequencingWalletClient.account.address,
-        toHex(toBytes(chainId, { size: 32 }))
-      ]
-    })
-  const requireAndModuleHash =
-    await deployerSequencingWalletClient.writeContract(requireAndModuleRequest)
-  const requireAndModuleTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: requireAndModuleHash
-    })
-  const requireAndFactoryLogs = parseEventLogs({
-    abi: requireAndModuleFactoryABI,
-    logs: requireAndModuleTx.logs
-  })
-  const requireAndModuleAddress = requireAndFactoryLogs.find(
-    (l) => l.eventName === "RequireAndModuleCreated"
-  )?.args.module
-  if (!requireAndModuleAddress) {
-    throw new Error("RequireAndModule deployment failed")
-  }
-  print(
-    `🔍  RequireAndModule deployed to ${requireAndModuleAddress}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${requireAndModuleHash}`
-  )
-  return requireAndModuleAddress
+  // const { request: requireAndModuleRequest } =
+  //   await sequencingPublicClient.simulateContract({
+  //     account: deployerSequencingWalletClient.account,
+  //     address: requireAndFactoryAddress,
+  //     abi: requireAndModuleFactoryABI,
+  //     functionName: "createRequireAndModule",
+  //     args: [
+  //       deployerSequencingWalletClient.account.address,
+  //       toHex(toBytes(chainId, { size: 32 }))
+  //     ]
+  //   })
+  // const requireAndModuleHash =
+  //   await deployerSequencingWalletClient.writeContract(requireAndModuleRequest)
+  // const requireAndModuleTx =
+  //   await sequencingPublicClient.waitForTransactionReceipt({
+  //     hash: requireAndModuleHash
+  //   })
+  // const requireAndFactoryLogs = parseEventLogs({
+  //   abi: requireAndModuleFactoryABI,
+  //   logs: requireAndModuleTx.logs
+  // })
+  // const requireAndModuleAddress = requireAndFactoryLogs.find(
+  //   (l) => l.eventName === "RequireAndModuleCreated"
+  // )?.args.module
+  // if (!requireAndModuleAddress) {
+  //   throw new Error("RequireAndModule deployment failed")
+  // }
+  // print(
+  //   `🔍  RequireAndModule deployed to ${requireAndModuleAddress}\n${getChainExplorerUrl(
+  //     sequencingPublicClient.chain
+  //   )}/tx/${requireAndModuleHash}`
+  // )
+  // return requireAndModuleAddress
+
+  // TODO (ENG-2215)
+  return zeroAddress
 }
 
 async function createSyndicateSequencingChain(requireAndModuleAddress: Hex) {
-  const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
-    await getFoundationConfig()
+  // const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
+  //   await getFoundationConfig()
 
-  const syndicateFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id]
-      .syndicateFactoryAddress
-  const { request: syndicateSequencingChainRequest } =
-    await sequencingPublicClient.simulateContract({
-      account: deployerSequencingWalletClient.account,
-      address: syndicateFactoryAddress,
-      abi: syndicateFactoryABI,
-      functionName: "createSyndicateSequencingChainWithCustomId",
-      args: [
-        BigInt(chainId),
-        deployerSequencingWalletClient.account.address,
-        requireAndModuleAddress
-      ]
-    })
-  const syndicateSequencingChainHash =
-    await deployerSequencingWalletClient.writeContract(
-      syndicateSequencingChainRequest
-    )
-  const syndicateSequencingChainTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: syndicateSequencingChainHash
-    })
-  const syndicateFactoryLogs = parseEventLogs({
-    abi: syndicateFactoryABI,
-    logs: syndicateSequencingChainTx.logs
-  })
-  const syndicateSequencingChainAddress = syndicateFactoryLogs.find(
-    (l) => l.eventName === "SyndicateSequencingChainCreated"
-  )?.args.sequencingChainAddress
-  if (!syndicateSequencingChainAddress) {
-    throw new Error("SyndicateSequencingChain deployment failed")
-  }
-  print(
-    `🔍  SyndicateSequencingChain deployed to ${syndicateSequencingChainAddress}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${syndicateSequencingChainHash}`
-  )
+  // const syndicateFactoryAddress =
+  //   supportedSequencingChains[sequencingPublicClient.chain.id]
+  //     .syndicateFactoryAddress
+  // const { request: syndicateSequencingChainRequest } =
+  //   await sequencingPublicClient.simulateContract({
+  //     account: deployerSequencingWalletClient.account,
+  //     address: syndicateFactoryAddress,
+  //     abi: syndicateFactoryABI,
+  //     functionName: "createSyndicateSequencingChainWithCustomId",
+  //     args: [
+  //       BigInt(chainId),
+  //       deployerSequencingWalletClient.account.address,
+  //       requireAndModuleAddress
+  //     ]
+  //   })
+  // const syndicateSequencingChainHash =
+  //   await deployerSequencingWalletClient.writeContract(
+  //     syndicateSequencingChainRequest
+  //   )
+  // const syndicateSequencingChainTx =
+  //   await sequencingPublicClient.waitForTransactionReceipt({
+  //     hash: syndicateSequencingChainHash
+  //   })
+  // const syndicateFactoryLogs = parseEventLogs({
+  //   abi: syndicateFactoryABI,
+  //   logs: syndicateSequencingChainTx.logs
+  // })
+  // const syndicateSequencingChainAddress = syndicateFactoryLogs.find(
+  //   (l) => l.eventName === "SyndicateSequencingChainCreated"
+  // )?.args.sequencingChainAddress
+  // if (!syndicateSequencingChainAddress) {
+  //   throw new Error("SyndicateSequencingChain deployment failed")
+  // }
+  // print(
+  //   `🔍  SyndicateSequencingChain deployed to ${syndicateSequencingChainAddress}\n${getChainExplorerUrl(
+  //     sequencingPublicClient.chain
+  //   )}/tx/${syndicateSequencingChainHash}`
+  // )
+  // return {
+  //   syndicateSequencingChainAddress,
+  //   deployedAtBlock: syndicateSequencingChainTx.blockNumber
+  // }
+
+  // TODO (ENG-2215)
   return {
-    syndicateSequencingChainAddress,
-    deployedAtBlock: syndicateSequencingChainTx.blockNumber
+    syndicateSequencingChainAddress: zeroAddress,
+    deployedAtBlock: BigInt(0)
   }
 }
 
