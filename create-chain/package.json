@@ -7,6 +7,7 @@
     "features": "bun run src/features/features.ts",
     "handoff": "bun run src/handoff/handoff.ts",
     "e2e": "bun run src/e2e/index.ts",
+    "cli": "bun run src/cli/configureL3FromParent.ts",
     "format": "biome format --write .",
     "lint": "biome lint --write .",
     "typecheck": "tsc --noEmit",
