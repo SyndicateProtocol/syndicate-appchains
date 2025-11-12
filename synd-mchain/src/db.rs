@@ -88,7 +88,7 @@ pub struct MBlock {
 ///
 /// Note that the block hash does not affect derived block hashes and therefore
 /// this implementation should be fully compatible with existing reth `MockChains`.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Block {
     /// block epoch timestamp in seconds
     pub timestamp: u64,
@@ -290,7 +290,7 @@ pub trait ArbitrumDB {
     }
     /// Adds a new batch to the chain
     /// Returns the block number if a new block is added
-    fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
+    fn add_batch(&self, mblock: MBlock) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
         let state = self.get_state();
         if state.batch_count == 0 && mblock.payload.is_none() {
             return Err(to_err("invalid first batch: must contain a payload"));
@@ -348,13 +348,15 @@ pub trait ArbitrumDB {
             after_batch_acc: Default::default(),
         };
         let mut inbox_acc = block.before_message_acc;
+        let offset = self.get_migration_offset();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
+            let l1_block_number =
+                if offset == 0 { block.slot.seq_block_number } else { block.slot.set_block_number };
             let message_hash = keccak256(
                 (
                     [msg.kind],
                     msg.sender,
-                    // TODO: use settlement block number if migration
-                    block.slot.seq_block_number,
+                    l1_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,
@@ -380,18 +382,19 @@ pub trait ArbitrumDB {
         block.after_batch_acc = keccak256(
             (block.before_batch_acc, data_hash, block.after_message_acc()).abi_encode_packed(),
         );
-        let block_number = state.batch_count + 1;
-        self.put_block(block_number, &block);
+        let batch_count = state.batch_count + 1;
+        self.put_block(batch_count, &block);
+        let block_clone = block.clone();
         // update the state last - incomplete blocks can be ignored / overwritten
         self.put_state(&State {
-            batch_count: block_number,
+            batch_count,
             batch_acc: block.after_batch_acc,
             message_count: block.after_message_count(),
             message_acc: block.after_message_acc(),
             timestamp: block.timestamp,
             slot: block.slot,
         });
-        Ok(Some(block_number))
+        Ok(Some((batch_count, offset, block_clone)))
     }
 
     // TODO think about make this a config param

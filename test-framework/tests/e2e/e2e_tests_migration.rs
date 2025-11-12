@@ -1,7 +1,9 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
+    eips::BlockNumberOrTag,
     primitives::{utils::parse_ether, Address, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
+    rpc::types::anvil::MineOptions,
 };
 use contract_bindings::synd::{
     arb_owner::ArbOwner,
@@ -36,7 +38,7 @@ use test_utils::{
         launch_nitro_node, start_component, start_eigenda_proxy, start_mchain, start_valkey,
         E2EProcess, NitroNodeArgs, NitroSequencerMode,
     },
-    nitro_chain::{deploy_nitro_rollup, NitroDeployment, ARB_OWNER_PRECOMPILE_ADDRESS},
+    nitro_chain::{deploy_nitro_rollup, NitroBlock, NitroDeployment, ARB_OWNER_PRECOMPILE_ADDRESS},
     port_manager::PortManager,
     utils::test_path,
     wait_until,
@@ -263,10 +265,14 @@ async fn e2e_migration() -> Result<()> {
 
     // TODO
     // mine a few blocks so base chains diverge in block number (edge case)
-    // set_chain
-    //     .provider
-    //     .evm_mine(Some(MineOptions::Options { timestamp: None, blocks: Some(1000) }))
-    //     .await?;
+    let block = set_chain.provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
+    set_chain
+        .provider
+        .evm_mine(Some(MineOptions::Options {
+            timestamp: Some(block.header.timestamp),
+            blocks: Some(1000),
+        }))
+        .await?;
 
     let sequencing_contract =
         deploy_sequencing_contract(seq_chain.provider.clone(), U256::from(appchain_chain_id))
@@ -481,6 +487,25 @@ async fn e2e_migration() -> Result<()> {
         },
         Duration::from_secs(10)
     );
+
+    let block: NitroBlock = synd_stack
+        .appchain
+        .provider
+        .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+        .await
+        .unwrap();
+
+    let l1_block_number = block.l1_block_number;
+    let set_chain_block_number = set_chain
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await?
+        .unwrap()
+        .header
+        .number;
+    // Make sure the l1 block number is the same as the set chain block number - 1
+    // We use the set block number as the L1 block number for migrated appchains
+    assert_eq!(l1_block_number, set_chain_block_number - 1);
 
     Ok(())
 }

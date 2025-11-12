@@ -198,13 +198,7 @@ pub fn eth_get_block_by_hash(
     debug!("eth_get_block_by_hash: number: {number}");
     let block = db.get_block(number)?;
     Ok(alloy::rpc::types::Block {
-        header: create_header(
-            number,
-            db.get_migration_offset(),
-            // TODO: use settlement block number if migration
-            block.slot.seq_block_number,
-            block.timestamp,
-        ),
+        header: create_header(number, db.get_migration_offset(), &block),
         ..Default::default()
     })
 }
@@ -242,13 +236,7 @@ pub fn eth_get_block_by_number(
     };
     let block = db.get_block(number).unwrap();
     Ok(alloy::rpc::types::Block {
-        header: create_header(
-            number,
-            db.get_migration_offset(),
-            // TODO: use settlement block number if migration
-            block.slot.seq_block_number,
-            block.timestamp,
-        ),
+        header: create_header(number, db.get_migration_offset(), &block),
         ..Default::default()
     })
 }

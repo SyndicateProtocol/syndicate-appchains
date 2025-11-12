@@ -61,7 +61,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
         if let Some(migration_params) = migration_params {
             db.appchain_migration(migration_params).unwrap();
-            finalized_batch = 2;
+            finalized_batch = db.get_state().batch_count;
         }
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;

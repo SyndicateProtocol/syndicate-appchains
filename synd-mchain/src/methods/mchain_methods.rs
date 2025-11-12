@@ -24,33 +24,30 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     let (mblock,): (MBlock,) = p.parse()?;
     let timestamp = mblock.timestamp;
     let seq_block_number = mblock.slot.seq_block_number;
-    let block = db.add_batch(mblock)?;
+    let result = db.add_batch(mblock)?;
 
     metrics.record_sequencing_block(seq_block_number, timestamp);
 
-    Ok(block.inspect(|&batch_count| {
-        metrics.record_last_block(batch_count, timestamp);
-        let mut data = mutex.lock().unwrap();
-        data.pending_ts.push_back(timestamp);
-        assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, batch_count);
-        data.subs.retain_mut(|sink| {
-            if sink.is_closed() {
-                return false;
-            }
-            sink.try_send(SubscriptionMessage::from(
-                serde_json::value::to_raw_value(&create_header(
-                    batch_count,
-                    db.get_migration_offset(),
-                    seq_block_number,
-                    timestamp,
+    Ok(result
+        .inspect(|(batch_count, offset, block)| {
+            metrics.record_last_block(*batch_count, timestamp);
+            let mut data = mutex.lock().unwrap();
+            data.pending_ts.push_back(timestamp);
+            assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, *batch_count);
+            data.subs.retain_mut(|sink| {
+                if sink.is_closed() {
+                    return false;
+                }
+                sink.try_send(SubscriptionMessage::from(
+                    serde_json::value::to_raw_value(&create_header(*batch_count, *offset, block))
+                        .unwrap(),
                 ))
-                .unwrap(),
-            ))
-            .inspect_err(|err| error!("try_send failed: {err}"))
-            .is_ok()
-        });
-        drop(data);
-    }))
+                .inspect_err(|err| error!("try_send failed: {err}"))
+                .is_ok()
+            });
+            drop(data);
+        })
+        .map(|(batch_count, _, _)| batch_count))
 }
 
 /// `mchain_rollbackToBlock`
@@ -71,8 +68,7 @@ pub fn rollback_to_block(
 
     // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
-    // TODO: use settlement block number if migration
-    let l1_block_number = block.slot.seq_block_number;
+    let clone_block = block.clone();
     let block_message_count = block.after_message_count();
     let timestamp = block.timestamp;
 
@@ -124,8 +120,7 @@ pub fn rollback_to_block(
                 serde_json::value::to_raw_value(&create_header(
                     block_number,
                     db.get_migration_offset(),
-                    l1_block_number,
-                    timestamp,
+                    &clone_block,
                 ))
                 .unwrap(),
             ))
