@@ -2,6 +2,7 @@ import type { Address, Hex } from "viem";
 import { createPublicClient, encodeFunctionData, http } from "viem";
 import { ArbOwnerABI } from "../../abi/nitro/ArbOwner";
 import { InboxABI } from "../../abi/nitro/Inbox";
+import { ERC20InboxABI } from "../../abi/nitro/ERC20Inbox";
 import { UpgradeExecutorABI } from "../../abi/nitro/UpgradeExecutor";
 import { applyL1ToL2Alias } from "../../utils/alias";
 import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../utils/constants";
@@ -113,24 +114,45 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 
 		const maxSubmissionCost = (submissionCost * 150n) / 100n; // Add 50% buffer for safety
 
-		// Step 3: Encode call to Inbox (use unsafeCreateRetryableTicket for custom gas token)
-		const inboxFunctionName = useCustomGasToken
-			? "unsafeCreateRetryableTicket"
-			: "createRetryableTicket";
-		const inboxCalldata = encodeFunctionData({
-			abi: InboxABI,
-			functionName: inboxFunctionName,
-			args: [
-				l3UpgradeExecutorAddress, // to
-				0n, // l2CallValue
-				maxSubmissionCost, // maxSubmissionCost
-				refundAddress, // excessFeeRefundAddress
-				refundAddress, // callValueRefundAddress
-				gasLimit, // gasLimit
-				maxFeePerGas, // maxFeePerGas
-				l3UpgradeExecutorCalldata, // data
-			],
-		});
+		// Calculate total value needed
+		const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
+
+		// Step 3: Encode call to Inbox (ERC20Inbox for custom gas token, regular Inbox for ETH)
+		let inboxCalldata: Hex;
+		if (useCustomGasToken) {
+			// ERC20Inbox has an extra tokenTotalFeeAmount parameter
+			inboxCalldata = encodeFunctionData({
+				abi: ERC20InboxABI,
+				functionName: "createRetryableTicket",
+				args: [
+					l3UpgradeExecutorAddress, // to
+					0n, // l2CallValue
+					maxSubmissionCost, // maxSubmissionCost
+					refundAddress, // excessFeeRefundAddress
+					refundAddress, // callValueRefundAddress
+					gasLimit, // gasLimit
+					maxFeePerGas, // maxFeePerGas
+					totalValue, // tokenTotalFeeAmount - amount to pull from sender
+					l3UpgradeExecutorCalldata, // data
+				],
+			});
+		} else {
+			// Regular Inbox uses payable function
+			inboxCalldata = encodeFunctionData({
+				abi: InboxABI,
+				functionName: "createRetryableTicket",
+				args: [
+					l3UpgradeExecutorAddress, // to
+					0n, // l2CallValue
+					maxSubmissionCost, // maxSubmissionCost
+					refundAddress, // excessFeeRefundAddress
+					refundAddress, // callValueRefundAddress
+					gasLimit, // gasLimit
+					maxFeePerGas, // maxFeePerGas
+					l3UpgradeExecutorCalldata, // data
+				],
+			});
+		}
 
 		// Step 4: Encode call to parent UpgradeExecutor.executeCall()
 		const upgradeExecutorCalldata = encodeFunctionData({
@@ -138,9 +160,6 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 			functionName: "executeCall",
 			args: [parentInboxAddress, inboxCalldata],
 		});
-
-		// Calculate total value needed
-		const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
 
 		print("=".repeat(80));
 		print("\n📝 TRANSACTION DATA\n");
@@ -176,38 +195,67 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 		print("\n💡 INSTRUCTIONS\n");
 		print("=".repeat(80));
 		if (useCustomGasToken) {
-			// Generate approval calldata
-			const approvalCalldata = encodeFunctionData({
+			// Generate approval calldatas
+			const erc20ApprovalAbi = [
+				{
+					type: "function",
+					name: "approve",
+					inputs: [
+						{ name: "spender", type: "address" },
+						{ name: "amount", type: "uint256" },
+					],
+					outputs: [{ name: "", type: "bool" }],
+					stateMutability: "nonpayable",
+				},
+			];
+
+			// Step 1: EOA transfers tokens to UpgradeExecutor
+			const transferCalldata = encodeFunctionData({
 				abi: [
 					{
 						type: "function",
-						name: "approve",
+						name: "transfer",
 						inputs: [
-							{ name: "spender", type: "address" },
+							{ name: "to", type: "address" },
 							{ name: "amount", type: "uint256" },
 						],
 						outputs: [{ name: "", type: "bool" }],
 						stateMutability: "nonpayable",
 					},
 				],
-				functionName: "approve",
+				functionName: "transfer",
 				args: [parentUpgradeExecutorAddress, totalValue],
 			});
 
+			// Step 2: UpgradeExecutor approves Inbox (via executeCall)
+			const inboxApprovalCalldata = encodeFunctionData({
+				abi: erc20ApprovalAbi,
+				functionName: "approve",
+				args: [parentInboxAddress, totalValue],
+			});
+
+			const upgradeExecutorApprovalCalldata = encodeFunctionData({
+				abi: UpgradeExecutorABI,
+				functionName: "executeCall",
+				args: [customGasTokenAddress, inboxApprovalCalldata],
+			});
+
 			print("For custom gas token chains, you need to:");
-			print("\n1. Approve the parent UpgradeExecutor to spend the gas token:");
+			print(
+				"\n1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:",
+			);
 			print(`   Target:   ${customGasTokenAddress}`);
 			print(`   Value:    0 wei`);
-			print(`   Calldata: ${approvalCalldata}`);
+			print(`   Calldata: ${transferCalldata}`);
 			print("");
-			print("   Or manually:");
 			print(
-				`   - Call approve() on the gas token contract at ${customGasTokenAddress}`,
+				"2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend tokens:",
 			);
-			print(`   - Spender: ${parentUpgradeExecutorAddress}`);
-			print(`   - Amount:  ${totalValue} wei (or more)`);
+			print(`   Target:   ${parentUpgradeExecutorAddress}`);
+			print(`   Value:    0 wei`);
+			print(`   Calldata: ${upgradeExecutorApprovalCalldata}`);
 			print("");
-			print("2. Then call the parent UpgradeExecutor:");
+			print("3. [UpgradeExecutor → Inbox] Call the parent UpgradeExecutor:");
 			print(`   Target:   ${parentUpgradeExecutorAddress}`);
 			print(`   Value:    0 wei (no ETH, uses approved tokens)`);
 			print(`   Calldata: ${upgradeExecutorCalldata}`);
