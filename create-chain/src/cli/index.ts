@@ -20,15 +20,18 @@ OPTIONS:
 
 EXAMPLES:
   # Calculate aliased address
-  bun cli alias 0x4F816281ce1a78E8989f632A1669DA6BeF9C86a9
+  bun cli alias <ADDRESS>
 
   # Configure WASM max stack depth
   bun cli configureL3 setWasmMaxStackDepth 22000 \\
-    --parent-rpc https://sepolia.base.org \\
-    --parent-upgrade-executor 0x1234... \\
-    --parent-inbox 0x5678... \\
-    --l3-upgrade-executor 0x9abc... \\
-    --refund-address 0xdef0...
+    --parent-rpc <RPC_URL> \\
+    --parent-upgrade-executor <ADDRESS> \\
+    --parent-inbox <ADDRESS> \\
+    --l3-upgrade-executor <ADDRESS> \\
+    --refund-address <ADDRESS> \\
+    --gas-limit <GAS_LIMIT (optional, default: 1000000)> \\
+    --max-fee-per-gas <GWEI (optional, default: 0.1)> \\
+    --custom-gas-token <ADDRESS (optional, default: undefined)>
 
 CONFIGURE L3 OPTIONS:
   --parent-rpc <URL>          Parent chain RPC URL (required)
@@ -40,6 +43,9 @@ CONFIGURE L3 OPTIONS:
   --refund-address <ADDRESS>  Address on L3 to receive excess fees (required)
   --gas-limit <LIMIT>         Gas limit for retryable ticket (optional, default: 1000000)
   --max-fee-per-gas <GWEI>    Max fee per gas in gwei (optional, default: 0.1)
+  --custom-gas-token <ADDRESS>
+                              Custom gas token contract address for chains using ERC20 gas tokens
+                              (optional, generates approval calldata when provided)
 `)
 }
 
