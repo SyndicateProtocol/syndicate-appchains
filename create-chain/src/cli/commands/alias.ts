@@ -1,15 +1,29 @@
-import { applyL1ToL2Alias } from "../../utils/alias"
+import type { CommandDefinition } from "../types";
+import { applyL1ToL2Alias } from "../../utils/alias";
 
-export async function aliasCommand(args: string[]) {
-  const address = args[0]
-
-  if (!address) {
-    console.error(`❌ Missing address for alias command`)
-    console.error("\nUsage: bun cli alias <ADDRESS>")
-    process.exit(1)
-  }
-
-  const aliasedAddress = applyL1ToL2Alias(address)
-  console.log(`Original:  ${address}`)
-  console.log(`Aliased:   ${aliasedAddress}`)
-}
+/**
+ * Command definition for the alias command
+ */
+export const aliasCommand: CommandDefinition = {
+	name: "alias",
+	description: "Calculate the aliased address for L1->L2 messages",
+	schema: {
+		positional: [
+			{
+				position: 0,
+				name: "address",
+				description: "The address to alias",
+				type: "address",
+				required: true,
+			},
+		],
+	},
+	handler: async (args) => {
+		const aliasedAddress = applyL1ToL2Alias(args.address);
+		console.log(`Original:  ${args.address}`);
+		console.log(`Aliased:   ${aliasedAddress}`);
+	},
+	examples: [
+		"bun cli alias 0x1234567890123456789012345678901234567890",
+	],
+};

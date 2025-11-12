@@ -1,12 +1,13 @@
 import type { Address, Hex } from "viem";
 import { createPublicClient, encodeFunctionData, http } from "viem";
 import { ArbOwnerABI } from "../../abi/nitro/ArbOwner";
-import { InboxABI } from "../../abi/nitro/Inbox";
 import { ERC20InboxABI } from "../../abi/nitro/ERC20Inbox";
+import { InboxABI } from "../../abi/nitro/Inbox";
 import { UpgradeExecutorABI } from "../../abi/nitro/UpgradeExecutor";
 import { applyL1ToL2Alias } from "../../utils/alias";
 import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../utils/constants";
 import { print } from "../../utils/print";
+import type { CommandDefinition } from "../types";
 
 interface ConfigureL3Params {
 	parentChainRpcUrl: string;
@@ -28,8 +29,8 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 		parentUpgradeExecutorAddress,
 		parentInboxAddress,
 		l3UpgradeExecutorAddress,
-		gasLimit = 1_000_000n,
-		maxFeePerGas = 100000000n, // 0.1 gwei default
+		gasLimit = BigInt(1000000),
+		maxFeePerGas = BigInt(100000000), // 0.1 gwei default
 		refundAddress,
 		customGasTokenAddress,
 		arbOwnerConfig,
@@ -90,29 +91,31 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 				address: parentInboxAddress,
 				abi: InboxABI,
 				functionName: "calculateRetryableSubmissionFee",
-				args: [dataLength, 0n], // 0 means use current basefee
+				args: [dataLength, BigInt(0)], // 0 means use current basefee
 			});
 
 			// If the result is 0, the function might not be working correctly
-			if (submissionCost === 0n) {
+			if (submissionCost === BigInt(0)) {
 				print(
 					"⚠️  Calculated submission cost is 0, using formula-based estimate\n",
 				);
 				// Use Arbitrum's formula: (1400 + 6 * dataLength) * baseFee
 				// Assuming a reasonable base fee of 0.1 gwei = 100000000 wei
-				const estimatedBaseFee = 100000000n;
-				submissionCost = (1400n + 6n * dataLength) * estimatedBaseFee;
+				const estimatedBaseFee = BigInt(100000000);
+				submissionCost =
+					(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 			}
 		} catch (_error) {
 			print(
 				"⚠️  Could not calculate submission cost, using formula-based estimate\n",
 			);
 			// Use Arbitrum's formula: (1400 + 6 * dataLength) * baseFee
-			const estimatedBaseFee = 100000000n;
-			submissionCost = (1400n + 6n * dataLength) * estimatedBaseFee;
+			const estimatedBaseFee = BigInt(100000000);
+			submissionCost =
+				(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 		}
 
-		const maxSubmissionCost = (submissionCost * 150n) / 100n; // Add 50% buffer for safety
+		const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100); // Add 50% buffer for safety
 
 		// Calculate total value needed
 		const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
@@ -126,7 +129,7 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 				functionName: "createRetryableTicket",
 				args: [
 					l3UpgradeExecutorAddress, // to
-					0n, // l2CallValue
+					BigInt(0), // l2CallValue
 					maxSubmissionCost, // maxSubmissionCost
 					refundAddress, // excessFeeRefundAddress
 					refundAddress, // callValueRefundAddress
@@ -143,7 +146,7 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 				functionName: "createRetryableTicket",
 				args: [
 					l3UpgradeExecutorAddress, // to
-					0n, // l2CallValue
+					BigInt(0), // l2CallValue
 					maxSubmissionCost, // maxSubmissionCost
 					refundAddress, // excessFeeRefundAddress
 					refundAddress, // callValueRefundAddress
@@ -271,80 +274,102 @@ async function generateConfigureTx(params: ConfigureL3Params) {
 	}
 }
 
-export async function configureL3Command(args: string[]) {
-	const getArg = (flag: string): string | undefined => {
-		const index = args.indexOf(flag);
-		return index !== -1 && args[index + 1] ? args[index + 1] : undefined;
-	};
-
-	const subCommand = args[0];
-	const commandValue = args[1];
-
-	if (subCommand !== "setWasmMaxStackDepth") {
-		console.error(`❌ Unknown configureL3 subcommand: ${subCommand}`);
-		console.error("\nAvailable subcommands: setWasmMaxStackDepth <DEPTH>");
-		process.exit(1);
-	}
-
-	if (!commandValue || commandValue.startsWith("--")) {
-		console.error(`❌ Missing value for setWasmMaxStackDepth`);
-		console.error(
-			"\nUsage: bun cli configureL3 setWasmMaxStackDepth <DEPTH> [OPTIONS]",
-		);
-		process.exit(1);
-	}
-
-	const wasmMaxStackDepth = commandValue;
-	const parentRpc = getArg("--parent-rpc");
-	const parentUpgradeExecutor = getArg("--parent-upgrade-executor");
-	const parentInbox = getArg("--parent-inbox");
-	const l3UpgradeExecutor = getArg("--l3-upgrade-executor");
-	const refundAddress = getArg("--refund-address");
-	const gasLimit = getArg("--gas-limit");
-	const maxFeePerGas = getArg("--max-fee-per-gas");
-	const customGasToken = getArg("--custom-gas-token");
-
-	// Validate required arguments
-	const required = {
-		"--parent-rpc": parentRpc,
-		"--parent-upgrade-executor": parentUpgradeExecutor,
-		"--parent-inbox": parentInbox,
-		"--l3-upgrade-executor": l3UpgradeExecutor,
-		"--refund-address": refundAddress,
-	};
-
-	const missing = Object.entries(required)
-		.filter(([_, value]) => !value)
-		.map(([key]) => key);
-
-	if (missing.length > 0) {
-		console.error(`Missing required arguments: ${missing.join(", ")}`);
-		console.error(`
-Usage: bun cli configureL3 setWasmMaxStackDepth <DEPTH> \\
+/**
+ * Command definition for configureL3
+ */
+export const configureL3Command: CommandDefinition = {
+	name: "configureL3",
+	description:
+		"Generate targets & calldata needed to configure syndicate appchains via its UpgradeExecutor on the parent chain.",
+	subcommands: [
+		{
+			name: "setWasmMaxStackDepth",
+			description: "Set the WASM max stack depth on L3",
+			schema: {
+				positional: [
+					{
+						position: 0,
+						name: "depth",
+						description: "The maximum WASM stack depth",
+						type: "number",
+						required: true,
+					},
+				],
+				flags: {
+					parentRpc: {
+						flag: "--parent-rpc",
+						description: "Parent chain RPC URL",
+						type: "string",
+						required: true,
+					},
+					parentUpgradeExecutor: {
+						flag: "--parent-upgrade-executor",
+						description: "Parent chain UpgradeExecutor address",
+						type: "address",
+						required: true,
+					},
+					parentInbox: {
+						flag: "--parent-inbox",
+						description: "Parent chain Inbox address",
+						type: "address",
+						required: true,
+					},
+					l3UpgradeExecutor: {
+						flag: "--l3-upgrade-executor",
+						description: "L3 UpgradeExecutor address",
+						type: "address",
+						required: true,
+					},
+					refundAddress: {
+						flag: "--refund-address",
+						description: "Address on L3 to receive excess fees",
+						type: "address",
+						required: true,
+					},
+					gasLimit: {
+						flag: "--gas-limit",
+						description: "Gas limit for retryable ticket",
+						type: "bigint",
+						default: BigInt(1_000_000),
+					},
+					maxFeePerGas: {
+						flag: "--max-fee-per-gas",
+						description: "Max fee per gas in gwei",
+						type: "bigint",
+						default: BigInt(100000000),
+						transform: (value: string) => BigInt(value) * BigInt(1_000_000_000),
+					},
+					customGasToken: {
+						flag: "--custom-gas-token",
+						description:
+							"Custom gas token contract address for chains using ERC20 gas tokens",
+						type: "address",
+					},
+				},
+			},
+			handler: async (args) => {
+				await generateConfigureTx({
+					parentChainRpcUrl: args.parentRpc,
+					parentUpgradeExecutorAddress: args.parentUpgradeExecutor,
+					parentInboxAddress: args.parentInbox,
+					l3UpgradeExecutorAddress: args.l3UpgradeExecutor,
+					refundAddress: args.refundAddress,
+					gasLimit: args.gasLimit,
+					maxFeePerGas: args.maxFeePerGas,
+					customGasTokenAddress: args.customGasToken,
+					arbOwnerConfig: {
+						wasmMaxStackDepth: args.depth,
+					},
+				});
+			},
+			examples: [
+				`bun cli configureL3 setWasmMaxStackDepth 22000 \\
   --parent-rpc <RPC_URL> \\
   --parent-upgrade-executor <ADDRESS> \\
   --parent-inbox <ADDRESS> \\
   --l3-upgrade-executor <ADDRESS> \\
-  --refund-address <ADDRESS> \\
-  [--gas-limit <GAS_LIMIT>] \\
-  [--max-fee-per-gas <GWEI>]
-`);
-		process.exit(1);
-	}
-
-	await generateConfigureTx({
-		parentChainRpcUrl: parentRpc!,
-		parentUpgradeExecutorAddress: parentUpgradeExecutor! as Address,
-		parentInboxAddress: parentInbox! as Address,
-		l3UpgradeExecutorAddress: l3UpgradeExecutor! as Address,
-		refundAddress: refundAddress! as Address,
-		gasLimit: gasLimit ? BigInt(gasLimit) : undefined,
-		maxFeePerGas: maxFeePerGas
-			? BigInt(maxFeePerGas) * BigInt(1_000_000_000)
-			: undefined,
-		customGasTokenAddress: customGasToken as Address | undefined,
-		arbOwnerConfig: {
-			wasmMaxStackDepth: Number(wasmMaxStackDepth!),
+  --refund-address <ADDRESS>`,
+			],
 		},
-	});
-}
+	],
+};
