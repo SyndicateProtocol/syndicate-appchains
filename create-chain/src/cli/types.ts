@@ -57,21 +57,36 @@ export interface CommandSchema {
 }
 
 /**
+ * Extract positional argument names and types from schema
+ */
+type PositionalArgsMap<T extends CommandSchema> = T["positional"] extends readonly PositionalArgDefinition[]
+	? {
+			[K in T["positional"][number]["name"]]: Extract<
+				T["positional"][number],
+				{ name: K }
+			> extends PositionalArgDefinition<infer U>
+				? ArgTypeMap[U]
+				: never;
+		}
+	: {};
+
+/**
+ * Extract flag argument names and types from schema
+ */
+type FlagArgsMap<T extends CommandSchema> = T["flags"] extends Record<string, ArgDefinition>
+	? {
+			[K in keyof T["flags"]]: T["flags"][K] extends ArgDefinition<infer U>
+				? T["flags"][K]["required"] extends true
+					? ArgTypeMap[U]
+					: ArgTypeMap[U] | undefined
+				: never;
+		}
+	: {};
+
+/**
  * Parsed argument values matching the schema
  */
-export type ParsedArgs<T extends CommandSchema> = {
-	[K in keyof T["flags"]]: T["flags"][K] extends ArgDefinition<infer U>
-		? T["flags"][K]["required"] extends true
-			? ArgTypeMap[U]
-			: ArgTypeMap[U] | undefined
-		: never;
-} & {
-	[K in keyof T["positional"]]: T["positional"][K] extends PositionalArgDefinition<
-		infer U
-	>
-		? ArgTypeMap[U]
-		: never;
-};
+export type ParsedArgs<T extends CommandSchema> = PositionalArgsMap<T> & FlagArgsMap<T>;
 
 /**
  * Command handler function type
@@ -109,7 +124,7 @@ export interface CommandDefinition<T extends CommandSchema = CommandSchema> {
 	/** Handler function (for commands without subcommands) */
 	handler?: CommandHandler<T>;
 	/** Subcommands (for commands with subcommands) */
-	subcommands?: SubcommandDefinition[];
+	subcommands?: SubcommandDefinition<any>[];
 	/** Examples for help text */
 	examples?: string[];
 	/** Custom help message generator (overrides default help generation) */

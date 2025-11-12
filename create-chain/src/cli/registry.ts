@@ -9,26 +9,28 @@ import type {
 /**
  * Global registry of all commands
  */
-const commands = new Map<string, CommandDefinition>();
+const commands = new Map<string, CommandDefinition<any>>();
 
 /**
  * Register a command
  */
-export function registerCommand(command: CommandDefinition): void {
-	commands.set(command.name, command);
+export function registerCommand<T extends CommandSchema>(
+	command: CommandDefinition<T>,
+): void {
+	commands.set(command.name, command as CommandDefinition<any>);
 }
 
 /**
  * Get a registered command by name
  */
-export function getCommand(name: string): CommandDefinition | undefined {
+export function getCommand(name: string): CommandDefinition<any> | undefined {
 	return commands.get(name);
 }
 
 /**
  * Get all registered commands
  */
-export function getAllCommands(): CommandDefinition[] {
+export function getAllCommands(): CommandDefinition<any>[] {
 	return Array.from(commands.values());
 }
 
@@ -46,8 +48,9 @@ function formatPositionalArg(arg: PositionalArgDefinition): string {
 function formatFlagArg(flagName: string, arg: ArgDefinition): string {
 	const flag = arg.flag || `--${flagName}`;
 	const valueName = flagName.toUpperCase().replace(/-/g, "_");
-	const suffix = arg.required ? "" : " (optional)";
-	const defaultValue = arg.default !== undefined ? `, default: ${arg.default}` : "";
+	const _suffix = arg.required ? "" : " (optional)";
+	const _defaultValue =
+		arg.default !== undefined ? `, default: ${arg.default}` : "";
 	return `  ${flag} <${valueName}>`;
 }
 
@@ -85,15 +88,25 @@ export function generateCommandHelp(command: CommandDefinition): string {
 		lines.push("");
 
 		// Collect all unique flags from all subcommands
-		const allFlags = new Map<string, { def: ArgDefinition; subcommandNames: string[] }>();
+		const allFlags = new Map<
+			string,
+			{ def: ArgDefinition; subcommandNames: string[] }
+		>();
 		for (const sub of command.subcommands) {
 			if (sub.schema.flags) {
 				for (const [flagName, flagDef] of Object.entries(sub.schema.flags)) {
-					const flagKey = flagDef.flag || `--${flagName}`;
+					// Type guard to ensure flagDef is an ArgDefinition
+					if (!flagDef || typeof flagDef !== "object") continue;
+
+					const typedFlagDef = flagDef as ArgDefinition;
+					const flagKey = typedFlagDef.flag || `--${flagName}`;
 					if (allFlags.has(flagKey)) {
-						allFlags.get(flagKey)!.subcommandNames.push(sub.name);
+						allFlags.get(flagKey)?.subcommandNames.push(sub.name);
 					} else {
-						allFlags.set(flagKey, { def: flagDef, subcommandNames: [sub.name] });
+						allFlags.set(flagKey, {
+							def: typedFlagDef,
+							subcommandNames: [sub.name],
+						});
 					}
 				}
 			}
@@ -106,9 +119,10 @@ export function generateCommandHelp(command: CommandDefinition): string {
 				const required = def.required ? " (required)" : " (optional)";
 				const defaultValue =
 					def.default !== undefined ? `, default: ${def.default}` : "";
-				const usedBy = subcommandNames.length === command.subcommands.length
-					? ""
-					: ` [used by: ${subcommandNames.join(", ")}]`;
+				const usedBy =
+					subcommandNames.length === command.subcommands.length
+						? ""
+						: ` [used by: ${subcommandNames.join(", ")}]`;
 				lines.push(`  ${flagKey} <VALUE>`);
 				lines.push(`    ${def.description}${required}${defaultValue}${usedBy}`);
 			}
@@ -119,9 +133,7 @@ export function generateCommandHelp(command: CommandDefinition): string {
 			? command.schema.positional.map(formatPositionalArg).join(" ")
 			: "";
 		lines.push("USAGE:");
-		lines.push(
-			`  bun cli ${command.name} ${positionals} [OPTIONS]`.trimEnd(),
-		);
+		lines.push(`  bun cli ${command.name} ${positionals} [OPTIONS]`.trimEnd());
 		lines.push("");
 
 		// Show flags for non-subcommand commands
@@ -176,7 +188,10 @@ export function generateSubcommandHelp(
 	lines.push("");
 
 	// Options
-	if (subcommand.schema.flags && Object.keys(subcommand.schema.flags).length > 0) {
+	if (
+		subcommand.schema.flags &&
+		Object.keys(subcommand.schema.flags).length > 0
+	) {
 		lines.push("OPTIONS:");
 		for (const [flagName, flagDef] of Object.entries(subcommand.schema.flags)) {
 			const flagText = formatFlagArg(flagName, flagDef);
@@ -207,7 +222,7 @@ export function generateSubcommandHelp(
 export function generateGlobalHelp(): string {
 	const lines: string[] = [];
 
-	lines.push("L3 Configuration CLI");
+	lines.push("synd-cli: manage syndicate appchains");
 	lines.push("");
 	lines.push("USAGE:");
 	lines.push("  bun cli <COMMAND> [OPTIONS]");
@@ -222,7 +237,9 @@ export function generateGlobalHelp(): string {
 	lines.push("OPTIONS:");
 	lines.push("  --help, -h          Show this help message");
 	lines.push("");
-	lines.push("Run 'bun cli <COMMAND> --help' for more information on a command.");
+	lines.push(
+		"Run 'bun cli <COMMAND> --help' for more information on a command.",
+	);
 
 	return lines.join("\n");
 }

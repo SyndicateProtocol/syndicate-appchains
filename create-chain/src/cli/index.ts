@@ -30,9 +30,7 @@ async function main() {
 
 	if (!command) {
 		console.error(`❌ Unknown command: ${commandName}`);
-		console.error(
-			`\nRun 'bun cli --help' to see available commands`,
-		);
+		console.error(`\nRun 'bun cli --help' to see available commands`);
 		process.exit(1);
 	}
 
@@ -49,7 +47,7 @@ async function main() {
 
 			if (!subcommandName) {
 				console.error(`❌ Missing subcommand for ${commandName}`);
-				console.log("\n" + generateCommandHelp(command));
+				console.log(`\n${generateCommandHelp(command)}`);
 				process.exit(1);
 			}
 
@@ -61,16 +59,13 @@ async function main() {
 				console.error(
 					`❌ Unknown subcommand: ${commandName} ${subcommandName}`,
 				);
-				console.log("\n" + generateCommandHelp(command));
+				console.log(`\n${generateCommandHelp(command)}`);
 				process.exit(1);
 			}
 
 			// Handle subcommand-level help
 			const subcommandArgs = commandArgs.slice(1);
-			if (
-				subcommandArgs.includes("--help") ||
-				subcommandArgs.includes("-h")
-			) {
+			if (subcommandArgs.includes("--help") || subcommandArgs.includes("-h")) {
 				console.log(generateSubcommandHelp(commandName, subcommand));
 				process.exit(0);
 			}
