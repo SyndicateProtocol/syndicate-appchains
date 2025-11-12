@@ -56,9 +56,6 @@ function formatPositionalArg(arg: PositionalArgDefinition): string {
 function formatFlagArg(flagName: string, arg: ArgDefinition): string {
 	const flag = arg.flag || `--${flagName}`;
 	const valueName = flagName.toUpperCase().replace(/-/g, "_");
-	const _suffix = arg.required ? "" : " (optional)";
-	const _defaultValue =
-		arg.default !== undefined ? `, default: ${arg.default}` : "";
 	return `  ${flag} <${valueName}>`;
 }
 

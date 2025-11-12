@@ -89,8 +89,7 @@ async function generateSetWasmMaxStackDepthTx({
 		);
 		// Use Arbitrum's formula: (1400 + 6 * dataLength) * baseFee
 		const estimatedBaseFee = BigInt(100000000);
-		submissionCost =
-			(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
+		submissionCost = (BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 	}
 
 	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100); // Add 50% buffer for safety
@@ -222,9 +221,7 @@ async function generateSetWasmMaxStackDepthTx({
 		});
 
 		print("For custom gas token chains, you need to:");
-		print(
-			"\n1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:",
-		);
+		print("\n1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:");
 		print(`   Target:   ${customGasTokenAddress}`);
 		print(`   Value:    0 wei`);
 		print(`   Calldata: ${transferCalldata}`);
