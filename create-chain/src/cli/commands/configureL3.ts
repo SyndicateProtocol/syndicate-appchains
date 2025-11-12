@@ -1,68 +1,31 @@
+import type { Address, Hex } from "viem"
 import {
-  type Address,
-  type Chain,
-  type Hex,
-  type PublicClient,
-  type WalletClient,
   createPublicClient,
-  createWalletClient,
   encodeFunctionData,
   http,
   parseEther
 } from "viem"
-import { privateKeyToAccount } from "viem/accounts"
-import { ArbOwnerABI } from "../abi/nitro/ArbOwner"
-import { InboxABI } from "../abi/nitro/Inbox"
-import { UpgradeExecutorABI } from "../abi/nitro/UpgradeExecutor"
-import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../utils/constants"
-import { print } from "../utils/print"
-import { applyL1ToL2Alias } from "../utils/alias"
+import { ArbOwnerABI } from "../../abi/nitro/ArbOwner"
+import { InboxABI } from "../../abi/nitro/Inbox"
+import { UpgradeExecutorABI } from "../../abi/nitro/UpgradeExecutor"
+import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../utils/constants"
+import { print } from "../../utils/print"
+import { applyL1ToL2Alias } from "../../utils/alias"
 
-/**
- * Configuration for cross-chain L3 setup via parent chain's UpgradeExecutor
- */
-interface ConfigureL3FromParentParams {
-  // Parent chain (L2) configuration
+interface ConfigureL3Params {
   parentChainRpcUrl: string
   parentUpgradeExecutorAddress: Address
   parentInboxAddress: Address
-
-  // L3 configuration
   l3UpgradeExecutorAddress: Address
-
-  // Retryable ticket parameters
+  refundAddress: Address
   gasLimit?: bigint
   maxFeePerGas?: bigint
-  maxSubmissionCost?: bigint
-  refundAddress: Address
-
-  // ArbOwner configuration to set
-  arbOwnerConfig: ArbOwnerConfig
+  arbOwnerConfig: {
+    wasmMaxStackDepth?: number
+  }
 }
 
-interface ArbOwnerConfig {
-  minimumL2BaseFee?: bigint
-  networkFeeAccount?: Address
-  infraFeeAccount?: Address
-  wasmMaxStackDepth?: number
-  speedLimit?: bigint
-  maxTxGasLimit?: bigint
-  // Add more ArbOwner settings as needed
-}
-
-/**
- * Configures an L3 chain by calling through the parent chain's UpgradeExecutor
- * to the L3's UpgradeExecutor, which then calls ArbOwner.
- *
- * Flow:
- * 1. Parent UpgradeExecutor.executeCall() -> Inbox
- * 2. Inbox.createRetryableTicket() -> L3 (message gets aliased)
- * 3. Aliased parent UpgradeExecutor calls L3 UpgradeExecutor.executeCall()
- * 4. L3 UpgradeExecutor calls ArbOwner precompile
- */
-export async function configureL3FromParent(
-  params: ConfigureL3FromParentParams
-) {
+async function generateConfigureTx(params: ConfigureL3Params) {
   const {
     parentChainRpcUrl,
     parentUpgradeExecutorAddress,
@@ -202,102 +165,24 @@ export async function configureL3FromParent(
   }
 }
 
-// Print help message
-function printHelp() {
-  console.log(`
-L3 Configuration CLI
-
-USAGE:
-  bun run cli <COMMAND> <VALUE> [OPTIONS]
-
-COMMANDS:
-  setWasmMaxStackDepth <DEPTH>
-                              Set the WASM max stack depth on L3 via parent chain's UpgradeExecutor
-  alias <ADDRESS>             Calculate the aliased address for L1->L2 messages
-
-OPTIONS:
-  --help                      Show this help message
-
-  --parent-rpc <URL>          Parent chain RPC URL (required)
-  --parent-upgrade-executor <ADDRESS>
-                              Parent chain UpgradeExecutor address (required)
-  --parent-inbox <ADDRESS>    Parent chain Inbox address (required)
-  --l3-upgrade-executor <ADDRESS>
-                              L3 UpgradeExecutor address (required)
-  --refund-address <ADDRESS>  Address on L3 to receive excess fees (required)
-
-  --gas-limit <LIMIT>         Gas limit for retryable ticket (optional, default: 1000000)
-  --max-fee-per-gas <GWEI>    Max fee per gas in gwei (optional, default: 0.1)
-
-EXAMPLES:
-  # Generate transaction data to set WASM max stack depth to 22000
-  bun run cli setWasmMaxStackDepth 22000 \\
-    --parent-rpc https://sepolia.base.org \\
-    --parent-upgrade-executor 0x1234... \\
-    --parent-inbox 0x5678... \\
-    --l3-upgrade-executor 0x9abc... \\
-    --refund-address 0xdef0...
-
-  # Calculate aliased address
-  bun run cli alias 0x4F816281ce1a78E8989f632A1669DA6BeF9C86a9
-
-DESCRIPTION:
-  This CLI tool generates the transaction data needed to configure an L3 chain
-  by calling through the parent chain's UpgradeExecutor to the L3's UpgradeExecutor,
-  which then calls the ArbOwner precompile.
-
-  The script outputs the target address, value, and calldata that your smart
-  contract should use to call the parent UpgradeExecutor.
-
-  Flow:
-  1. Your contract -> Parent UpgradeExecutor.executeCall() -> Inbox
-  2. Inbox.createRetryableTicket() -> L3 (message gets aliased)
-  3. Aliased parent UpgradeExecutor calls L3 UpgradeExecutor.executeCall()
-  4. L3 UpgradeExecutor calls ArbOwner precompile
-`)
-}
-
-// Parse CLI arguments
-function parseArgs() {
-  const args = process.argv.slice(2)
-
-  // Check for help flag
-  if (args.includes("--help") || args.includes("-h") || args.length === 0) {
-    printHelp()
-    process.exit(0)
-  }
-
+export async function configureL3Command(args: string[]) {
   const getArg = (flag: string): string | undefined => {
     const index = args.indexOf(flag)
     return index !== -1 && args[index + 1] ? args[index + 1] : undefined
   }
 
-  const command = args[0]
+  const subCommand = args[0]
   const commandValue = args[1]
 
-  // Handle alias command
-  if (command === "alias") {
-    if (!commandValue) {
-      console.error(`❌ Missing address for alias command`)
-      console.error("\nUsage: bun run cli alias <ADDRESS>")
-      process.exit(1)
-    }
-    const aliasedAddress = applyL1ToL2Alias(commandValue)
-    console.log(`Original:  ${commandValue}`)
-    console.log(`Aliased:   ${aliasedAddress}`)
-    process.exit(0)
-  }
-
-  if (command !== "setWasmMaxStackDepth") {
-    console.error(`❌ Unknown command: ${command}`)
-    console.error("\nAvailable commands: setWasmMaxStackDepth <DEPTH>, alias <ADDRESS>")
-    console.error("\nRun 'bun run cli --help' for more information")
+  if (subCommand !== "setWasmMaxStackDepth") {
+    console.error(`❌ Unknown configureL3 subcommand: ${subCommand}`)
+    console.error("\nAvailable subcommands: setWasmMaxStackDepth <DEPTH>")
     process.exit(1)
   }
 
   if (!commandValue || commandValue.startsWith("--")) {
     console.error(`❌ Missing value for setWasmMaxStackDepth`)
-    console.error("\nUsage: bun run cli setWasmMaxStackDepth <DEPTH> [OPTIONS]")
+    console.error("\nUsage: bun cli configureL3 setWasmMaxStackDepth <DEPTH> [OPTIONS]")
     process.exit(1)
   }
 
@@ -326,7 +211,7 @@ function parseArgs() {
   if (missing.length > 0) {
     console.error(`Missing required arguments: ${missing.join(", ")}`)
     console.error(`
-Usage: bun run cli setWasmMaxStackDepth <DEPTH> \\
+Usage: bun cli configureL3 setWasmMaxStackDepth <DEPTH> \\
   --parent-rpc <RPC_URL> \\
   --parent-upgrade-executor <ADDRESS> \\
   --parent-inbox <ADDRESS> \\
@@ -338,41 +223,16 @@ Usage: bun run cli setWasmMaxStackDepth <DEPTH> \\
     process.exit(1)
   }
 
-  return {
-    parentRpc: parentRpc!,
-    parentUpgradeExecutor: parentUpgradeExecutor! as Address,
-    parentInbox: parentInbox! as Address,
-    l3UpgradeExecutor: l3UpgradeExecutor! as Address,
+  await generateConfigureTx({
+    parentChainRpcUrl: parentRpc!,
+    parentUpgradeExecutorAddress: parentUpgradeExecutor! as Address,
+    parentInboxAddress: parentInbox! as Address,
+    l3UpgradeExecutorAddress: l3UpgradeExecutor! as Address,
     refundAddress: refundAddress! as Address,
-    wasmMaxStackDepth: Number(wasmMaxStackDepth!),
     gasLimit: gasLimit ? BigInt(gasLimit) : undefined,
-    maxFeePerGas: maxFeePerGas ? BigInt(maxFeePerGas) * 1_000_000_000n : undefined // Convert gwei to wei
-  }
-}
-
-async function main() {
-  const args = parseArgs()
-
-  await configureL3FromParent({
-    parentChainRpcUrl: args.parentRpc,
-    parentUpgradeExecutorAddress: args.parentUpgradeExecutor,
-    parentInboxAddress: args.parentInbox,
-    l3UpgradeExecutorAddress: args.l3UpgradeExecutor,
-    refundAddress: args.refundAddress,
-    gasLimit: args.gasLimit,
-    maxFeePerGas: args.maxFeePerGas,
+    maxFeePerGas: maxFeePerGas ? BigInt(maxFeePerGas) * 1_000_000_000n : undefined,
     arbOwnerConfig: {
-      wasmMaxStackDepth: args.wasmMaxStackDepth
+      wasmMaxStackDepth: Number(wasmMaxStackDepth!)
     }
   })
-}
-
-// Run if executed directly
-if (import.meta.main) {
-  main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error("🚫", error)
-      process.exit(1)
-    })
 }
