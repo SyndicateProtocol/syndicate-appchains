@@ -1,6 +1,7 @@
 import type { Command } from "@commander-js/extra-typings";
 import { getAddress } from "viem";
 import { applyL1ToL2Alias } from "../../utils/alias";
+import { exitWithError, print } from "../../utils/print";
 
 /**
  * Register the alias command
@@ -14,11 +15,10 @@ export function aliasCommand(program: Command) {
 			try {
 				const parsedAddress = getAddress(address);
 				const aliasedAddress = applyL1ToL2Alias(parsedAddress);
-				console.log(`Original:  ${address}`);
-				console.log(`Aliased:   ${aliasedAddress}`);
+				print("Original", address);
+				print("Aliased", aliasedAddress);
 			} catch (error) {
-				console.error(`❌ ${error}`);
-				process.exit(1);
+				exitWithError(String(error));
 			}
 		});
 }

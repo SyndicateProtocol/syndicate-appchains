@@ -1,4 +1,5 @@
 import { isValidAddress } from "@/src/utils/helpers";
+import { exitWithError } from "@/src/utils/print";
 import type { Command } from "@commander-js/extra-typings";
 import type { Address } from "viem";
 import { generateSetWasmMaxStackDepthTx } from "./setWasmMaxStackDepth";
@@ -26,7 +27,7 @@ export function configureL3Command(program: Command) {
 		.requiredOption("--parent-inbox <address>", "Parent chain Inbox address")
 		.requiredOption(
 			"--child-upgrade-executor <address>",
-			"Appchain UpgradeExecutor address",
+			"L3 UpgradeExecutor address",
 		)
 		.requiredOption(
 			"--refund-address <address>",
@@ -55,53 +56,42 @@ export function configureL3Command(program: Command) {
 				// Manual validation and type conversion
 				const depthNum = Number(depth);
 				if (Number.isNaN(depthNum) || depthNum <= 0) {
-					console.error(`❌ Invalid depth: ${depth}`);
-					process.exit(1);
+					exitWithError(`Invalid depth: ${depth}`);
 				}
 
 				// Validate addresses
-				const _addressRegex = /^0x[a-fA-F0-9]{40}$/;
 				if (!isValidAddress(options.parentUpgradeExecutor)) {
-					console.error(
-						`❌ Invalid parent upgrade executor address: ${options.parentUpgradeExecutor}`,
+					exitWithError(
+						`Invalid parent upgrade executor address: ${options.parentUpgradeExecutor}`,
 					);
-					process.exit(1);
 				}
 				if (!isValidAddress(options.parentInbox)) {
-					console.error(
-						`❌ Invalid parent inbox address: ${options.parentInbox}`,
-					);
-					process.exit(1);
+					exitWithError(`Invalid parent inbox address: ${options.parentInbox}`);
 				}
 				if (!isValidAddress(options.childUpgradeExecutor)) {
-					console.error(
-						`❌ Invalid appchain	 upgrade executor address: ${options.childUpgradeExecutor}`,
+					exitWithError(
+						`Invalid child upgrade executor address: ${options.childUpgradeExecutor}`,
 					);
-					process.exit(1);
 				}
 				if (!isValidAddress(options.refundAddress)) {
-					console.error(`❌ Invalid refund address: ${options.refundAddress}`);
-					process.exit(1);
+					exitWithError(`Invalid refund address: ${options.refundAddress}`);
 				}
 				if (options.customGasToken && !isValidAddress(options.customGasToken)) {
-					console.error(
-						`❌ Invalid custom gas token address: ${options.customGasToken}`,
+					exitWithError(
+						`Invalid custom gas token address: ${options.customGasToken}`,
 					);
-					process.exit(1);
 				}
 
 				// Convert gas limit
 				const gasLimit = BigInt(options.gasLimit);
 				if (gasLimit <= BigInt(0)) {
-					console.error(`❌ Invalid gas limit: ${options.gasLimit}`);
-					process.exit(1);
+					exitWithError(`Invalid gas limit: ${options.gasLimit}`);
 				}
 
 				// Convert max fee per gas (gwei to wei)
 				const maxFeePerGasNum = Number(options.maxFeePerGas);
 				if (Number.isNaN(maxFeePerGasNum) || maxFeePerGasNum <= 0) {
-					console.error(`❌ Invalid max fee per gas: ${options.maxFeePerGas}`);
-					process.exit(1);
+					exitWithError(`Invalid max fee per gas: ${options.maxFeePerGas}`);
 				}
 				// Convert gwei (decimal) to wei (integer) by multiplying by 1e9
 				const maxFeePerGas = BigInt(
@@ -113,7 +103,7 @@ export function configureL3Command(program: Command) {
 					parentUpgradeExecutorAddress:
 						options.parentUpgradeExecutor as Address,
 					parentInboxAddress: options.parentInbox as Address,
-					l3UpgradeExecutorAddress: options.l3UpgradeExecutor as Address,
+					childUpgradeExecutorAddress: options.childUpgradeExecutor as Address,
 					refundAddress: options.refundAddress as Address,
 					wasmMaxStackDepth: depthNum,
 					gasLimit,

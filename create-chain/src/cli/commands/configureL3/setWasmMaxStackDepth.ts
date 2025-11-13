@@ -1,12 +1,18 @@
+import { ERC20Abi } from "@/src/abi/ERC20";
 import type { Address, Hex } from "viem";
 import { createPublicClient, encodeFunctionData, http } from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { ERC20InboxABI } from "../../../abi/nitro/ERC20Inbox";
 import { InboxABI } from "../../../abi/nitro/Inbox";
 import { UpgradeExecutorABI } from "../../../abi/nitro/UpgradeExecutor";
-import { applyL1ToL2Alias } from "../../../utils/alias";
 import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../../utils/constants";
-import { print } from "../../../utils/print";
+import {
+	formatWeiValue,
+	print,
+	printIndented,
+	printSection,
+	printSeparator,
+} from "../../../utils/print";
 
 interface SetWasmMaxStackDepthParams {
 	parentChainRpcUrl: string;
@@ -32,18 +38,9 @@ export async function generateSetWasmMaxStackDepthTx({
 	wasmMaxStackDepth,
 }: SetWasmMaxStackDepthParams) {
 	const useCustomGasToken = !!customGasTokenAddress;
-
 	const publicClient = createPublicClient({
 		transport: http(parentChainRpcUrl),
 	});
-
-	print("🚀 Generating setWasmMaxStackDepth transaction data...");
-	print(`Parent UpgradeExecutor: ${parentUpgradeExecutorAddress}`);
-	print(`Appchain UpgradeExecutor: ${childUpgradeExecutorAddress}`);
-	print(
-		`Aliased Parent UpgradeExecutor: ${applyL1ToL2Alias(parentUpgradeExecutorAddress)}`,
-	);
-	print(`WASM Max Stack Depth: ${wasmMaxStackDepth}\n`);
 
 	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutro
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
@@ -77,10 +74,11 @@ export async function generateSetWasmMaxStackDepthTx({
 			"Could not calculate submission cost, using formula-based estimate",
 			error,
 		);
-		// Assuming a reasonable base fee of 0.1 gwei = 100000000 wei
-		const estimatedBaseFee = BigInt(100000000);
+
 		// fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
 		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
+		// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
+		const estimatedBaseFee = BigInt(100_000_000);
 		submissionCost = (BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 	}
 
@@ -133,72 +131,47 @@ export async function generateSetWasmMaxStackDepthTx({
 		args: [parentInboxAddress, inboxCalldata],
 	});
 
-	print("=".repeat(80));
-	print("\n📝 TRANSACTION DATA\n");
-	print("=".repeat(80));
-	print(`\nTo:        ${parentUpgradeExecutorAddress}`);
+	printSection("📝 TRANSACTION DATA");
+	print("");
+	print("To", parentUpgradeExecutorAddress);
 	if (useCustomGasToken) {
-		print(`Value:     0 wei (custom gas token will be used)`);
-		print(
-			`Token Amount: ${totalValue} wei (${Number(totalValue) / 1e18} tokens)`,
-		);
+		print("Value", "0 wei (custom gas token will be used)");
+		formatWeiValue("Token Amount", totalValue, { unit: "tokens" });
 	} else {
-		print(`Value:     ${totalValue} wei`);
-		print(`           ${Number(totalValue) / 1e18} ETH`);
-		print(`           ${Number(totalValue) / 1e9} gwei`);
+		formatWeiValue("Value", totalValue);
 	}
-	print(`Calldata:  ${upgradeExecutorCalldata}\n`);
-	print("=".repeat(80));
-	print("\n📊 BREAKDOWN\n");
-	print("=".repeat(80));
-	print(
-		`Submission Cost:     ${maxSubmissionCost} wei (${Number(maxSubmissionCost) / 1e18} tokens)`,
+	print("Calldata", upgradeExecutorCalldata);
+	print("");
+
+	printSection("📊 BREAKDOWN");
+	print("");
+	formatWeiValue("Submission Cost", maxSubmissionCost, {
+		unit: useCustomGasToken ? "tokens" : "ETH",
+	});
+	formatWeiValue("Gas Cost", gasLimit * maxFeePerGas, {
+		unit: useCustomGasToken ? "tokens" : "ETH",
+	});
+	printIndented("Gas Limit", gasLimit.toString());
+	printIndented(
+		"Max Fee Per Gas",
+		`${maxFeePerGas} wei (${Number(maxFeePerGas) / 1e9} gwei)`,
 	);
-	print(
-		`Gas Cost:            ${gasLimit * maxFeePerGas} wei (${Number(gasLimit * maxFeePerGas) / 1e18} tokens)`,
-	);
-	print(`  Gas Limit:         ${gasLimit}`);
-	print(
-		`  Max Fee Per Gas:   ${maxFeePerGas} wei (${Number(maxFeePerGas) / 1e9} gwei)`,
-	);
-	print(`Refund Address:      ${refundAddress}`);
-	print(`Custom Gas Token:    ${useCustomGasToken ? "Yes" : "No"}`);
-	print(`\n${"=".repeat(80)}`);
-	print("\n💡 INSTRUCTIONS\n");
-	print("=".repeat(80));
+	print("Refund Address", refundAddress);
+	print("Custom Gas Token", useCustomGasToken ? "Yes" : "No");
+	print("");
+
+	printSection("💡 INSTRUCTIONS");
 	if (useCustomGasToken) {
-		// Step 1: EOA transfers tokens to UpgradeExecutor
+		// EOA needs to transfer tokens to the parent UpgradeExecutor
 		const transferCalldata = encodeFunctionData({
-			abi: [
-				{
-					type: "function",
-					name: "transfer",
-					inputs: [
-						{ name: "to", type: "address" },
-						{ name: "amount", type: "uint256" },
-					],
-					outputs: [{ name: "", type: "bool" }],
-					stateMutability: "nonpayable",
-				},
-			],
+			abi: ERC20Abi,
 			functionName: "transfer",
 			args: [parentUpgradeExecutorAddress, totalValue],
 		});
 
-		// Step 2: UpgradeExecutor approves Inbox (via executeCall)
+		// UpgradeExecutor needs to approve Inbox (via executeCall on the UpgradeExecutor)
 		const inboxApprovalCalldata = encodeFunctionData({
-			abi: [
-				{
-					type: "function",
-					name: "approve",
-					inputs: [
-						{ name: "spender", type: "address" },
-						{ name: "amount", type: "uint256" },
-					],
-					outputs: [{ name: "", type: "bool" }],
-					stateMutability: "nonpayable",
-				},
-			],
+			abi: ERC20Abi,
 			functionName: "approve",
 			args: [parentInboxAddress, totalValue],
 		});
@@ -209,30 +182,38 @@ export async function generateSetWasmMaxStackDepthTx({
 			args: [customGasTokenAddress, inboxApprovalCalldata],
 		});
 
+		print("");
 		print("For custom gas token chains, you need to:");
-		print("\n1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:");
-		print(`   Target:   ${customGasTokenAddress}`);
-		print(`   Value:    0 wei`);
-		print(`   Calldata: ${transferCalldata}`);
+		print("");
+		print("1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:");
+		printIndented("Target", customGasTokenAddress);
+		printIndented("Value", "0 wei");
+		printIndented("Calldata", transferCalldata);
 		print("");
 		print(
 			"2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend tokens:",
 		);
-		print(`   Target:   ${parentUpgradeExecutorAddress}`);
-		print(`   Value:    0 wei`);
-		print(`   Calldata: ${upgradeExecutorApprovalCalldata}`);
+		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented("Value", "0 wei");
+		printIndented("Calldata", upgradeExecutorApprovalCalldata);
 		print("");
 		print("3. [UpgradeExecutor → Inbox] Call the parent UpgradeExecutor:");
-		print(`   Target:   ${parentUpgradeExecutorAddress}`);
-		print(`   Value:    0 wei (no ETH, uses approved tokens)`);
-		print(`   Calldata: ${upgradeExecutorCalldata}`);
+		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented("Value", "0 wei (no ETH, uses approved tokens)");
+		printIndented("Calldata", upgradeExecutorCalldata);
 	} else {
+		print("");
 		print("Your smart contract should call the parent UpgradeExecutor with:");
-		print(`  Target:   ${parentUpgradeExecutorAddress}`);
-		print(`  Value:    ${totalValue} wei`);
-		print(`  Calldata: ${upgradeExecutorCalldata}`);
+		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented(
+			"Value",
+			`${totalValue} wei (${Number(totalValue) / 1e18} ETH)`,
+		);
+		printIndented("Calldata", upgradeExecutorCalldata);
 	}
-	print("\n⚠️  Note: The retryable ticket will need to be redeemed on L3.");
-	print("    This usually happens automatically.\n");
-	print(`${"=".repeat(80)}\n`);
+	print("");
+	print("⚠️  Note: The retryable ticket will need to be redeemed on L3.");
+	print("    This usually happens automatically.");
+	print("");
+	printSeparator();
 }
