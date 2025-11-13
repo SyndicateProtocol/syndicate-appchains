@@ -14,9 +14,7 @@ export function aliasCommand(program: Command) {
 		.action((address: string) => {
 			try {
 				const parsedAddress = getAddress(address);
-				const aliasedAddress = applyL1ToL2Alias(parsedAddress);
-				print("Original", address);
-				print("Aliased", aliasedAddress);
+				print(applyL1ToL2Alias(parsedAddress));
 			} catch (error) {
 				exitWithError(String(error));
 			}
