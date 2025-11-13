@@ -40,7 +40,7 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     }
 }
 
-#[instrument(skip(metrics), err, fields(otel.kind = ?SpanKind::Internal))]
+#[instrument(skip(config, metrics), err, fields(otel.kind = ?SpanKind::Internal))]
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
     let mchain = MProvider::new(&config.block_builder.mchain_ws_url)
         .await
