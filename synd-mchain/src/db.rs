@@ -398,13 +398,11 @@ pub trait ArbitrumDB {
         Ok(Some((batch_count, offset, block_clone)))
     }
 
-    // TODO think about make this a config param
-
     /// Applies a custom batch with appchain migration information
     fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
         let MigrationParams {
             settlement_start_block,
-            before_batch_acc,
+            before_batch_acc, // TODO remove
             batch_acc,
             batch_count,
             delayed_msgs_acc,
@@ -432,7 +430,7 @@ pub trait ArbitrumDB {
                     set_block_hash: B256::ZERO,
                 },
                 messages: vec![],
-                before_batch_acc,
+                before_batch_acc: batch_acc,
                 after_batch_acc: batch_acc,
                 before_message_acc: delayed_msgs_acc,
                 before_message_count: delayed_msgs_count,

@@ -12,7 +12,7 @@ use jsonrpsee::{
     Extensions,
 };
 use std::sync::Mutex;
-use tracing::{debug, error};
+use tracing::error;
 
 /// `mchain_addBatch`
 #[allow(clippy::unwrap_used)]
@@ -22,13 +22,11 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     _: &Extensions,
 ) -> Result<Option<u64>, ErrorObjectOwned> {
     let (mblock,): (MBlock,) = p.parse()?;
-    let timestamp = mblock.timestamp;
-    let seq_block_number = mblock.slot.seq_block_number;
-    let result = db.add_batch(mblock.clone())?;
-    metrics.record_sequencing_block(seq_block_number, timestamp);
-    debug!("POTATO add_batch result: {result:?}, mblock: {mblock:?}");
-    Ok(result
+    Ok(db
+        .add_batch(mblock)?
         .inspect(|(batch_count, offset, block)| {
+            let timestamp = block.timestamp;
+            metrics.record_sequencing_block(block.slot.seq_block_number, timestamp);
             metrics.record_last_block(*batch_count, timestamp);
             let mut data = mutex.lock().unwrap();
             // What is this timestamp for?
@@ -36,7 +34,6 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
             assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, *batch_count);
             data.subs.retain_mut(|sink| {
                 if sink.is_closed() {
-                    debug!("POTATO add_batch sink is closed");
                     return false;
                 }
                 sink.try_send(SubscriptionMessage::from(

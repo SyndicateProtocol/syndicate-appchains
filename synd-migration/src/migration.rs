@@ -168,6 +168,8 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     info!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
     info!("\n---------------\n");
 
+    // TODO obtain and log GENESIS_CONFIG here
+
     Ok(rollup_state)
 }
 
