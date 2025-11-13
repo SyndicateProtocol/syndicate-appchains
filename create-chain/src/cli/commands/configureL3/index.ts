@@ -16,7 +16,7 @@ export function configureL3Command(program: Command) {
 	// setWasmMaxStackDepth subcommand
 	configureL3
 		.command("setWasmMaxStackDepth")
-		.description("Set the WASM max stack depth on L3")
+		.description("Set the WASM max stack depth on an appchain")
 		.argument("<depth>", "The maximum WASM stack depth")
 		.requiredOption("--parent-rpc <url>", "Parent chain RPC URL")
 		.requiredOption(
@@ -25,12 +25,12 @@ export function configureL3Command(program: Command) {
 		)
 		.requiredOption("--parent-inbox <address>", "Parent chain Inbox address")
 		.requiredOption(
-			"--l3-upgrade-executor <address>",
-			"L3 UpgradeExecutor address",
+			"--child-upgrade-executor <address>",
+			"Appchain UpgradeExecutor address",
 		)
 		.requiredOption(
 			"--refund-address <address>",
-			"Address on L3 to receive excess fees",
+			"Address on appchain to receive excess fees",
 		)
 		.option("--gas-limit <limit>", "Gas limit for retryable ticket", "1000000")
 		.option("--max-fee-per-gas <gwei>", "Max fee per gas in gwei", "0.1")
@@ -45,7 +45,7 @@ export function configureL3Command(program: Command) {
 					parentRpc: string;
 					parentUpgradeExecutor: string;
 					parentInbox: string;
-					l3UpgradeExecutor: string;
+					childUpgradeExecutor: string;
 					refundAddress: string;
 					gasLimit: string;
 					maxFeePerGas: string;
@@ -73,9 +73,9 @@ export function configureL3Command(program: Command) {
 					);
 					process.exit(1);
 				}
-				if (!isValidAddress(options.l3UpgradeExecutor)) {
+				if (!isValidAddress(options.childUpgradeExecutor)) {
 					console.error(
-						`❌ Invalid L3 upgrade executor address: ${options.l3UpgradeExecutor}`,
+						`❌ Invalid appchain	 upgrade executor address: ${options.childUpgradeExecutor}`,
 					);
 					process.exit(1);
 				}
@@ -104,7 +104,9 @@ export function configureL3Command(program: Command) {
 					process.exit(1);
 				}
 				// Convert gwei (decimal) to wei (integer) by multiplying by 1e9
-				const maxFeePerGas = BigInt(Math.round(maxFeePerGasNum * 1_000_000_000));
+				const maxFeePerGas = BigInt(
+					Math.round(maxFeePerGasNum * 1_000_000_000),
+				);
 
 				await generateSetWasmMaxStackDepthTx({
 					parentChainRpcUrl: options.parentRpc,

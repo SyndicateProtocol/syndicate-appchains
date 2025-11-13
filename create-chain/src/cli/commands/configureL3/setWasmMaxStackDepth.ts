@@ -12,7 +12,7 @@ interface SetWasmMaxStackDepthParams {
 	parentChainRpcUrl: string;
 	parentUpgradeExecutorAddress: Address;
 	parentInboxAddress: Address;
-	l3UpgradeExecutorAddress: Address;
+	childUpgradeExecutorAddress: Address;
 	refundAddress: Address;
 	wasmMaxStackDepth: number;
 	gasLimit?: bigint;
@@ -24,7 +24,7 @@ export async function generateSetWasmMaxStackDepthTx({
 	parentChainRpcUrl,
 	parentUpgradeExecutorAddress,
 	parentInboxAddress,
-	l3UpgradeExecutorAddress,
+	childUpgradeExecutorAddress,
 	gasLimit = BigInt(1_000_000),
 	maxFeePerGas = BigInt(100000000), // 0.1 gwei default
 	refundAddress,
@@ -39,29 +39,28 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	print("🚀 Generating setWasmMaxStackDepth transaction data...");
 	print(`Parent UpgradeExecutor: ${parentUpgradeExecutorAddress}`);
-	print(`L3 UpgradeExecutor: ${l3UpgradeExecutorAddress}`);
+	print(`Appchain UpgradeExecutor: ${childUpgradeExecutorAddress}`);
 	print(
 		`Aliased Parent UpgradeExecutor: ${applyL1ToL2Alias(parentUpgradeExecutorAddress)}`,
 	);
 	print(`WASM Max Stack Depth: ${wasmMaxStackDepth}\n`);
 
-	// Step 1: Encode call to ArbOwner
-	const arbOwnerCalldata = encodeFunctionData({
-		abi: ArbOwnerABI,
-		functionName: "setWasmMaxStackDepth",
-		args: [wasmMaxStackDepth],
-	});
-
-	// Step 2: Encode call to L3 UpgradeExecutor.executeCall()
+	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutro
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
-		args: [ARB_OWNER_PRECOMPILE_ADDRESS, arbOwnerCalldata],
+		args: [
+			ARB_OWNER_PRECOMPILE_ADDRESS,
+			encodeFunctionData({
+				abi: ArbOwnerABI,
+				functionName: "setWasmMaxStackDepth",
+				args: [wasmMaxStackDepth],
+			}),
+		],
 	});
 
-	// Calculate submission cost
+	// Calculate submission cost for the retryable ticket
 	const dataLength = BigInt((l3UpgradeExecutorCalldata.length - 2) / 2); // Remove '0x' and divide by 2
-
 	let submissionCost: bigint;
 	try {
 		submissionCost = await publicClient.readContract({
@@ -70,24 +69,18 @@ export async function generateSetWasmMaxStackDepthTx({
 			functionName: "calculateRetryableSubmissionFee",
 			args: [dataLength, BigInt(0)], // 0 means use current basefee
 		});
-
-		// If the result is 0, the function might not be working correctly
 		if (submissionCost === BigInt(0)) {
-			print(
-				"⚠️  Calculated submission cost is 0, using formula-based estimate\n",
-			);
-			// Use Arbitrum's formula: (1400 + 6 * dataLength) * baseFee
-			// Assuming a reasonable base fee of 0.1 gwei = 100000000 wei
-			const estimatedBaseFee = BigInt(100000000);
-			submissionCost =
-				(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
+			throw new Error("Submission cost is 0");
 		}
-	} catch (_error) {
-		print(
-			"⚠️  Could not calculate submission cost, using formula-based estimate\n",
+	} catch (error) {
+		console.warn(
+			"Could not calculate submission cost, using formula-based estimate",
+			error,
 		);
-		// Use Arbitrum's formula: (1400 + 6 * dataLength) * baseFee
+		// Assuming a reasonable base fee of 0.1 gwei = 100000000 wei
 		const estimatedBaseFee = BigInt(100000000);
+		// fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
+		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
 		submissionCost = (BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 	}
 
@@ -96,15 +89,15 @@ export async function generateSetWasmMaxStackDepthTx({
 	// Calculate total value needed
 	const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
 
-	// Step 3: Encode call to Inbox (ERC20Inbox for custom gas token, regular Inbox for ETH)
+	// Encode call to Inbox (ERC20Inbox for custom gas token, regular Inbox for ETH)
 	let inboxCalldata: Hex;
 	if (useCustomGasToken) {
-		// ERC20Inbox has an extra tokenTotalFeeAmount parameter
+		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L64-L65
 		inboxCalldata = encodeFunctionData({
 			abi: ERC20InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				l3UpgradeExecutorAddress, // to
+				childUpgradeExecutorAddress, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -116,12 +109,12 @@ export async function generateSetWasmMaxStackDepthTx({
 			],
 		});
 	} else {
-		// Regular Inbox uses payable function
+		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L261
 		inboxCalldata = encodeFunctionData({
 			abi: InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				l3UpgradeExecutorAddress, // to
+				childUpgradeExecutorAddress, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -133,7 +126,7 @@ export async function generateSetWasmMaxStackDepthTx({
 		});
 	}
 
-	// Step 4: Encode call to parent UpgradeExecutor.executeCall()
+	// Encode call to parent UpgradeExecutor.executeCall()
 	const upgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
@@ -174,20 +167,6 @@ export async function generateSetWasmMaxStackDepthTx({
 	print("\n💡 INSTRUCTIONS\n");
 	print("=".repeat(80));
 	if (useCustomGasToken) {
-		// Generate approval calldatas
-		const erc20ApprovalAbi = [
-			{
-				type: "function",
-				name: "approve",
-				inputs: [
-					{ name: "spender", type: "address" },
-					{ name: "amount", type: "uint256" },
-				],
-				outputs: [{ name: "", type: "bool" }],
-				stateMutability: "nonpayable",
-			},
-		];
-
 		// Step 1: EOA transfers tokens to UpgradeExecutor
 		const transferCalldata = encodeFunctionData({
 			abi: [
@@ -208,7 +187,18 @@ export async function generateSetWasmMaxStackDepthTx({
 
 		// Step 2: UpgradeExecutor approves Inbox (via executeCall)
 		const inboxApprovalCalldata = encodeFunctionData({
-			abi: erc20ApprovalAbi,
+			abi: [
+				{
+					type: "function",
+					name: "approve",
+					inputs: [
+						{ name: "spender", type: "address" },
+						{ name: "amount", type: "uint256" },
+					],
+					outputs: [{ name: "", type: "bool" }],
+					stateMutability: "nonpayable",
+				},
+			],
 			functionName: "approve",
 			args: [parentInboxAddress, totalValue],
 		});
