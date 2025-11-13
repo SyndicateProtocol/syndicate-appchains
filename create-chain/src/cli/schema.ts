@@ -20,7 +20,7 @@ export const ethAddressSchema = z
 	)
 	.transform((val) => getAddress(val));
 
-export const positiveBigIntSchema = z
+const positiveBigIntSchema = z
 	.string()
 	.refine(
 		(val) => {

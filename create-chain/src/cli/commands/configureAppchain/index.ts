@@ -7,17 +7,15 @@ import {
 import { generateSetWasmMaxStackDepthTx } from "./setWasmMaxStackDepth";
 
 /**
- * Register the configureL3 command with its subcommands
+ * Register the configureAppchain command with its subcommands
  */
-export function configureL3Command(program: Command) {
-	const configureL3 = program
-		.command("configureL3")
-		.description(
-			"Generate targets & calldata needed to configure syndicate appchains via its UpgradeExecutor on the parent chain",
-		);
+export function configureAppchainCommand(program: Command) {
+	const configureAppchain = program
+		.command("configureAppchain")
+		.description("Configure a syndicate appchain");
 
 	// setWasmMaxStackDepth subcommand
-	configureL3
+	configureAppchain
 		.command("setWasmMaxStackDepth")
 		.description("Set the WASM max stack depth on an appchain")
 		.argument("<depth>", "The maximum WASM stack depth")

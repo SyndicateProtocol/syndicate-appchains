@@ -1,7 +1,7 @@
 import type { Command } from "@commander-js/extra-typings";
-import { getAddress } from "viem";
 import { applyL1ToL2Alias } from "../../utils/alias";
-import { exitWithError, print } from "../../utils/print";
+import { print } from "../../utils/print";
+import { ethAddressSchema, handleSchemaErrors } from "../schema";
 
 /**
  * Register the alias command
@@ -12,11 +12,14 @@ export function aliasCommand(program: Command) {
 		.description("Calculate the aliased address for L1->L2 messages")
 		.argument("<address>", "The address to alias")
 		.action((address: string) => {
-			try {
-				const parsedAddress = getAddress(address);
-				print(applyL1ToL2Alias(parsedAddress));
-			} catch (error) {
-				exitWithError(String(error));
+			const {
+				success,
+				data: parsedAddress,
+				error,
+			} = ethAddressSchema.safeParse(address);
+			if (!success) {
+				return handleSchemaErrors(error);
 			}
+			print(applyL1ToL2Alias(parsedAddress));
 		});
 }
