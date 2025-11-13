@@ -17,12 +17,6 @@ struct SyndicateSequencingChainStorage {
     /// @notice The ID of the App chain that this contract is sequencing transactions for
     /// @dev This is set during initialization and never changes
     uint256 appchainId;
-    /// @notice Version of the SyndicateSequencingChain contract (updatable during upgrades)
-    /// @dev Version number to track implementation upgrades
-    uint256 version;
-    /// @notice The address of the GasMeter contract
-    /// @dev This is set during initialization and never changes
-    address gasMeter;
 }
 
 /// @title SyndicateSequencingChain
@@ -66,6 +60,8 @@ contract SyndicateSequencingChain is
     ISyndicateSequencingChain,
     UUPSUpgradeable
 {
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
+
     /// @notice The address of the GasMeter contract
     /// @dev This is set during initialization and never changes
     address public immutable gasMeter;
@@ -95,13 +91,6 @@ contract SyndicateSequencingChain is
     function appchainId() public view returns (uint256) {
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         return $.appchainId;
-    }
-
-    /// @notice Get the current version of this contract implementation
-    /// @return The semantic version string of this contract
-    function version() public view returns (uint256) {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        return $.version;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -161,7 +150,6 @@ contract SyndicateSequencingChain is
 
         SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
         $.appchainId = _appchainId;
-        $.version = 1_000_000; // 1.0.0
     }
 
     modifier onlyGasMeter() {
@@ -244,17 +232,5 @@ contract SyndicateSequencingChain is
                 emit TransactionProcessed(sequencer, transaction);
             }
         }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                         ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Updates the contract version (owner only, typically called during upgrades)
-    /// @dev This is for tracking and debugging purposes, allowing operators to identify which version is running.
-    /// @param newVersion The new version number (e.g., 1_100_000 for 1.1.0)
-    function updateVersion(uint256 newVersion) external onlyOwner {
-        SyndicateSequencingChainStorage storage $ = _getSyndicateSequencingChainStorage();
-        $.version = newVersion;
     }
 }
