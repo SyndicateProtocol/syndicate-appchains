@@ -15,7 +15,6 @@ import { InboxABI } from "../../../abi/nitro/Inbox";
 import { UpgradeExecutorABI } from "../../../abi/nitro/UpgradeExecutor";
 import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../../utils/constants";
 import {
-	formatWeiValue,
 	print,
 	printIndented,
 	printSection,
@@ -80,19 +79,24 @@ export async function generateSetWasmMaxStackDepthTx({
 	} else {
 		// For ETH chains, calculate the submission cost
 		try {
+			const block = await publicClient.getBlock();
+			// Default to 0.1 gwei if baseFeePerGas is not set
+			const baseFeePerGas = block.baseFeePerGas ?? BigInt(100_000_000);
 			submissionCost = await publicClient.readContract({
 				address: parentInboxAddress,
 				abi: InboxABI,
 				functionName: "calculateRetryableSubmissionFee",
-				args: [dataLength, BigInt(0)], // 0 means use current basefee
+				args: [dataLength, baseFeePerGas],
 			});
-		} catch (error) {
+
+			if (submissionCost === BigInt(0)) {
+				throw new Error("Inbox returned 0 for submission cost");
+			}
+		} catch (_) {
 			console.warn(
 				"Could not calculate submission cost, using formula-based estimate",
-				error,
 			);
-
-			// fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
+			// Fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
 			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
 			// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
 			const estimatedBaseFee = BigInt(100_000_000);
@@ -103,6 +107,7 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	// Add 50% buffer to total submission cost for safety
 	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100);
+	console.log("Max Submission Cost", maxSubmissionCost);
 	const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
 
 	// Encode call to Inbox
@@ -154,27 +159,24 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	printSection("📝 TRANSACTION DATA");
 	print("");
+
 	print("To", parentUpgradeExecutorAddress);
-	if (!useCustomGasToken) {
-		formatWeiValue("Value", totalValue);
-	}
+	!useCustomGasToken && print("Value", `${totalValue} wei`);
 	print("Calldata", upgradeExecutorCalldata);
 	print("");
 
 	printSection("📊 BREAKDOWN");
 	print("");
 
-	if (!useCustomGasToken) {
-		formatWeiValue("Submission Cost", maxSubmissionCost, {
-			unit: "ETH",
-		});
-	}
-	print("Gas Limit", gasLimit.toString());
-	print("Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
+	!useCustomGasToken &&
+		print("Retryable Ticket Cost", `${formatEther(maxSubmissionCost)} ETH`);
+	print("Appchain TX Gas Limit", gasLimit.toString());
+	print("Appchain TX Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
 	print(
 		"Transaction Cost",
 		`${formatEther(gasLimit * maxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
 	);
+	print("Total Cost", `${formatEther(totalValue)} ETH`);
 	print("Refund Address", refundAddress);
 	print("");
 
@@ -222,7 +224,6 @@ export async function generateSetWasmMaxStackDepthTx({
 		printIndented("Calldata", upgradeExecutorCalldata);
 	} else {
 		print("");
-		print("Your smart contract should call the parent UpgradeExecutor with:");
 		printIndented("Target", parentUpgradeExecutorAddress);
 		printIndented(
 			"Value",
