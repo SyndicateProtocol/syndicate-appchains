@@ -33,8 +33,12 @@ export function configureL3Command(program: Command) {
 			"--refund-address <address>",
 			"Address on appchain to receive excess fees",
 		)
-		.option("--gas-limit <limit>", "Gas limit for retryable ticket", "1000000")
-		.option("--max-fee-per-gas <gwei>", "Max fee per gas in gwei", "0.1")
+		.option(
+			"--child-rpc <url>",
+			"Child chain RPC URL (enables gas estimation from chain)",
+		)
+		.option("--gas-limit <limit>", "Gas limit for retryable ticket")
+		.option("--max-fee-per-gas <gwei>", "Max fee per gas in gwei")
 		.option(
 			"--custom-gas-token <address>",
 			"Custom gas token contract address for chains using ERC20 gas tokens",
@@ -44,12 +48,13 @@ export function configureL3Command(program: Command) {
 				depth: string,
 				options: {
 					parentRpc: string;
+					childRpc?: string;
 					parentUpgradeExecutor: string;
 					parentInbox: string;
 					childUpgradeExecutor: string;
 					refundAddress: string;
-					gasLimit: string;
-					maxFeePerGas: string;
+					gasLimit?: string;
+					maxFeePerGas?: string;
 					customGasToken?: string;
 				},
 			) => {
@@ -82,24 +87,29 @@ export function configureL3Command(program: Command) {
 					);
 				}
 
-				// Convert gas limit
-				const gasLimit = BigInt(options.gasLimit);
-				if (gasLimit <= BigInt(0)) {
-					exitWithError(`Invalid gas limit: ${options.gasLimit}`);
+				// Convert gas limit (optional)
+				let gasLimit: bigint | undefined;
+				if (options.gasLimit) {
+					gasLimit = BigInt(options.gasLimit);
+					if (gasLimit <= BigInt(0)) {
+						exitWithError(`Invalid gas limit: ${options.gasLimit}`);
+					}
 				}
 
-				// Convert max fee per gas (gwei to wei)
-				const maxFeePerGasNum = Number(options.maxFeePerGas);
-				if (Number.isNaN(maxFeePerGasNum) || maxFeePerGasNum <= 0) {
-					exitWithError(`Invalid max fee per gas: ${options.maxFeePerGas}`);
+				// Convert max fee per gas (gwei to wei) (optional)
+				let maxFeePerGas: bigint | undefined;
+				if (options.maxFeePerGas) {
+					const maxFeePerGasNum = Number(options.maxFeePerGas);
+					if (Number.isNaN(maxFeePerGasNum) || maxFeePerGasNum <= 0) {
+						exitWithError(`Invalid max fee per gas: ${options.maxFeePerGas}`);
+					}
+					// Convert gwei (decimal) to wei (integer) by multiplying by 1e9
+					maxFeePerGas = BigInt(Math.round(maxFeePerGasNum * 1_000_000_000));
 				}
-				// Convert gwei (decimal) to wei (integer) by multiplying by 1e9
-				const maxFeePerGas = BigInt(
-					Math.round(maxFeePerGasNum * 1_000_000_000),
-				);
 
 				await generateSetWasmMaxStackDepthTx({
-					parentChainRpcUrl: options.parentRpc,
+					parentRpc: options.parentRpc,
+					childRpc: options.childRpc,
 					parentUpgradeExecutorAddress:
 						options.parentUpgradeExecutor as Address,
 					parentInboxAddress: options.parentInbox as Address,

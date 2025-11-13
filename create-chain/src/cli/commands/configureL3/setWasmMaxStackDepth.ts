@@ -22,7 +22,8 @@ import {
 } from "../../../utils/print";
 
 interface SetWasmMaxStackDepthParams {
-	parentChainRpcUrl: string;
+	parentRpc: string;
+	childRpc?: string;
 	parentUpgradeExecutorAddress: Address;
 	parentInboxAddress: Address;
 	childUpgradeExecutorAddress: Address;
@@ -34,23 +35,73 @@ interface SetWasmMaxStackDepthParams {
 }
 
 export async function generateSetWasmMaxStackDepthTx({
-	parentChainRpcUrl,
+	parentRpc,
+	childRpc,
 	parentUpgradeExecutorAddress,
 	parentInboxAddress,
 	childUpgradeExecutorAddress,
-	gasLimit = BigInt(50_000),
-	maxFeePerGas = BigInt(100_000_000), // 0.1 gwei
+	gasLimit,
+	maxFeePerGas,
 	refundAddress,
 	customGasTokenAddress,
 	wasmMaxStackDepth,
 }: SetWasmMaxStackDepthParams) {
 	const useCustomGasToken = !!customGasTokenAddress;
 	const publicClient = createPublicClient({
-		transport: http(parentChainRpcUrl),
+		transport: http(parentRpc),
 	});
 	const nativeCurrency = useCustomGasToken
 		? await getNativeCurrency(publicClient, customGasTokenAddress)
 		: undefined;
+
+	// Estimate gas parameters from child chain if RPC URL is provided
+	let estimatedGasLimit: bigint;
+	let estimatedMaxFeePerGas: bigint;
+
+	if (childRpc) {
+		const childPublicClient = createPublicClient({
+			transport: http(childRpc),
+		});
+
+		// Get calldata for the ArbOwner call
+		const arbOwnerCalldata = encodeFunctionData({
+			abi: ArbOwnerABI,
+			functionName: "setWasmMaxStackDepth",
+			args: [wasmMaxStackDepth],
+		});
+
+		try {
+			// Estimate gas for the UpgradeExecutor call on child chain
+			estimatedGasLimit = await childPublicClient.estimateGas({
+				account: childUpgradeExecutorAddress,
+				to: ARB_OWNER_PRECOMPILE_ADDRESS,
+				data: arbOwnerCalldata,
+			});
+
+			// Get current gas price from child chain
+			estimatedMaxFeePerGas = await childPublicClient.getGasPrice();
+
+			// Add 20% buffer to gas limit for safety
+			estimatedGasLimit = (estimatedGasLimit * BigInt(120)) / BigInt(100);
+		} catch (error) {
+			console.warn(
+				"⚠️  Could not estimate gas from child chain, using defaults",
+			);
+			console.warn("Error:", error);
+			estimatedGasLimit = gasLimit ?? BigInt(50_000);
+			estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
+		}
+	} else {
+		// Use provided values or defaults
+		estimatedGasLimit = gasLimit ?? BigInt(50_000);
+		estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
+		if (!gasLimit || !maxFeePerGas) {
+			print("");
+			print(
+				"ℹ️  Using default gas parameters. Pass --child-rpc to estimate from chain.",
+			);
+		}
+	}
 
 	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutor
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
@@ -107,7 +158,8 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	// Add 50% buffer to total submission cost for safety
 	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100);
-	const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
+	const totalValue =
+		maxSubmissionCost + estimatedGasLimit * estimatedMaxFeePerGas;
 
 	// Encode call to Inbox
 	let inboxCalldata: Hex;
@@ -122,8 +174,8 @@ export async function generateSetWasmMaxStackDepthTx({
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
 				refundAddress, // callValueRefundAddress
-				gasLimit, // gasLimit
-				maxFeePerGas, // maxFeePerGas
+				estimatedGasLimit, // gasLimit
+				estimatedMaxFeePerGas, // maxFeePerGas
 				totalValue, // tokenTotalFeeAmount - amount to pull from sender
 				l3UpgradeExecutorCalldata, // data
 			],
@@ -139,8 +191,8 @@ export async function generateSetWasmMaxStackDepthTx({
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
 				refundAddress, // callValueRefundAddress
-				gasLimit, // gasLimit
-				maxFeePerGas, // maxFeePerGas
+				estimatedGasLimit, // gasLimit
+				estimatedMaxFeePerGas, // maxFeePerGas
 				l3UpgradeExecutorCalldata, // data
 			],
 		});
@@ -161,14 +213,12 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	!useCustomGasToken &&
 		print("Ticket Submission Cost", `${formatEther(maxSubmissionCost)} ETH`);
-	// print("Appchain TX Gas Limit", gasLimit.toString());
-	// print("Appchain TX Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
 	print(
 		"Appchain Tx Transaction Cost",
-		`${formatEther(gasLimit * maxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
+		`${formatEther(estimatedGasLimit * estimatedMaxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
 	);
-	printIndented("Gas Limit", gasLimit.toString());
-	printIndented("Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
+	printIndented("Max Fee Per Gas", `${formatGwei(estimatedMaxFeePerGas)} gwei`);
+	printIndented("Gas Limit", estimatedGasLimit.toString());
 	!useCustomGasToken &&
 		print("Total Cost To Execute", `${formatEther(totalValue)} ETH`);
 	print("Refund Address", refundAddress);
