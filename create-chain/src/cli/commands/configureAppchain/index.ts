@@ -23,16 +23,13 @@ export function configureAppchainCommand(program: Command) {
 		.requiredOption("--parent-inbox <address>", "Parent chain Inbox address")
 		.requiredOption(
 			"--child-upgrade-executor <address>",
-			"L3 UpgradeExecutor address",
+			"Appchain UpgradeExecutor address",
 		)
 		.requiredOption(
 			"--refund-address <address>",
 			"Address on appchain to receive excess fees",
 		)
-		.option(
-			"--child-rpc <url>",
-			"Child chain RPC URL (enables gas estimation from chain)",
-		)
+		.option("--child-rpc <url>", "Appchain RPC URL")
 		.option("--gas-limit <limit>", "Gas limit for retryable ticket")
 		.option("--max-fee-per-gas <wei>", "Max fee per gas in wei")
 		.action(async (depth: string, options: Record<string, unknown>) => {

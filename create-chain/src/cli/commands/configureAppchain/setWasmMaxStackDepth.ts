@@ -17,6 +17,7 @@ import {
 	ARB_OWNER_PRECOMPILE_ADDRESS,
 	NODE_INTERFACE_ADDRESS,
 } from "../../../utils/constants";
+import { scaleByPercentage } from "../../../utils/helpers";
 import {
 	print,
 	printIndented,
@@ -64,7 +65,6 @@ export async function generateSetWasmMaxStackDepthTx({
 		transport: http(parentRpc),
 	});
 
-	// Auto-detect if this chain uses a custom gas token
 	const customNativeToken = await detectCustomNativeToken(
 		publicClient,
 		parentInbox,
@@ -120,11 +120,10 @@ export async function generateSetWasmMaxStackDepthTx({
 			}
 
 			// Add 50% buffer to total submission cost to increase the chances of auto-redemption of the retryable ticket
-			estimatedMaxFeePerGas =
-				(estimatedMaxFeePerGas * BigInt(150)) / BigInt(100);
+			estimatedMaxFeePerGas = scaleByPercentage(estimatedMaxFeePerGas, 150);
 
 			// Add 20% buffer to gas limit for safety
-			estimatedGasLimit = (estimatedGasLimit * BigInt(120)) / BigInt(100);
+			estimatedGasLimit = scaleByPercentage(estimatedGasLimit, 120);
 		} catch (error) {
 			console.warn(
 				"⚠️  Could not estimate gas from child chain, using defaults",
@@ -175,14 +174,13 @@ export async function generateSetWasmMaxStackDepthTx({
 			);
 			// Fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
 			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
-			// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
 			submissionCost =
 				(BigInt(1400) + BigInt(6) * dataLength) * DEFAULT_MAX_FEE_PER_GAS;
 		}
 	}
 
 	// Add 50% buffer to total submission cost for safety
-	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100);
+	const maxSubmissionCost = scaleByPercentage(submissionCost, 150);
 	const totalValue =
 		maxSubmissionCost + estimatedGasLimit * estimatedMaxFeePerGas;
 

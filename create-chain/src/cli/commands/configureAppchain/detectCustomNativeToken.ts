@@ -13,17 +13,17 @@ export async function detectCustomNativeToken(
 		});
 
 		try {
-			const tokenAddress = await publicClient.readContract({
+			const address = await publicClient.readContract({
 				address: bridgeAddress,
 				abi: [
 					parseAbiItem("function nativeToken() public view returns (address)"),
 				],
 				functionName: "nativeToken",
 			});
-			const currency = await getNativeCurrency(publicClient, tokenAddress);
+			const currency = await getNativeCurrency(publicClient, address);
 			return {
 				...currency,
-				address: tokenAddress,
+				address,
 			};
 		} catch (_) {
 			return null;
