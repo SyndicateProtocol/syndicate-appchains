@@ -24,9 +24,9 @@ import {
 interface SetWasmMaxStackDepthParams {
 	parentRpc: string;
 	childRpc?: string;
-	parentUpgradeExecutorAddress: Address;
-	parentInboxAddress: Address;
-	childUpgradeExecutorAddress: Address;
+	parentUpgradeExecutor: Address;
+	parentInbox: Address;
+	childUpgradeExecutor: Address;
 	refundAddress: Address;
 	wasmMaxStackDepth: number;
 	gasLimit?: bigint;
@@ -37,9 +37,9 @@ interface SetWasmMaxStackDepthParams {
 export async function generateSetWasmMaxStackDepthTx({
 	parentRpc,
 	childRpc,
-	parentUpgradeExecutorAddress,
-	parentInboxAddress,
-	childUpgradeExecutorAddress,
+	parentUpgradeExecutor,
+	parentInbox,
+	childUpgradeExecutor,
 	gasLimit,
 	maxFeePerGas,
 	refundAddress,
@@ -73,7 +73,7 @@ export async function generateSetWasmMaxStackDepthTx({
 		try {
 			// Estimate gas for the UpgradeExecutor call on child chain
 			estimatedGasLimit = await childPublicClient.estimateGas({
-				account: childUpgradeExecutorAddress,
+				account: childUpgradeExecutor,
 				to: ARB_OWNER_PRECOMPILE_ADDRESS,
 				data: arbOwnerCalldata,
 			});
@@ -134,7 +134,7 @@ export async function generateSetWasmMaxStackDepthTx({
 			// Default to 0.1 gwei if baseFeePerGas is not set
 			const baseFeePerGas = block.baseFeePerGas ?? BigInt(100_000_000);
 			submissionCost = await publicClient.readContract({
-				address: parentInboxAddress,
+				address: parentInbox,
 				abi: InboxABI,
 				functionName: "calculateRetryableSubmissionFee",
 				args: [dataLength, baseFeePerGas],
@@ -169,7 +169,7 @@ export async function generateSetWasmMaxStackDepthTx({
 			abi: ERC20InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				childUpgradeExecutorAddress, // to
+				childUpgradeExecutor, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -186,7 +186,7 @@ export async function generateSetWasmMaxStackDepthTx({
 			abi: InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				childUpgradeExecutorAddress, // to
+				childUpgradeExecutor, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -202,7 +202,7 @@ export async function generateSetWasmMaxStackDepthTx({
 	const upgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
-		args: [parentInboxAddress, inboxCalldata],
+		args: [parentInbox, inboxCalldata],
 	});
 
 	const tokenAmount = formatUnits(totalValue, nativeCurrency?.decimals || 18);
@@ -230,14 +230,14 @@ export async function generateSetWasmMaxStackDepthTx({
 		const transferCalldata = encodeFunctionData({
 			abi: ERC20Abi,
 			functionName: "transfer",
-			args: [parentUpgradeExecutorAddress, totalValue],
+			args: [parentUpgradeExecutor, totalValue],
 		});
 
 		// UpgradeExecutor needs to approve Inbox (via executeCall on the UpgradeExecutor)
 		const inboxApprovalCalldata = encodeFunctionData({
 			abi: ERC20Abi,
 			functionName: "approve",
-			args: [parentInboxAddress, totalValue],
+			args: [parentInbox, totalValue],
 		});
 
 		const upgradeExecutorApprovalCalldata = encodeFunctionData({
@@ -257,18 +257,18 @@ export async function generateSetWasmMaxStackDepthTx({
 		print(
 			`2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend ${tokenAmount} ${tokenSymbol}:`,
 		);
-		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented("Target", parentUpgradeExecutor);
 		!useCustomGasToken && printIndented("Value", "0");
 		printIndented("Calldata", upgradeExecutorApprovalCalldata);
 		print("");
 		print("3. [UpgradeExecutor → Inbox] Call the parent UpgradeExecutor:");
-		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented("Target", parentUpgradeExecutor);
 		!useCustomGasToken &&
 			printIndented("Value", `0 (no ETH, uses approved ${tokenSymbol})`);
 		printIndented("Calldata", upgradeExecutorCalldata);
 	} else {
 		print("");
-		printIndented("Target", parentUpgradeExecutorAddress);
+		printIndented("Target", parentUpgradeExecutor);
 		printIndented("Value", totalValue.toString());
 		printIndented("Calldata", upgradeExecutorCalldata);
 	}

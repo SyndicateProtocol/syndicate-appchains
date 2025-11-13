@@ -8,7 +8,7 @@
         "@commander-js/extra-typings": "^14.0.0",
         "commander": "^14.0.2",
         "viem": "^2.23.4",
-        "zod": "^4.1.8",
+        "zod": "^4.1.12",
       },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
@@ -486,7 +486,7 @@
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
 
-    "zod": ["zod@4.1.8", "", {}, "sha512-5R1P+WwQqmmMIEACyzSvo4JXHY5WiAFHRMg+zBZKgKS+Q1viRa0C1hmUKtHltoIFKtIdki3pRxkmpP74jnNYHQ=="],
+    "zod": ["zod@4.1.12", "", {}, "sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ=="],
 
     "@arbitrum/nitro-contracts/@openzeppelin/contracts": ["@openzeppelin/contracts@4.5.0", "", {}, "sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA=="],
 

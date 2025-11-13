@@ -1,8 +1,53 @@
-import { isValidAddress } from "@/src/utils/helpers";
 import { exitWithError } from "@/src/utils/print";
 import type { Command } from "@commander-js/extra-typings";
-import type { Address } from "viem";
+import { getAddress } from "viem";
+import { z } from "zod";
 import { generateSetWasmMaxStackDepthTx } from "./setWasmMaxStackDepth";
+
+// Ethereum address validation schema
+const ethAddressSchema = z
+	.string()
+	.transform((val) => getAddress(val))
+	.refine((val) => !!val, { message: "Must be a valid Ethereum address" });
+
+// Schema for setWasmMaxStackDepth options
+const setWasmMaxStackDepthOptionsSchema = z.object({
+	parentRpc: z.string().url("Invalid parent RPC URL"),
+	childRpc: z.string().url("Invalid child RPC URL").optional(),
+	parentUpgradeExecutor: ethAddressSchema,
+	parentInbox: ethAddressSchema,
+	childUpgradeExecutor: ethAddressSchema,
+	refundAddress: ethAddressSchema,
+	gasLimit: z
+		.string()
+		.transform((val) => BigInt(val))
+		.optional()
+		.refine(
+			(val) => {
+				if (!val) return true;
+				try {
+					const bigIntVal = BigInt(val);
+					return bigIntVal > BigInt(0);
+				} catch {
+					return false;
+				}
+			},
+			{ message: "Gas limit must be a positive integer" },
+		),
+	maxFeePerGas: z
+		.string()
+		.transform((val) => BigInt(val))
+		.optional()
+		.refine(
+			(val) => {
+				if (!val) return true;
+				const num = Number(val);
+				return !Number.isNaN(num) && num > 0;
+			},
+			{ message: "Max fee per gas must be a positive number" },
+		),
+	customGasToken: ethAddressSchema.optional(),
+});
 
 /**
  * Register the configureL3 command with its subcommands
@@ -38,88 +83,34 @@ export function configureL3Command(program: Command) {
 			"Child chain RPC URL (enables gas estimation from chain)",
 		)
 		.option("--gas-limit <limit>", "Gas limit for retryable ticket")
-		.option("--max-fee-per-gas <gwei>", "Max fee per gas in gwei")
+		.option("--max-fee-per-gas <wei>", "Max fee per gas in wei")
 		.option(
 			"--custom-gas-token <address>",
 			"Custom gas token contract address for chains using ERC20 gas tokens",
 		)
-		.action(
-			async (
-				depth: string,
-				options: {
-					parentRpc: string;
-					childRpc?: string;
-					parentUpgradeExecutor: string;
-					parentInbox: string;
-					childUpgradeExecutor: string;
-					refundAddress: string;
-					gasLimit?: string;
-					maxFeePerGas?: string;
-					customGasToken?: string;
-				},
-			) => {
-				// Manual validation and type conversion
-				const depthNum = Number(depth);
-				if (Number.isNaN(depthNum) || depthNum <= 0) {
-					exitWithError(`Invalid depth: ${depth}`);
-				}
+		.action(async (depth: string, options: Record<string, unknown>) => {
+			const depthNum = Number(depth);
+			if (Number.isNaN(depthNum) || depthNum <= 0) {
+				exitWithError(`Invalid depth: ${depth}`);
+			}
 
-				// Validate addresses
-				if (!isValidAddress(options.parentUpgradeExecutor)) {
-					exitWithError(
-						`Invalid parent upgrade executor address: ${options.parentUpgradeExecutor}`,
-					);
-				}
-				if (!isValidAddress(options.parentInbox)) {
-					exitWithError(`Invalid parent inbox address: ${options.parentInbox}`);
-				}
-				if (!isValidAddress(options.childUpgradeExecutor)) {
-					exitWithError(
-						`Invalid child upgrade executor address: ${options.childUpgradeExecutor}`,
-					);
-				}
-				if (!isValidAddress(options.refundAddress)) {
-					exitWithError(`Invalid refund address: ${options.refundAddress}`);
-				}
-				if (options.customGasToken && !isValidAddress(options.customGasToken)) {
-					exitWithError(
-						`Invalid custom gas token address: ${options.customGasToken}`,
-					);
-				}
+			const {
+				data: validatedOptions,
+				success,
+				error,
+			} = setWasmMaxStackDepthOptionsSchema.safeParse(options);
 
-				// Convert gas limit (optional)
-				let gasLimit: bigint | undefined;
-				if (options.gasLimit) {
-					gasLimit = BigInt(options.gasLimit);
-					if (gasLimit <= BigInt(0)) {
-						exitWithError(`Invalid gas limit: ${options.gasLimit}`);
-					}
-				}
+			if (!success) {
+				const errors = error.issues
+					.map((err) => `  - ${err.path.join(".")}: ${err.message}`)
+					.join("\n");
+				exitWithError(`Invalid options:\n${errors}`);
+				return; // exitWithError calls process.exit but TypeScript doesn't know that
+			}
 
-				// Convert max fee per gas (gwei to wei) (optional)
-				let maxFeePerGas: bigint | undefined;
-				if (options.maxFeePerGas) {
-					const maxFeePerGasNum = Number(options.maxFeePerGas);
-					if (Number.isNaN(maxFeePerGasNum) || maxFeePerGasNum <= 0) {
-						exitWithError(`Invalid max fee per gas: ${options.maxFeePerGas}`);
-					}
-					// Convert gwei (decimal) to wei (integer) by multiplying by 1e9
-					maxFeePerGas = BigInt(Math.round(maxFeePerGasNum * 1_000_000_000));
-				}
-
-				await generateSetWasmMaxStackDepthTx({
-					parentRpc: options.parentRpc,
-					childRpc: options.childRpc,
-					parentUpgradeExecutorAddress:
-						options.parentUpgradeExecutor as Address,
-					parentInboxAddress: options.parentInbox as Address,
-					childUpgradeExecutorAddress: options.childUpgradeExecutor as Address,
-					refundAddress: options.refundAddress as Address,
-					wasmMaxStackDepth: depthNum,
-					gasLimit,
-					maxFeePerGas,
-					customGasTokenAddress: options.customGasToken as Address | undefined,
-				});
-			},
-		);
+			await generateSetWasmMaxStackDepthTx({
+				...validatedOptions,
+				wasmMaxStackDepth: depthNum,
+			});
+		});
 }

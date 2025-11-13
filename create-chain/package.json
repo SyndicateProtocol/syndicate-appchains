@@ -19,7 +19,7 @@
 		"@commander-js/extra-typings": "^14.0.0",
 		"commander": "^14.0.2",
 		"viem": "^2.23.4",
-		"zod": "^4.1.8"
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
