@@ -119,6 +119,10 @@ export async function generateSetWasmMaxStackDepthTx({
 				estimatedMaxFeePerGas += BigInt(1);
 			}
 
+			// Add 50% buffer to total submission cost to increase the chances of auto-redemption of the retryable ticket
+			estimatedMaxFeePerGas =
+				(estimatedMaxFeePerGas * BigInt(150)) / BigInt(100);
+
 			// Add 20% buffer to gas limit for safety
 			estimatedGasLimit = (estimatedGasLimit * BigInt(120)) / BigInt(100);
 		} catch (error) {
