@@ -60,8 +60,14 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
         if let Some(migration_params) = migration_params {
+            let migrated_batch_count = migration_params.batch_count;
+            // copied init block so it is in the first migrated block
+            let mut init_block = db.get_block(1).unwrap();
+            // hack so the the acc matches when querying by seqNum
+            init_block.after_batch_acc = migration_params.batch_acc;
+            db.put_block(migrated_batch_count, &init_block);
             db.appchain_migration(migration_params).unwrap();
-            finalized_batch = db.get_state().batch_count;
+            finalized_batch = migrated_batch_count;
         }
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;

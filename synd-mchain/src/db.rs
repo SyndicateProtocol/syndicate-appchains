@@ -418,24 +418,24 @@ pub trait ArbitrumDB {
 
         debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, before_batch_acc: {before_batch_acc}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
 
-        self.put_block(
-            batch_count,
-            &Block {
-                timestamp: 0u64,
-                batch: Bytes::new(),
-                slot: Slot {
-                    seq_block_number: 0u64,
-                    seq_block_hash: B256::ZERO,
-                    set_block_number: 0u64,
-                    set_block_hash: B256::ZERO,
-                },
-                messages: vec![],
-                before_batch_acc: batch_acc,
-                after_batch_acc: batch_acc,
-                before_message_acc: delayed_msgs_acc,
-                before_message_count: delayed_msgs_count,
-            },
-        );
+        // self.put_block(
+        //     batch_count,
+        //     &Block {
+        //         timestamp: 0u64,
+        //         batch: Bytes::new(),
+        //         slot: Slot {
+        //             seq_block_number: 0u64,
+        //             seq_block_hash: B256::ZERO,
+        //             set_block_number: 0u64,
+        //             set_block_hash: B256::ZERO,
+        //         },
+        //         messages: vec![],
+        //         before_batch_acc: batch_acc,
+        //         after_batch_acc: batch_acc,
+        //         before_message_acc: delayed_msgs_acc,
+        //         before_message_count: delayed_msgs_count,
+        //     },
+        // );
 
         //prepare the state so add_batch is able to add an empty batch
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);

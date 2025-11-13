@@ -118,13 +118,11 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count, offset) = match db.get_block_with_offset(i) {
-                Ok((block, batch_count, offset)) => (block, batch_count, offset),
-                Err(e) => {
-                    debug!("eth_get_logs (expected for migrations): error getting block with offset {i}: {e}");
-                    continue;
-                }
-            };
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if from_block != to_block && block.timestamp == 0 {
+                // don't include initmsg in events
+                continue;
+            }
             let mut before_acc = block.before_message_acc;
             for (msg_idx, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
@@ -148,13 +146,11 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let (block, batch_count, offset) = match db.get_block_with_offset(i) {
-                Ok((block, batch_count, offset)) => (block, batch_count, offset),
-                Err(e) => {
-                    debug!("eth_get_logs (expected for migrations): error getting block with offset {i}: {e}");
-                    continue;
-                }
-            };
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if from_block != to_block && block.timestamp == 0 {
+                // don't include initmsg in events
+                continue;
+            }
             events.push(create_log(
                 batch_count,
                 offset,
@@ -183,6 +179,10 @@ pub fn eth_get_logs(
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if from_block != to_block && block.timestamp == 0 {
+                // don't include initmsg in events
+                continue;
+            }
             for (msg_idx, (msg, _)) in block.messages.iter().enumerate() {
                 events.push(create_log(
                     batch_count,
