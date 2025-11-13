@@ -107,7 +107,6 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	// Add 50% buffer to total submission cost for safety
 	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100);
-	console.log("Max Submission Cost", maxSubmissionCost);
 	const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
 
 	// Encode call to Inbox
@@ -157,26 +156,21 @@ export async function generateSetWasmMaxStackDepthTx({
 	const tokenAmount = formatUnits(totalValue, nativeCurrency?.decimals || 18);
 	const tokenSymbol = nativeCurrency?.symbol || "tokens";
 
-	printSection("📝 TRANSACTION DATA");
-	print("");
-
-	print("To", parentUpgradeExecutorAddress);
-	!useCustomGasToken && print("Value", `${totalValue} wei`);
-	print("Calldata", upgradeExecutorCalldata);
-	print("");
-
 	printSection("📊 BREAKDOWN");
 	print("");
 
 	!useCustomGasToken &&
-		print("Retryable Ticket Cost", `${formatEther(maxSubmissionCost)} ETH`);
-	print("Appchain TX Gas Limit", gasLimit.toString());
-	print("Appchain TX Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
+		print("Ticket Submission Cost", `${formatEther(maxSubmissionCost)} ETH`);
+	// print("Appchain TX Gas Limit", gasLimit.toString());
+	// print("Appchain TX Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
 	print(
-		"Transaction Cost",
+		"Appchain Tx Transaction Cost",
 		`${formatEther(gasLimit * maxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
 	);
-	print("Total Cost", `${formatEther(totalValue)} ETH`);
+	printIndented("Gas Limit", gasLimit.toString());
+	printIndented("Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
+	!useCustomGasToken &&
+		print("Total Cost To Execute", `${formatEther(totalValue)} ETH`);
 	print("Refund Address", refundAddress);
 	print("");
 
@@ -225,10 +219,7 @@ export async function generateSetWasmMaxStackDepthTx({
 	} else {
 		print("");
 		printIndented("Target", parentUpgradeExecutorAddress);
-		printIndented(
-			"Value",
-			`${totalValue} wei (${Number(totalValue) / 1e18} ETH)`,
-		);
+		printIndented("Value", totalValue.toString());
 		printIndented("Calldata", upgradeExecutorCalldata);
 	}
 	print("");
