@@ -597,7 +597,7 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 
 // estimateGasFeeCapWithBuffer estimates the gas fee cap for the SubmitAssertion transaction without sending it,
 // and multiplies it by the `bufferFactor` to handle volatile gas conditions.
-// Returns `nil` if estimation fails, which triggers default estimation.
+// Returns `nil` if estimation fails
 func (p *Proposer) estimateGasFeeCapWithBuffer(
 	ctx context.Context,
 	assertion teemodule.PendingAssertion,
