@@ -1,3 +1,5 @@
+import { formatEther, formatGwei } from "viem";
+
 const keyWidth = 30;
 
 export function print(key: string, value?: string | number) {
@@ -29,17 +31,17 @@ export function printSection(title: string, char = "=", width = 80) {
 }
 
 /**
- * Format a bigint value with its wei, ETH, and gwei representations
+ * Format a bigint value with its wei, and ETH representation
  */
 export function formatWeiValue(
 	label: string,
 	weiValue: bigint,
-	options?: { unit?: "ETH" | "tokens" },
+	options?: { unit?: string },
 ) {
 	const unit = options?.unit || "ETH";
 	console.log(`${`${label}:`.padEnd(keyWidth)}${weiValue} wei`);
-	console.log(`${"".padEnd(keyWidth)}${Number(weiValue) / 1e18} ${unit}`);
-	console.log(`${"".padEnd(keyWidth)}${Number(weiValue) / 1e9} gwei`);
+	console.log(`${"".padEnd(keyWidth)}${formatGwei(weiValue)} gwei`);
+	console.log(`${"".padEnd(keyWidth)}${formatEther(weiValue)} ${unit}`);
 }
 
 /**

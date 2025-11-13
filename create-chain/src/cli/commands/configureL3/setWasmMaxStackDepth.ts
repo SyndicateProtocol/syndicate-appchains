@@ -1,6 +1,14 @@
 import { ERC20Abi } from "@/src/abi/ERC20";
+import { getNativeCurrency } from "@/src/utils/helpers";
 import type { Address, Hex } from "viem";
-import { createPublicClient, encodeFunctionData, http } from "viem";
+import {
+	createPublicClient,
+	encodeFunctionData,
+	formatEther,
+	formatGwei,
+	formatUnits,
+	http,
+} from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { ERC20InboxABI } from "../../../abi/nitro/ERC20Inbox";
 import { InboxABI } from "../../../abi/nitro/Inbox";
@@ -31,8 +39,8 @@ export async function generateSetWasmMaxStackDepthTx({
 	parentUpgradeExecutorAddress,
 	parentInboxAddress,
 	childUpgradeExecutorAddress,
-	gasLimit = BigInt(1_000_000),
-	maxFeePerGas = BigInt(100000000), // 0.1 gwei default
+	gasLimit = BigInt(50_000),
+	maxFeePerGas = BigInt(100_000_000), // 0.1 gwei
 	refundAddress,
 	customGasTokenAddress,
 	wasmMaxStackDepth,
@@ -41,8 +49,11 @@ export async function generateSetWasmMaxStackDepthTx({
 	const publicClient = createPublicClient({
 		transport: http(parentChainRpcUrl),
 	});
+	const nativeCurrency = useCustomGasToken
+		? await getNativeCurrency(publicClient, customGasTokenAddress)
+		: undefined;
 
-	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutro
+	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutor
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
@@ -57,37 +68,44 @@ export async function generateSetWasmMaxStackDepthTx({
 	});
 
 	// Calculate submission cost for the retryable ticket
+	// For ERC20 chains, submission cost is always 0 (ERC20Inbox.calculateRetryableSubmissionFee returns 0)
+	// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L114-L120
 	const dataLength = BigInt((l3UpgradeExecutorCalldata.length - 2) / 2); // Remove '0x' and divide by 2
 	let submissionCost: bigint;
-	try {
-		submissionCost = await publicClient.readContract({
-			address: parentInboxAddress,
-			abi: InboxABI,
-			functionName: "calculateRetryableSubmissionFee",
-			args: [dataLength, BigInt(0)], // 0 means use current basefee
-		});
-		if (submissionCost === BigInt(0)) {
-			throw new Error("Submission cost is 0");
-		}
-	} catch (error) {
-		console.warn(
-			"Could not calculate submission cost, using formula-based estimate",
-			error,
-		);
 
-		// fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
-		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
-		// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
-		const estimatedBaseFee = BigInt(100_000_000);
-		submissionCost = (BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
+	if (useCustomGasToken) {
+		// For ERC20 chains, submission cost is always 0
+		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L118-L119
+		submissionCost = BigInt(0);
+	} else {
+		// For ETH chains, calculate the submission cost
+		try {
+			submissionCost = await publicClient.readContract({
+				address: parentInboxAddress,
+				abi: InboxABI,
+				functionName: "calculateRetryableSubmissionFee",
+				args: [dataLength, BigInt(0)], // 0 means use current basefee
+			});
+		} catch (error) {
+			console.warn(
+				"Could not calculate submission cost, using formula-based estimate",
+				error,
+			);
+
+			// fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
+			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
+			// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
+			const estimatedBaseFee = BigInt(100_000_000);
+			submissionCost =
+				(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
+		}
 	}
 
-	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100); // Add 50% buffer for safety
-
-	// Calculate total value needed
+	// Add 50% buffer to total submission cost for safety
+	const maxSubmissionCost = (submissionCost * BigInt(150)) / BigInt(100);
 	const totalValue = maxSubmissionCost + gasLimit * maxFeePerGas;
 
-	// Encode call to Inbox (ERC20Inbox for custom gas token, regular Inbox for ETH)
+	// Encode call to Inbox
 	let inboxCalldata: Hex;
 	if (useCustomGasToken) {
 		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L64-L65
@@ -131,13 +149,13 @@ export async function generateSetWasmMaxStackDepthTx({
 		args: [parentInboxAddress, inboxCalldata],
 	});
 
+	const tokenAmount = formatUnits(totalValue, nativeCurrency?.decimals || 18);
+	const tokenSymbol = nativeCurrency?.symbol || "tokens";
+
 	printSection("📝 TRANSACTION DATA");
 	print("");
 	print("To", parentUpgradeExecutorAddress);
-	if (useCustomGasToken) {
-		print("Value", "0 wei (custom gas token will be used)");
-		formatWeiValue("Token Amount", totalValue, { unit: "tokens" });
-	} else {
+	if (!useCustomGasToken) {
 		formatWeiValue("Value", totalValue);
 	}
 	print("Calldata", upgradeExecutorCalldata);
@@ -145,19 +163,19 @@ export async function generateSetWasmMaxStackDepthTx({
 
 	printSection("📊 BREAKDOWN");
 	print("");
-	formatWeiValue("Submission Cost", maxSubmissionCost, {
-		unit: useCustomGasToken ? "tokens" : "ETH",
-	});
-	formatWeiValue("Gas Cost", gasLimit * maxFeePerGas, {
-		unit: useCustomGasToken ? "tokens" : "ETH",
-	});
-	printIndented("Gas Limit", gasLimit.toString());
-	printIndented(
-		"Max Fee Per Gas",
-		`${maxFeePerGas} wei (${Number(maxFeePerGas) / 1e9} gwei)`,
+
+	if (!useCustomGasToken) {
+		formatWeiValue("Submission Cost", maxSubmissionCost, {
+			unit: "ETH",
+		});
+	}
+	print("Gas Limit", gasLimit.toString());
+	print("Max Fee Per Gas", `${formatGwei(maxFeePerGas)} gwei`);
+	print(
+		"Transaction Cost",
+		`${formatEther(gasLimit * maxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
 	);
 	print("Refund Address", refundAddress);
-	print("Custom Gas Token", useCustomGasToken ? "Yes" : "No");
 	print("");
 
 	printSection("💡 INSTRUCTIONS");
@@ -183,23 +201,24 @@ export async function generateSetWasmMaxStackDepthTx({
 		});
 
 		print("");
-		print("For custom gas token chains, you need to:");
-		print("");
-		print("1. [EOA → Token] Transfer tokens to the parent UpgradeExecutor:");
+		print(
+			`1. [EOA → Token] Transfer ${tokenAmount} ${tokenSymbol} to the parent UpgradeExecutor:`,
+		);
 		printIndented("Target", customGasTokenAddress);
-		printIndented("Value", "0 wei");
+		!useCustomGasToken && printIndented("Value", "0");
 		printIndented("Calldata", transferCalldata);
 		print("");
 		print(
-			"2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend tokens:",
+			`2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend ${tokenAmount} ${tokenSymbol}:`,
 		);
 		printIndented("Target", parentUpgradeExecutorAddress);
-		printIndented("Value", "0 wei");
+		!useCustomGasToken && printIndented("Value", "0");
 		printIndented("Calldata", upgradeExecutorApprovalCalldata);
 		print("");
 		print("3. [UpgradeExecutor → Inbox] Call the parent UpgradeExecutor:");
 		printIndented("Target", parentUpgradeExecutorAddress);
-		printIndented("Value", "0 wei (no ETH, uses approved tokens)");
+		!useCustomGasToken &&
+			printIndented("Value", `0 (no ETH, uses approved ${tokenSymbol})`);
 		printIndented("Calldata", upgradeExecutorCalldata);
 	} else {
 		print("");
