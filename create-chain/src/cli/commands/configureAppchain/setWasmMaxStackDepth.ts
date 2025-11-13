@@ -25,6 +25,15 @@ import {
 	printSeparator,
 } from "../../../utils/print";
 
+/*
+Flow:
+	Settlement Chain (Parent): EXECUTOR_ROLE (EOA or Smart Contract) → ParentUpgradeExecutor → ParentInbox
+                          ↓
+                  (creates retryable ticket)
+                          ↓
+	Appchain (Child):  Retryable auto-redeems → ChildUpgradeExecutor → ArbOwner.setWasmMaxStackDepth()
+*/
+
 interface SetWasmMaxStackDepthParams {
 	parentRpc: string;
 	childRpc?: string;
@@ -101,9 +110,9 @@ export async function generateSetWasmMaxStackDepthTx({
 					],
 				}),
 			});
+
 			// maxFeePerGas of 1 is a magic value in arbitrum but is a valid setting for a syndicate appchain. We add 1 here to avoid reverting.
 			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/AbsInbox.sol#L276-L277
-
 			estimatedMaxFeePerGas = await childPublicClient.getGasPrice();
 			if (estimatedMaxFeePerGas === BigInt(1)) {
 				estimatedMaxFeePerGas += BigInt(1);
