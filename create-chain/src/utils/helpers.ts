@@ -128,13 +128,20 @@ export async function upsertToSyndObject(
 
 	for (let i = 0; i < pathParts.length - 1; i++) {
 		const part = pathParts[i];
+		if (part === "__proto__" || part === "constructor" || part === "prototype") {
+			throw new Error(`Prototype pollution property blocked in objectPath: '${part}'`);
+		}
 		if (!current[part]) {
 			current[part] = {};
 		}
 		current = current[part] as Record<string, unknown>;
 	}
 
-	current[pathParts[pathParts.length - 1]] = data;
+	const lastPart = pathParts[pathParts.length - 1];
+	if (lastPart === "__proto__" || lastPart === "constructor" || lastPart === "prototype") {
+		throw new Error(`Prototype pollution property blocked in objectPath: '${lastPart}'`);
+	}
+	current[lastPart] = data;
 
 	// Write the updated object back to file
 	return Bun.write(syndFilePath, stringify(syndObject, null, 2));
