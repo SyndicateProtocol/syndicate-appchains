@@ -12,8 +12,12 @@ import {
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { ERC20InboxABI } from "../../../abi/nitro/ERC20Inbox";
 import { InboxABI } from "../../../abi/nitro/Inbox";
+import { NodeInterfaceABI } from "../../../abi/nitro/NodeInterface";
 import { UpgradeExecutorABI } from "../../../abi/nitro/UpgradeExecutor";
-import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../../../utils/constants";
+import {
+	ARB_OWNER_PRECOMPILE_ADDRESS,
+	NODE_INTERFACE_ADDRESS,
+} from "../../../utils/constants";
 import {
 	print,
 	printIndented,
@@ -33,6 +37,9 @@ interface SetWasmMaxStackDepthParams {
 	maxFeePerGas?: bigint;
 	customGasTokenAddress?: Address;
 }
+
+const DEFAULT_GAS_LIMIT = BigInt(100_000);
+const DEFAULT_MAX_FEE_PER_GAS = BigInt(100_000_000); // 0.1 gwei
 
 export async function generateSetWasmMaxStackDepthTx({
 	parentRpc,
@@ -54,49 +61,6 @@ export async function generateSetWasmMaxStackDepthTx({
 		? await getNativeCurrency(publicClient, customGasTokenAddress)
 		: undefined;
 
-	let estimatedGasLimit: bigint;
-	let estimatedMaxFeePerGas: bigint;
-
-	if (childRpc) {
-		const childPublicClient = createPublicClient({
-			transport: http(childRpc),
-		});
-
-		const arbOwnerCalldata = encodeFunctionData({
-			abi: ArbOwnerABI,
-			functionName: "setWasmMaxStackDepth",
-			args: [wasmMaxStackDepth],
-		});
-
-		try {
-			estimatedGasLimit = await childPublicClient.estimateGas({
-				account: childUpgradeExecutor,
-				to: ARB_OWNER_PRECOMPILE_ADDRESS,
-				data: arbOwnerCalldata,
-			});
-			estimatedMaxFeePerGas = await childPublicClient.getGasPrice();
-
-			// Add 20% buffer to gas limit for safety
-			estimatedGasLimit = (estimatedGasLimit * BigInt(120)) / BigInt(100);
-		} catch (error) {
-			console.warn(
-				"⚠️  Could not estimate gas from child chain, using defaults",
-			);
-			console.warn("Error:", error);
-			estimatedGasLimit = gasLimit ?? BigInt(50_000);
-			estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
-		}
-	} else {
-		estimatedGasLimit = gasLimit ?? BigInt(50_000);
-		estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
-		if (!gasLimit || !maxFeePerGas) {
-			print("");
-			print(
-				"ℹ️  Using default gas parameters. Pass --child-rpc to estimate from chain.",
-			);
-		}
-	}
-
 	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutor
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
@@ -111,6 +75,61 @@ export async function generateSetWasmMaxStackDepthTx({
 		],
 	});
 
+	let estimatedGasLimit: bigint;
+	let estimatedMaxFeePerGas: bigint;
+
+	if (childRpc) {
+		const childPublicClient = createPublicClient({
+			transport: http(childRpc),
+		});
+
+		try {
+			// Use NodeInterface to estimate the full retryable ticket execution
+			estimatedGasLimit = await childPublicClient.estimateGas({
+				to: NODE_INTERFACE_ADDRESS,
+				data: encodeFunctionData({
+					abi: NodeInterfaceABI,
+					functionName: "estimateRetryableTicket",
+					args: [
+						parentUpgradeExecutor, // sender (will be aliased from parent)
+						BigInt(0), // deposit (not needed for estimation)
+						childUpgradeExecutor, // to
+						BigInt(0), // l2CallValue
+						refundAddress, // excessFeeRefundAddress
+						refundAddress, // callValueRefundAddress
+						l3UpgradeExecutorCalldata, // data - the actual executeCall data
+					],
+				}),
+			});
+			// maxFeePerGas of 1 is a magic value in arbitrum but is a valid setting for a syndicate appchain. We add 1 here to avoid reverting.
+			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/AbsInbox.sol#L276-L277
+
+			estimatedMaxFeePerGas = await childPublicClient.getGasPrice();
+			if (estimatedMaxFeePerGas === BigInt(1)) {
+				estimatedMaxFeePerGas += BigInt(1);
+			}
+
+			// Add 20% buffer to gas limit for safety
+			estimatedGasLimit = (estimatedGasLimit * BigInt(120)) / BigInt(100);
+		} catch (error) {
+			console.warn(
+				"⚠️  Could not estimate gas from child chain, using defaults",
+			);
+			console.warn("Error:", error);
+			estimatedGasLimit = gasLimit ?? DEFAULT_GAS_LIMIT;
+			estimatedMaxFeePerGas = maxFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS;
+		}
+	} else {
+		estimatedGasLimit = gasLimit ?? DEFAULT_GAS_LIMIT;
+		estimatedMaxFeePerGas = maxFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS;
+		if (!gasLimit || !maxFeePerGas) {
+			print("");
+			print(
+				"ℹ️  Using default gas parameters. Pass --child-rpc to estimate from chain.",
+			);
+		}
+	}
+
 	// Calculate submission cost for the retryable ticket
 	// For ERC20 chains, submission cost is always 0 (ERC20Inbox.calculateRetryableSubmissionFee returns 0)
 	// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L114-L120
@@ -122,12 +141,10 @@ export async function generateSetWasmMaxStackDepthTx({
 		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L118-L119
 		submissionCost = BigInt(0);
 	} else {
-		const estimatedBaseFee = BigInt(100_000_000); // 0.1 gwei
-
 		// For ETH chains, calculate the retryable ticket submission cost
 		try {
 			const block = await publicClient.getBlock();
-			const baseFeePerGas = block.baseFeePerGas ?? estimatedBaseFee;
+			const baseFeePerGas = block.baseFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS;
 			submissionCost = await publicClient.readContract({
 				address: parentInbox,
 				abi: InboxABI,
@@ -146,7 +163,7 @@ export async function generateSetWasmMaxStackDepthTx({
 			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
 			// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
 			submissionCost =
-				(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
+				(BigInt(1400) + BigInt(6) * dataLength) * DEFAULT_MAX_FEE_PER_GAS;
 		}
 	}
 
