@@ -124,6 +124,8 @@ pub struct RollupState {
     pub delayed_msgs_count: u64,
     /// The delayed messages accumulator
     pub delayed_msgs_acc: B256,
+    /// Arb message count
+    pub batch_message_count: u64,
 }
 
 /// Migration command - it inspects a given Nitro database, extracts relevant information and sets
@@ -158,15 +160,16 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     debug!("rollup state: {:#?}", rollup_state);
     debug!("chain config: {:#?}", chain_config);
 
-    info!("\n---------------\n");
-    info!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
-    info!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
-    info!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
-    info!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
-    info!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
-    info!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
-    info!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    info!("\n---------------\n");
+    println!("\n---------------\n");
+    println!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
+    println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
+    println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
+    println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
+    println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
+    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
+    println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
+    println!("\n---------------\n");
+    println!("last batch arb msg count: {}", rollup_state.batch_message_count);
 
     // TODO obtain and log GENESIS_CONFIG here
 
@@ -241,15 +244,17 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
     let batch_count = u64::decode(&mut &batch_count_bytes[..])
         .map_err(|e| eyre::eyre!("Failed to decode batch count: {e}"))?;
 
-    let delayed_msgs_count = arb_db
-        .get(b"_delayedMessageCount")?
-        .map(|bytes| u64::decode(&mut &bytes[..]).unwrap())
-        .ok_or_else(|| eyre::eyre!("Failed to get delayed message count"))?;
-
+    // let delayed_msgs_count = arb_db
+    //     .get(b"_delayedMessageCount")?
+    //     .map(|bytes| u64::decode(&mut &bytes[..]).unwrap())
+    //     .ok_or_else(|| eyre::eyre!("Failed to get delayed message count"))?;
+    //
     let batch_data = arb_db
         .get(make_numbered_key(b"s", batch_count - 1, &[]))?
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
         .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?;
+
+    let delayed_msgs_count = batch_data.delayed_message_count;
 
     debug!("batch_data: {:#?}", batch_data);
 
@@ -273,5 +278,6 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
         parent_chain_block: batch_data.parent_chain_block,
         delayed_msgs_count,
         delayed_msgs_acc,
+        batch_message_count: batch_data.message_count,
     })
 }

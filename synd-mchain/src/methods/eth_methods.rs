@@ -88,15 +88,16 @@ pub fn eth_get_logs(
         };
         let batch_seq_num =
             u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
-        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(batch_seq_num + 1).into()) {
+        let batch_count = batch_seq_num + 1;
+        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(batch_count).into()) {
             return Err(err("block hash and batch index mismatch"));
         }
-        let block = db.get_block(batch_seq_num + 1)?;
+        let block = db.get_block(batch_count)?;
         if block.batch.is_empty() {
             return Err(err("batch is empty - SequencerBatchData event does not exist"));
         }
         return Ok(vec![create_log(
-            batch_seq_num + 1,
+            batch_count,
             db.get_migration_offset(),
             ISequencerInbox::SequencerBatchData {
                 batchSequenceNumber: U256::from(batch_seq_num),
@@ -119,7 +120,7 @@ pub fn eth_get_logs(
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
-            if from_block != to_block && block.timestamp == 0 {
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
                 // don't include initmsg in events
                 continue;
             }
@@ -147,7 +148,7 @@ pub fn eth_get_logs(
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
-            if from_block != to_block && block.timestamp == 0 {
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
                 // don't include initmsg in events
                 continue;
             }
@@ -179,7 +180,7 @@ pub fn eth_get_logs(
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
             let (block, batch_count, offset) = db.get_block_with_offset(i)?;
-            if from_block != to_block && block.timestamp == 0 {
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
                 // don't include initmsg in events
                 continue;
             }

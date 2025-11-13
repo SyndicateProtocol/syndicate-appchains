@@ -288,14 +288,23 @@ pub trait ArbitrumDB {
             }
         }
     }
+
+    fn add_batch(&self, mblock: MBlock) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
+        self.add_batch_base(mblock, false)
+    }
+
     /// Adds a new batch to the chain
     /// Returns the block number if a new block is added
-    fn add_batch(&self, mblock: MBlock) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
+    fn add_batch_base(
+        &self,
+        mblock: MBlock,
+        is_migration: bool,
+    ) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
         let state = self.get_state();
         if state.batch_count == 0 && mblock.payload.is_none() {
             return Err(to_err("invalid first batch: must contain a payload"));
         }
-        if state.batch_count > 0 {
+        if state.batch_count > 0 && !is_migration {
             if mblock.timestamp < state.timestamp {
                 return Err(to_err(format!(
                     "invalid batch: timestamp cannot go backwards: {} < {}",
@@ -330,7 +339,6 @@ pub trait ArbitrumDB {
         let arbitrum_batch = match mblock.payload {
             Some(batch) => batch,
             None => {
-                debug!("POTATO db.add_batch: no payload, updating state: {mblock:?}");
                 self.put_state(&State { timestamp: mblock.timestamp, slot: mblock.slot, ..state });
                 return Ok(None);
             }
@@ -356,7 +364,7 @@ pub trait ArbitrumDB {
                 (
                     [msg.kind],
                     msg.sender,
-                    l1_block_number,
+                    l1_block_num,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,
@@ -394,7 +402,6 @@ pub trait ArbitrumDB {
             timestamp: block.timestamp,
             slot: block.slot,
         });
-        debug!("POTATO db.add_batch: state: {state:?}, batch_count: {batch_count:?}, offset: {offset:?}, block: {block_clone:?}");
         Ok(Some((batch_count, offset, block_clone)))
     }
 
@@ -413,29 +420,19 @@ pub trait ArbitrumDB {
         // because that's what Nitro expects. Because mchain is designed so that block
         // number = batch count we need to have an offset in order to get the correct block
         // from a given batch count.
+
+        assert!((batch_count <= settlement_start_block), "batch count: {batch_count} higher than start settlement block: {settlement_start_block}");
         let offset = settlement_start_block - batch_count;
+
+        // copied init block so it is in the first migrated block
+        let mut init_block = self.get_block(1).unwrap();
+        // hack so the the acc matches when querying by seqNum
+        init_block.after_batch_acc = batch_acc;
+        self.put_block(batch_count, &init_block);
+
         self.put_migration_offset(offset);
 
         debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, before_batch_acc: {before_batch_acc}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
-
-        // self.put_block(
-        //     batch_count,
-        //     &Block {
-        //         timestamp: 0u64,
-        //         batch: Bytes::new(),
-        //         slot: Slot {
-        //             seq_block_number: 0u64,
-        //             seq_block_hash: B256::ZERO,
-        //             set_block_number: 0u64,
-        //             set_block_hash: B256::ZERO,
-        //         },
-        //         messages: vec![],
-        //         before_batch_acc: batch_acc,
-        //         after_batch_acc: batch_acc,
-        //         before_message_acc: delayed_msgs_acc,
-        //         before_message_count: delayed_msgs_count,
-        //     },
-        // );
 
         //prepare the state so add_batch is able to add an empty batch
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
@@ -455,6 +452,22 @@ pub trait ArbitrumDB {
                 set_block_hash: B256::ZERO,
             },
         });
+
+        // create dummy batch
+        self.add_batch_base(
+            MBlock {
+                timestamp: 1,
+                slot: Slot {
+                    seq_block_number: 0u64,
+                    seq_block_hash: B256::ZERO,
+                    set_block_number: 0u64,
+                    set_block_hash: B256::ZERO,
+                },
+                payload: Some(Default::default()),
+            },
+            true,
+        )?;
+
         Ok(())
     }
 }
