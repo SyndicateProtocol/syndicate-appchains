@@ -34,6 +34,8 @@ pub struct ConfigurationOptions {
     pub maestro_finalization_duration: Option<Duration>,
     pub maestro_finalization_checker_interval: Option<Duration>,
     pub close_challenge_interval: Duration,
+    pub sequencer_max_fee_per_gas: u128,
+    pub maestro_log_level: Option<String>,
 }
 
 impl Default for ConfigurationOptions {
@@ -53,6 +55,8 @@ impl Default for ConfigurationOptions {
             maestro_finalization_duration: None,
             maestro_finalization_checker_interval: None,
             close_challenge_interval: Duration::from_secs(1),
+            sequencer_max_fee_per_gas: 100_000_000_000_000,
+            maestro_log_level: None,
         }
     }
 }

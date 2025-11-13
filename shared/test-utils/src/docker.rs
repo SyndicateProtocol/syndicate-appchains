@@ -186,6 +186,10 @@ pub async fn start_component(
             .current_dir(env!("CARGO_WORKSPACE_DIR"))
             .arg("run");
 
+        if executable_name == "synd-maestro" {
+            cmd.env("RUST_LOG", "debug");
+        }
+
         if needs_rocksdb {
             cmd.arg("--features").arg("rocksdb");
         }

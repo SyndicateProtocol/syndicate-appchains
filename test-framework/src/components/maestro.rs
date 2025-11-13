@@ -1,6 +1,5 @@
 use std::{collections::HashMap, time::Duration};
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(super) struct MaestroConfig {
     pub port: u16,

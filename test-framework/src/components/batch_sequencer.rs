@@ -8,6 +8,7 @@ pub(super) struct BatchSequencerConfig {
     pub(crate) sequencing_rpc_url: String,
     pub(crate) port: u16,
     pub(crate) wait_for_receipt: bool,
+    pub(crate) max_fee_per_gas: u128,
 }
 
 impl BatchSequencerConfig {
@@ -25,6 +26,8 @@ impl BatchSequencerConfig {
             self.sequencing_rpc_url.clone(),
             "--port".to_string(),
             self.port.to_string(),
+            "--max-fee-per-gas".to_string(),
+            self.max_fee_per_gas.to_string(),
         ];
 
         if self.wait_for_receipt {

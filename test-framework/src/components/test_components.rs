@@ -594,6 +594,7 @@ impl TestComponents {
                 sequencing_rpc_url: seq_rpc_ws_url.clone(),
                 port: PortManager::instance().next_port().await,
                 wait_for_receipt: true,
+                max_fee_per_gas: options.sequencer_max_fee_per_gas,
             };
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
@@ -602,7 +603,8 @@ impl TestComponents {
                 Default::default(),
             )
             .await?;
-            batch_sequencer = Some(batch_sequencer_instance);
+            // batch_sequencer = Some(batch_sequencer_instance);
+            batch_sequencer = None;
         }
 
         let l1_provider = l1_info.as_ref().map(|info| info.provider.clone());

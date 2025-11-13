@@ -732,3 +732,71 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
     )
     .await
 }
+
+/*
+ * Plan: Create a maestro + sequencer + translator. The sequencer should have a very low max_fee_per_gas which will make txns fail.
+ * Then send txns 1 2 3, and retry them, and confirm that you can retry beyond the `max_retries`? Or that the `max_retries` doesn't get updated.
+ */
+
+#[tokio::test]
+async fn e2e_maestro_deleteme() -> Result<(), eyre::Error> {
+    TestComponents::run(
+        &ConfigurationOptions {
+            use_write_loop: true,
+            sequencer_max_fee_per_gas: 1,
+            maestro_finalization_checker_interval: Some(Duration::from_secs(2)),
+            maestro_finalization_duration: Some(Duration::from_secs(2)),
+            maestro_log_level: Some("debug".into()),
+            ..Default::default()
+        },
+        |components| async move {
+            components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
+            components.sequencing_provider.anvil_set_auto_mine(true).await?;
+            // Send a deposit to the appchain to make sure the from address has funds
+            let wallet_address = components.sequencing_provider.default_signer_address();
+            let value = parse_ether("0.01")?;
+            let inbox =
+                Rollup::new(components.appchain_deployment.inbox, &components.settlement_provider);
+            let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
+            components.mine_set_block(0).await?;
+            components.mine_set_block(1).await?;
+
+            // Wait for deposit to be processed
+            wait_until!(
+                components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
+                Duration::from_secs(60)
+            );
+
+            let chain_id = components.appchain_provider.get_chain_id().await?;
+            let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
+            let tx = TransactionRequest::default()
+                .from(wallet_address)
+                .with_to(TEST_ADDR)
+                .with_value(U256::from(0))
+                .with_nonce(nonce)
+                .with_gas_limit(100_000)
+                .with_chain_id(chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(components.sequencing_provider.wallet())
+                .await?;
+
+            let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
+
+            wait_until!(
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
+                Duration::from_secs(60)
+            );
+
+            // Verify that the transaction was processed
+            let receipt = components.appchain_provider.get_transaction_receipt(tx_hash).await?;
+            assert!(receipt.is_some());
+            assert!(receipt.clone().unwrap().status());
+            assert_eq!(receipt.unwrap().from, wallet_address);
+
+            Ok(())
+        },
+    )
+        .await
+}
