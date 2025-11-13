@@ -2,7 +2,6 @@ import { getAddress } from "viem";
 import { z } from "zod";
 import { exitWithError } from "../utils/print";
 
-// Ethereum address validation schema
 export const ethAddressSchema = z
 	.string()
 	.refine(
@@ -36,7 +35,6 @@ const positiveBigIntSchema = z
 	)
 	.transform((val) => (val ? BigInt(val) : undefined));
 
-// Schema for setWasmMaxStackDepth options
 export const setWasmMaxStackDepthOptionsSchema = z
 	.object({
 		parentRpc: z.string().url("Invalid parent RPC URL"),

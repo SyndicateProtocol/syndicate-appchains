@@ -6,15 +6,11 @@ import {
 } from "../../schema";
 import { generateSetWasmMaxStackDepthTx } from "./setWasmMaxStackDepth";
 
-/**
- * Register the configureAppchain command with its subcommands
- */
 export function configureAppchainCommand(program: Command) {
 	const configureAppchain = program
 		.command("configureAppchain")
 		.description("Configure a syndicate appchain");
 
-	// setWasmMaxStackDepth subcommand
 	configureAppchain
 		.command("setWasmMaxStackDepth")
 		.description("Set the WASM max stack depth on an appchain")

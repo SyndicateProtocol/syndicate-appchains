@@ -3,9 +3,6 @@ import { applyL1ToL2Alias } from "../../utils/alias";
 import { print } from "../../utils/print";
 import { ethAddressSchema, handleSchemaErrors } from "../schema";
 
-/**
- * Register the alias command
- */
 export function aliasCommand(program: Command) {
 	program
 		.command("alias")
