@@ -45,7 +45,6 @@ export const setWasmMaxStackDepthOptionsSchema = z
 		refundAddress: ethAddressSchema,
 		gasLimit: positiveBigIntSchema.optional(),
 		maxFeePerGas: positiveBigIntSchema.optional(),
-		customGasToken: ethAddressSchema.optional(),
 	})
 	.strict();
 

@@ -35,10 +35,6 @@ export function configureAppchainCommand(program: Command) {
 		)
 		.option("--gas-limit <limit>", "Gas limit for retryable ticket")
 		.option("--max-fee-per-gas <wei>", "Max fee per gas in wei")
-		.option(
-			"--custom-gas-token <address>",
-			"Custom gas token contract address for chains using ERC20 gas tokens",
-		)
 		.action(async (depth: string, options: Record<string, unknown>) => {
 			const depthNum = Number(depth);
 			if (Number.isNaN(depthNum) || depthNum <= 0) {

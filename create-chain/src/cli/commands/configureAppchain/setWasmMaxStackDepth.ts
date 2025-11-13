@@ -1,5 +1,4 @@
 import { ERC20Abi } from "@/src/abi/ERC20";
-import { getNativeCurrency } from "@/src/utils/helpers";
 import type { Address, Hex } from "viem";
 import {
 	createPublicClient,
@@ -24,6 +23,7 @@ import {
 	printSection,
 	printSeparator,
 } from "../../../utils/print";
+import { detectCustomNativeToken } from "./detectCustomNativeToken";
 
 /*
 Flow:
@@ -44,7 +44,6 @@ interface SetWasmMaxStackDepthParams {
 	wasmMaxStackDepth: number;
 	gasLimit?: bigint;
 	maxFeePerGas?: bigint;
-	customGasTokenAddress?: Address;
 }
 
 const DEFAULT_GAS_LIMIT = BigInt(100_000);
@@ -59,16 +58,18 @@ export async function generateSetWasmMaxStackDepthTx({
 	gasLimit,
 	maxFeePerGas,
 	refundAddress,
-	customGasTokenAddress,
 	wasmMaxStackDepth,
 }: SetWasmMaxStackDepthParams) {
-	const useCustomGasToken = !!customGasTokenAddress;
 	const publicClient = createPublicClient({
 		transport: http(parentRpc),
 	});
-	const nativeCurrency = useCustomGasToken
-		? await getNativeCurrency(publicClient, customGasTokenAddress)
-		: undefined;
+
+	// Auto-detect if this chain uses a custom gas token
+	const customNativeToken = await detectCustomNativeToken(
+		publicClient,
+		parentInbox,
+	);
+	const useCustomGasToken = !!customNativeToken;
 
 	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutor
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
@@ -223,8 +224,11 @@ export async function generateSetWasmMaxStackDepthTx({
 		args: [parentInbox, inboxCalldata],
 	});
 
-	const tokenAmount = formatUnits(totalValue, nativeCurrency?.decimals || 18);
-	const tokenSymbol = nativeCurrency?.symbol || "tokens";
+	const tokenAmount = formatUnits(
+		totalValue,
+		customNativeToken?.decimals || 18,
+	);
+	const tokenSymbol = customNativeToken?.symbol || "tokens";
 
 	printSection("📊 BREAKDOWN");
 	print("");
@@ -233,7 +237,7 @@ export async function generateSetWasmMaxStackDepthTx({
 		print("Ticket Submission Cost", `${formatEther(maxSubmissionCost)} ETH`);
 	print(
 		"Appchain Tx Transaction Cost",
-		`${formatEther(estimatedGasLimit * estimatedMaxFeePerGas)} ${useCustomGasToken ? nativeCurrency?.symbol || "tokens" : "ETH"}`,
+		`${formatEther(estimatedGasLimit * estimatedMaxFeePerGas)} ${useCustomGasToken ? customNativeToken?.symbol || "tokens" : "ETH"}`,
 	);
 	printIndented("Max Fee Per Gas", `${formatGwei(estimatedMaxFeePerGas)} gwei`);
 	printIndented("Gas Limit", estimatedGasLimit.toString());
@@ -261,14 +265,14 @@ export async function generateSetWasmMaxStackDepthTx({
 		const upgradeExecutorApprovalCalldata = encodeFunctionData({
 			abi: UpgradeExecutorABI,
 			functionName: "executeCall",
-			args: [customGasTokenAddress, inboxApprovalCalldata],
+			args: [customNativeToken.address, inboxApprovalCalldata],
 		});
 
 		print("");
 		print(
 			`1. [EOA → Token] Transfer ${tokenAmount} ${tokenSymbol} to the parent UpgradeExecutor:`,
 		);
-		printIndented("Target", customGasTokenAddress);
+		printIndented("Target", customNativeToken.address);
 		!useCustomGasToken && printIndented("Value", "0");
 		printIndented("Calldata", transferCalldata);
 		print("");
