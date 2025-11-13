@@ -54,7 +54,6 @@ export async function generateSetWasmMaxStackDepthTx({
 		? await getNativeCurrency(publicClient, customGasTokenAddress)
 		: undefined;
 
-	// Estimate gas parameters from child chain if RPC URL is provided
 	let estimatedGasLimit: bigint;
 	let estimatedMaxFeePerGas: bigint;
 
@@ -63,7 +62,6 @@ export async function generateSetWasmMaxStackDepthTx({
 			transport: http(childRpc),
 		});
 
-		// Get calldata for the ArbOwner call
 		const arbOwnerCalldata = encodeFunctionData({
 			abi: ArbOwnerABI,
 			functionName: "setWasmMaxStackDepth",
@@ -71,14 +69,11 @@ export async function generateSetWasmMaxStackDepthTx({
 		});
 
 		try {
-			// Estimate gas for the UpgradeExecutor call on child chain
 			estimatedGasLimit = await childPublicClient.estimateGas({
 				account: childUpgradeExecutor,
 				to: ARB_OWNER_PRECOMPILE_ADDRESS,
 				data: arbOwnerCalldata,
 			});
-
-			// Get current gas price from child chain
 			estimatedMaxFeePerGas = await childPublicClient.getGasPrice();
 
 			// Add 20% buffer to gas limit for safety
@@ -92,7 +87,6 @@ export async function generateSetWasmMaxStackDepthTx({
 			estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
 		}
 	} else {
-		// Use provided values or defaults
 		estimatedGasLimit = gasLimit ?? BigInt(50_000);
 		estimatedMaxFeePerGas = maxFeePerGas ?? BigInt(100_000_000); // 0.1 gwei
 		if (!gasLimit || !maxFeePerGas) {
@@ -128,11 +122,12 @@ export async function generateSetWasmMaxStackDepthTx({
 		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L118-L119
 		submissionCost = BigInt(0);
 	} else {
-		// For ETH chains, calculate the submission cost
+		const estimatedBaseFee = BigInt(100_000_000); // 0.1 gwei
+
+		// For ETH chains, calculate the retryable ticket submission cost
 		try {
 			const block = await publicClient.getBlock();
-			// Default to 0.1 gwei if baseFeePerGas is not set
-			const baseFeePerGas = block.baseFeePerGas ?? BigInt(100_000_000);
+			const baseFeePerGas = block.baseFeePerGas ?? estimatedBaseFee;
 			submissionCost = await publicClient.readContract({
 				address: parentInbox,
 				abi: InboxABI,
@@ -150,7 +145,6 @@ export async function generateSetWasmMaxStackDepthTx({
 			// Fallback to hardcoded estimate from Inbox's calculateRetryableSubmissionFee()
 			// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/Inbox.sol#L309-L310
 			// Assuming a reasonable base fee of 0.1 gwei = 100_000_000 wei
-			const estimatedBaseFee = BigInt(100_000_000);
 			submissionCost =
 				(BigInt(1400) + BigInt(6) * dataLength) * estimatedBaseFee;
 		}
@@ -161,7 +155,6 @@ export async function generateSetWasmMaxStackDepthTx({
 	const totalValue =
 		maxSubmissionCost + estimatedGasLimit * estimatedMaxFeePerGas;
 
-	// Encode call to Inbox
 	let inboxCalldata: Hex;
 	if (useCustomGasToken) {
 		// https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/ERC20Inbox.sol#L64-L65
@@ -198,7 +191,6 @@ export async function generateSetWasmMaxStackDepthTx({
 		});
 	}
 
-	// Encode call to parent UpgradeExecutor.executeCall()
 	const upgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
