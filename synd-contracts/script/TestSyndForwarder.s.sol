@@ -21,7 +21,9 @@ contract TestSyndForwarder is Script {
     function run() public {
         vm.startBroadcast();
 
-        // forwarder.deploy(bytes32(uint256(1)), stub, "");
+        address deployedContract = forwarder.deploy(bytes32(uint256(1)), stub, "");
+        console2.log("Deployed contract on chain 1 to:", deployedContract);
+
         forwarder.call(
             address(optimismPortal),
             abi.encodeWithSelector(
@@ -33,6 +35,7 @@ contract TestSyndForwarder is Script {
                 abi.encodeWithSelector(SyndForwarder.deploy.selector, bytes32(uint256(1)), stub, "")
             )
         );
+        console2.log("Confirm the txn succeeded on chain 2 and the contract is deployed at:", deployedContract);
 
         vm.stopBroadcast();
     }

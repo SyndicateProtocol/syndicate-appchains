@@ -3,11 +3,14 @@ pragma solidity 0.8.28;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AddressAliasHelper} from "lib/nitro-contracts/src/libraries/AddressAliasHelper.sol";
 import {MinimalUUPSStub} from "./MinimalUUPSStub.sol";
 
 /// @title SyndForwarder
-/// @notice WIP
-/// @dev WIP
+/// @notice Syndicate Forwarder for consistent deterministic deployment of contracts across chains
+/// @dev This contract should be deployed using a deterministic deployment proxy so that
+///      for a givien config (source sender and source chain id) it will have the same address
+///      across all chains
 contract SyndForwarder {
     address public immutable allowedSender;
     address public immutable stubImplementation;
@@ -22,7 +25,7 @@ contract SyndForwarder {
             allowedSender = _sourceSender;
         } else {
             // alias the contract address to receive messages from the same contract on the parent chain
-            allowedSender = address(uint160(address(this)) + uint160(0x1111000000000000000000000000000000001111));
+            allowedSender = AddressAliasHelper.applyL1ToL2Alias(address(this));
         }
 
         bytes memory stubBytecode = abi.encodePacked(type(MinimalUUPSStub).creationCode);
