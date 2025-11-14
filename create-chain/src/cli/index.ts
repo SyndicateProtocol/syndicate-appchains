@@ -1,6 +1,6 @@
 import { Command } from "@commander-js/extra-typings";
 import { aliasCommand } from "./commands/alias";
-import { configureAppchainCommand } from "./commands/configureAppchain/index";
+import { configureAppchainCommand } from "./commands/callArbOwner/index";
 
 const program = new Command();
 

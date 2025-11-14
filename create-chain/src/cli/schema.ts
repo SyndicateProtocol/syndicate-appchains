@@ -35,7 +35,7 @@ const positiveBigIntSchema = z
 	)
 	.transform((val) => (val ? BigInt(val) : undefined));
 
-export const setWasmMaxStackDepthOptionsSchema = z
+export const callArbOwnerOptionsSchema = z
 	.object({
 		parentRpc: z.string().url("Invalid parent RPC URL"),
 		childRpc: z.string().url("Invalid child RPC URL").optional(),
@@ -47,6 +47,9 @@ export const setWasmMaxStackDepthOptionsSchema = z
 		maxFeePerGas: positiveBigIntSchema.optional(),
 	})
 	.strict();
+
+// Alias for backward compatibility
+export const setWasmMaxStackDepthOptionsSchema = callArbOwnerOptionsSchema;
 
 export function handleSchemaErrors(errors: z.ZodError) {
 	const err = errors.issues

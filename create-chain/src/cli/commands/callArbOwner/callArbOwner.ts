@@ -32,25 +32,26 @@ Flow:
                           ↓
                   (creates retryable ticket)
                           ↓
-	Appchain (Child):  Retryable auto-redeems → ChildUpgradeExecutor → ArbOwner.setWasmMaxStackDepth()
+	Appchain (Child):  Retryable auto-redeems → ChildUpgradeExecutor → ArbOwner.<functionName>()
 */
 
-interface SetWasmMaxStackDepthParams {
+export interface CallArbOwnerParams {
 	parentRpc: string;
 	childRpc?: string;
 	parentUpgradeExecutor: Address;
 	parentInbox: Address;
 	childUpgradeExecutor: Address;
 	refundAddress: Address;
-	wasmMaxStackDepth: number;
 	gasLimit?: bigint;
 	maxFeePerGas?: bigint;
+	arbOwnerFunctionName: string;
+	arbOwnerCalldata: Hex;
 }
 
 const DEFAULT_GAS_LIMIT = BigInt(100_000);
 const DEFAULT_MAX_FEE_PER_GAS = BigInt(100_000_000); // 0.1 gwei
 
-export async function generateSetWasmMaxStackDepthTx({
+export async function generateCallArbOwnerTx({
 	parentRpc,
 	childRpc,
 	parentUpgradeExecutor,
@@ -59,8 +60,9 @@ export async function generateSetWasmMaxStackDepthTx({
 	gasLimit,
 	maxFeePerGas,
 	refundAddress,
-	wasmMaxStackDepth,
-}: SetWasmMaxStackDepthParams) {
+	arbOwnerFunctionName,
+	arbOwnerCalldata,
+}: CallArbOwnerParams) {
 	const publicClient = createPublicClient({
 		transport: http(parentRpc),
 	});
@@ -71,18 +73,11 @@ export async function generateSetWasmMaxStackDepthTx({
 	);
 	const useCustomGasToken = !!customNativeToken;
 
-	// Get calldata for calling setWasmMaxStackDepth through the UpgradeExecutor
+	// Get calldata for calling the ArbOwner function through the UpgradeExecutor
 	const l3UpgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
-		args: [
-			ARB_OWNER_PRECOMPILE_ADDRESS,
-			encodeFunctionData({
-				abi: ArbOwnerABI,
-				functionName: "setWasmMaxStackDepth",
-				args: [wasmMaxStackDepth],
-			}),
-		],
+		args: [ARB_OWNER_PRECOMPILE_ADDRESS, arbOwnerCalldata],
 	});
 
 	let estimatedGasLimit: bigint;
@@ -246,6 +241,7 @@ export async function generateSetWasmMaxStackDepthTx({
 	!useCustomGasToken &&
 		print("Total Cost To Execute", `${formatEther(totalValue)} ETH`);
 	print("Refund Address", refundAddress);
+	print("ArbOwner Function", arbOwnerFunctionName);
 	print("");
 
 	printSection("💡 INSTRUCTIONS");
