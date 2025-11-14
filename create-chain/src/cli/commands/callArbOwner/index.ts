@@ -5,8 +5,7 @@ import { encodeFunctionData } from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { callArbOwnerOptionsSchema, handleSchemaErrors } from "../../schema";
 import { generateCallArbOwnerTx } from "./callArbOwner";
-import { formatFunctionSignatureForDisplay } from "./helpers";
-import { parseFunctionArgs } from "./parseFunctionArgs";
+import { formatFunctionSignatureForDisplay, preprocessArgs } from "./helpers";
 
 export function callArbOwnerCommand(program: Command) {
 	const callArbOwner = program
@@ -60,15 +59,14 @@ export function callArbOwnerCommand(program: Command) {
 				args: string[],
 				options: Record<string, unknown>,
 			) => {
-				// Validate the function exists in ArbOwner ABI and is a write function
-				const functionAbi = ArbOwnerABI.find(
-					(item) => item.type === "function" && item.name === functionName,
+				const writeFunctions = getWriteFunctions();
+				const functionAbi = writeFunctions.find(
+					(item) => item.name === functionName,
 				) as AbiFunction | undefined;
 
 				if (!functionAbi) {
-					const availableFunctions = getWriteFunctions();
 					return exitWithError(
-						`Function '${functionName}' not found in ArbOwner ABI.\n\nAvailable write functions:\n${availableFunctions
+						`Function '${functionName}' not found in ArbOwner ABI.\n\nAvailable write functions:\n${writeFunctions
 							.map((fn) => `  ${formatFunctionSignatureForDisplay(fn)}`)
 							.join(
 								"\n",
@@ -76,7 +74,6 @@ export function callArbOwnerCommand(program: Command) {
 					);
 				}
 
-				// Parse and validate options
 				const {
 					data: validatedOptions,
 					success,
@@ -87,18 +84,28 @@ export function callArbOwnerCommand(program: Command) {
 					return handleSchemaErrors(error);
 				}
 
-				// Parse function arguments
-				const parsedArgs = parseFunctionArgs(ArbOwnerABI, functionName, args);
-				if (!parsedArgs) {
-					return;
+				// Validate argument count
+				if (args.length !== functionAbi.inputs.length) {
+					return exitWithError(
+						`Function '${functionName}' expects ${functionAbi.inputs.length} argument(s) but got ${args.length}.\n${formatFunctionSignatureForDisplay(functionAbi)}`,
+					);
 				}
 
-				// Generate the calldata
-				const arbOwnerCalldata = encodeFunctionData({
-					abi: ArbOwnerABI,
-					functionName: functionName as never,
-					args: parsedArgs as never,
-				});
+				// Preprocess arguments (minimal - just type conversion)
+				// Then let viem's encodeFunctionData do all the validation
+				let arbOwnerCalldata;
+				try {
+					const preprocessedArgs = preprocessArgs(functionAbi, args);
+					arbOwnerCalldata = encodeFunctionData({
+						abi: ArbOwnerABI,
+						functionName: functionName as never,
+						args: preprocessedArgs as never,
+					});
+				} catch (error) {
+					return exitWithError(
+						`Invalid arguments: ${error instanceof Error ? error.message : "Unknown error"}\n${formatFunctionSignatureForDisplay(functionAbi)}`,
+					);
+				}
 
 				await generateCallArbOwnerTx({
 					...validatedOptions,
