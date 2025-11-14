@@ -13,15 +13,15 @@ import {
   getChainExplorerUrl,
   getNativeCurrency,
   isNativeTokenEth
-} from "@/scripts/utils/helpers"
+} from "@/src/utils/helpers"
 import { getFoundationConfig } from "../utils/config"
 
 import {
   ownerAdjustableExchangeRatePricerAbi,
   ownerAdjustableExchangeRatePricerBytecode
-} from "@/scripts/abi/nitro/OwnerAdjustableExchangeRatePricer"
-import type { CreateSettlementRollupParams } from "@/scripts/types"
-import { supportedSettlementChains } from "@/scripts/utils/constants"
+} from "@/src/abi/nitro/OwnerAdjustableExchangeRatePricer"
+import type { CreateSettlementRollupParams } from "@/src/types"
+import { supportedSettlementChains } from "@/src/utils/constants"
 import { sleep } from "bun"
 import { erc20Abi, formatEther, parseEther, parseUnits } from "viem"
 import { print } from "../utils/print"

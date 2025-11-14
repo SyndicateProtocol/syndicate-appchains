@@ -1,5 +1,5 @@
-import { SequencerInboxABI } from "@/scripts/abi/nitro/SequencerInbox"
-import { UpgradeExecutorABI } from "@/scripts/abi/nitro/UpgradeExecutor"
+import { SequencerInboxABI } from "@/src/abi/nitro/SequencerInbox"
+import { UpgradeExecutorABI } from "@/src/abi/nitro/UpgradeExecutor"
 import { encodeFunctionData, zeroAddress } from "viem"
 import { getHandoffConfig } from "../utils/config"
 import { getChainExplorerUrl, isAddressEq } from "../utils/helpers"

@@ -11,7 +11,7 @@ use shared::{
 use std::{sync::Arc, time::Duration};
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
-    client::{IngestorProvider, IngestorProviderConfig, Provider as IProvider},
+    client::{IngestorProvider, IngestorProviderConfig, IngestorProviderImpl},
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, Provider};
@@ -40,13 +40,13 @@ pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
     }
 }
 
-#[instrument(skip(metrics), err, fields(otel.kind = ?SpanKind::Internal))]
+#[instrument(skip(config, metrics), err, fields(otel.kind = ?SpanKind::Internal))]
 async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
     let mchain = MProvider::new(&config.block_builder.mchain_ws_url)
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {e}")))?;
 
-    let sequencing_client = IngestorProvider::new(
+    let sequencing_client = IngestorProviderImpl::new(
         config.sequencing.sequencing_ws_url.as_ref().unwrap(),
         IngestorProviderConfig {
             timeout: config.ws_request_timeout,
@@ -57,7 +57,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     )
     .await;
 
-    let settlement_client = IngestorProvider::new(
+    let settlement_client = IngestorProviderImpl::new(
         config.settlement.settlement_ws_url.as_ref(),
         IngestorProviderConfig {
             timeout: config.ws_request_timeout,
@@ -115,6 +115,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
             adapter.sequencer_addresses(),
             adapter,
             seq_client,
+            None,
         )
         .await?;
 
@@ -133,12 +134,14 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         config.rpc_retry_interval,
     )
     .await;
+    let inbox_address = Some(arbitrum_adapter.inbox_address);
     let settlement = settlement_client
         .get_blocks(
             settlement_config.start_block,
             arbitrum_adapter.settlement_addresses(),
             arbitrum_adapter,
             set_client,
+            inbox_address,
         )
         .await?;
 
@@ -155,8 +158,8 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 }
 
 async fn wait_until_ingestors_are_ready(
-    sequencing_client: &IngestorProvider,
-    settlement_client: &IngestorProvider,
+    sequencing_client: &IngestorProviderImpl,
+    settlement_client: &IngestorProviderImpl,
     ingestor_ready_check_interval: Duration,
 ) -> Result<()> {
     let interval_str = humantime::format_duration(ingestor_ready_check_interval);

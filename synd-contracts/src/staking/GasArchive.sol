@@ -541,10 +541,12 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         require(aggregatorAddress != address(0), ZeroAddress());
         require(chainID != 0, ZeroChainId());
 
-        GasArchiveStorage storage $ = _getGasArchiveStorage();
-        require($.seqChains.add(chainID), SequencingChainAlreadyExists());
-        $.epochRemainingChains++;
-        $.seqChainGasAggregator[chainID] = aggregatorAddress;
+        require(seqChains.add(chainID), SequencingChainAlreadyExists());
+        // If the chain has data for this epoch already, dont increment the counter
+        if (!epochChainDataSubmitted[epoch][chainID]) {
+            epochRemainingChains++;
+        }
+        seqChainGasAggregator[chainID] = aggregatorAddress;
 
         if (chainID != settlementChainID) {
             require(outboxAddress != address(0), ZeroAddress());
@@ -574,11 +576,10 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             // clear the verified data hash in case it is set
             $.epochVerifiedDataHash[$.epoch][chainID] = bytes32(0);
             $.epochRemainingChains--;
-            uint256 seqChainCount = $.seqChains.length();
-            if (seqChainCount > 0 && $.epochRemainingChains == 0) {
-                emit EpochCompleted($.epoch);
+            if ($.epochRemainingChains == 0) {
+                emit EpochCompleted(epoch);
                 $.epoch++;
-                $.epochRemainingChains = seqChainCount;
+                $.epochRemainingChains = seqChains.length();
             }
         }
         emit ChainRemoved($.epoch, chainID);

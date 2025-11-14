@@ -11,6 +11,7 @@ version.workspace      = true
 [dependencies]
 alloy             = { workspace = true, features = ["provider-ws"] }
 clap              = { workspace = true, features = ["derive", "env"] }
+contract-bindings = { workspace = true }
 derivative        = { workspace = true }
 eyre              = { workspace = true }
 fs2               = { workspace = true }

@@ -1,6 +1,6 @@
 import { zeroAddress } from "viem"
 
-import type { GenerateBridgeConfigParams } from "@/scripts/types"
+import type { GenerateBridgeConfigParams } from "@/src/types"
 import { DEFAULT_APPCHAIN_MIN_BASE_FEE } from "./constants"
 
 export function generateBridgeConfig({

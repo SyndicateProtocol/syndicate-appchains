@@ -2,9 +2,17 @@
 
 use crate::{db::ITEM_SIZE, eth_client::EthClient, server::Message};
 use alloy::{
+    consensus::Transaction,
     eips::BlockNumberOrTag,
-    primitives::{Address, Bytes, B256},
+    primitives::{Address, Bytes, B256, U256},
     rpc::types::Filter,
+    sol_types::{SolCall, SolEvent as _},
+};
+use contract_bindings::synd::{
+    i_delayed_message_provider::IDelayedMessageProvider::{
+        InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
+    },
+    i_inbox::IInbox::sendL2MessageFromOriginCall,
 };
 use eyre::{eyre, OptionExt as _};
 use futures_util::{
@@ -23,25 +31,19 @@ use jsonrpsee::{
 use serde::de::DeserializeOwned;
 use shared::{
     tracing::SpanKind,
-    types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock},
+    types::{BlockBuilder, BlockRef, DelayedMsgsData, GetBlockRef, PartialBlock},
 };
-use std::{
-    collections::{HashSet, VecDeque},
-    future::Future,
-    pin::Pin,
-    sync::Arc,
-    time::Duration,
-};
-use tracing::{info, instrument};
+use std::{collections::VecDeque, future::Future, pin::Pin, sync::Arc, time::Duration};
+use tracing::{info, instrument, trace};
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
-async fn build_partial_blocks(
+async fn build_partial_blocks_from_init_requests(
     start_block: u64,
     data: &IndexedBlockData,
     client: &EthClient,
-    addrs: Vec<Address>,
+    addrs: &[Address],
 ) -> eyre::Result<Vec<PartialBlock>> {
     let count = data.count();
     let mut blocks = Vec::default();
@@ -56,6 +58,7 @@ async fn build_partial_blocks(
             block_ref: BlockRef { number: i, timestamp, hash },
             parent_hash,
             logs: Default::default(),
+            log_tx_hashes: Default::default(),
         });
         parent_hash = hash;
     }
@@ -69,7 +72,9 @@ async fn build_partial_blocks(
 
     info!("fetching partial logs from blocks {} to {}", start_block, end_block);
     let mut logs = client
-        .get_logs(&Filter::new().address(addrs.clone()).from_block(start_block).to_block(end_block))
+        .get_logs(
+            &Filter::new().address(addrs.to_vec()).from_block(start_block).to_block(end_block),
+        )
         .await?;
 
     if let Some(log) = logs.last() {
@@ -91,6 +96,7 @@ async fn build_partial_blocks(
         // Fetch all logs for unsafe blocks. This makes it more likely that a log is included which
         // contains block hash info with it.
         let first_unsafe_block = safe_block + 1;
+
         info!("fetching full logs from blocks {} to {}", first_unsafe_block, end_block);
         let mut unsafe_logs = client
             .get_logs(&Filter::new().from_block(first_unsafe_block).to_block(end_block))
@@ -107,11 +113,7 @@ async fn build_partial_blocks(
                     blocks[(safe_block - start_block) as usize].block_ref.hash
                 ));
             }
-            let mut addr_set = HashSet::new();
-            for addr in &addrs {
-                addr_set.insert(addr);
-            }
-            unsafe_logs.retain(|x| addr_set.contains(&x.address()));
+            unsafe_logs.retain(|x| addrs.contains(&x.address()));
             logs.append(&mut unsafe_logs);
         }
 
@@ -122,7 +124,7 @@ async fn build_partial_blocks(
             let mut block_logs = client
                 .get_logs(
                     &Filter::new()
-                        .address(addrs.clone())
+                        .address(addrs.to_vec())
                         .at_block_hash(blocks[(i - start_block) as usize].block_ref.hash),
                 )
                 .await?;
@@ -130,20 +132,66 @@ async fn build_partial_blocks(
         }
     }
 
-    let mut block = start_block - 1;
-    let mut index = 0;
+    let mut prev_block_index = start_block - 1;
+    let mut prev_log_index = 0;
     for log in logs {
         assert!(!log.removed);
         let log_block = log.block_number.unwrap();
         assert_eq!(log.block_hash, Some(blocks[(log_block - start_block) as usize].block_ref.hash));
         let log_index = log.log_index.unwrap();
-        assert!(log_block > block || (log_block == block && log_index > index), "out of order log found from rpc provider: previous (block, index) = ({block} {index}), current = ({log_block}, {log_index})");
-        block = log_block;
-        index = log_index;
-        blocks[(log.block_number.unwrap() - start_block) as usize].logs.push(log.into_inner());
+        assert!(log_block > prev_block_index || (log_block == prev_block_index && log_index > prev_log_index),
+            "out of order log found from rpc provider: previous (block, index) = ({prev_block_index} {prev_log_index}), current = ({log_block}, {log_index})");
+        prev_block_index = log_block;
+        prev_log_index = log_index;
+        let block_index = (log.block_number.unwrap() - start_block) as usize;
+        blocks[block_index]
+            .log_tx_hashes
+            .push(log.transaction_hash.unwrap_or_else(|| panic!("log without txhash")));
+        blocks[block_index].logs.push(log.into_inner());
     }
 
     Ok(blocks)
+}
+
+/// Obtains delayed message data for the delayed messages in the block
+#[allow(clippy::cognitive_complexity)]
+pub async fn delayed_msgs_data_from_partial_block(
+    block: &PartialBlock,
+    client: &EthClient,
+    inbox_addr: Option<Address>,
+) -> eyre::Result<DelayedMsgsData> {
+    let mut result = DelayedMsgsData::new();
+
+    // if no inbox_addr is set, it's a seq chain block and there's no need to iterate the logs
+    let Some(inbox_addr) = inbox_addr else {
+        return Ok(result);
+    };
+
+    for (i, log) in block.logs.iter().enumerate() {
+        if log.address != inbox_addr {
+            continue;
+        };
+
+        match log.topics()[0] {
+            InboxMessageDelivered::SIGNATURE_HASH => {
+                let seq_num: U256 = log.topics()[1].into();
+                let decoded = InboxMessageDelivered::abi_decode_data_validate(&log.data.data)?;
+                result.insert(seq_num, decoded.0);
+            }
+            InboxMessageDeliveredFromOrigin::SIGNATURE_HASH => {
+                let tx = client
+                    .get_transaction_by_hash(block.log_tx_hashes[i])
+                    .await
+                    .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+
+                let decoded_tx = sendL2MessageFromOriginCall::abi_decode_validate(tx.input())?;
+                let seq_num: U256 = log.topics()[1].into();
+                result.insert(seq_num, decoded_tx.messageData);
+            }
+            e => trace!("unsupported event type: {e}"),
+        };
+    }
+    Ok(result)
 }
 
 struct BlockStream<
@@ -155,7 +203,9 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
-    init_data: Option<(EthClient, Vec<Address>, u64)>,
+    inbox_addr: Option<Address>,
+    client: EthClient,
+    init_data: Option<(Vec<Address>, u64)>,
     #[allow(clippy::type_complexity)]
     init_requests: VecDeque<
         Pin<
@@ -178,22 +228,26 @@ impl<
         stream: S,
         block_builder: Arc<B>,
         start_block: u64,
-        init_data: (EthClient, Vec<Address>, u64),
+        client: EthClient,
+        init_data: (Vec<Address>, u64),
+        inbox_addr: Option<Address>,
     ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
             block_builder,
             buffer: Default::default(),
             indexed_block_number: start_block,
+            client,
             init_data: Some(init_data),
             init_requests: Default::default(),
+            inbox_addr,
         }
     }
 
     /// Process the init message into initial requests to be processed later
     #[allow(clippy::unwrap_used)]
     async fn process_init_message(&mut self) -> eyre::Result<(), eyre::Error> {
-        if let Some((client, addrs, max_blocks_per_request)) = self.init_data.take() {
+        if let Some((addrs, max_blocks_per_request)) = self.init_data.take() {
             // fetch initial blocks from the stream
             let mut init_blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
             // remove the first block from the stream, which is a special init message
@@ -203,35 +257,32 @@ impl<
             // get start and end blocks for batching
             let mut start_block = self.indexed_block_number;
 
-            if max_blocks_per_request == 0 {
-                self.init_requests.push_back(Box::pin(async move {
-                    let blocks = build_partial_blocks(start_block, &init, &client, addrs)
-                        .await?
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect();
+            let addrs_arc = Arc::new(addrs.clone());
+
+            let create_request = |init_data: IndexedBlockData, block_num: u64| {
+                let client_clone = self.client.clone();
+                let addrs_clone = addrs_arc.clone();
+                Box::pin(async move {
+                    let blocks = build_partial_blocks_from_init_requests(
+                        block_num,
+                        &init_data,
+                        &client_clone,
+                        &addrs_clone,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|x| Ok(Message::Block(x)))
+                    .collect();
                     Ok(blocks)
-                }));
+                })
+            };
+
+            if max_blocks_per_request == 0 {
+                self.init_requests.push_back(create_request(init, start_block));
             } else {
                 while init.count() > 0 {
                     let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
-
-                    let client_clone = client.clone();
-                    let addrs_clone = addrs.clone();
-
-                    self.init_requests.push_back(Box::pin(async move {
-                        let blocks = build_partial_blocks(
-                            start_block,
-                            &init_batch,
-                            &client_clone,
-                            addrs_clone,
-                        )
-                        .await?
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect();
-                        Ok(blocks)
-                    }));
+                    self.init_requests.push_back(create_request(init_batch, start_block));
                     start_block += max_blocks_per_request;
                     init = remaining;
                 }
@@ -265,7 +316,7 @@ impl<
 {
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
-        let mut blocks = vec![];
+        let mut responses = vec![];
 
         // If there is init data, handle the initial message
         // This happens only once, the first time this function is called
@@ -274,16 +325,23 @@ impl<
         }
 
         if !self.init_requests.is_empty() {
-            blocks = self.init_requests.pop_front().unwrap().await?;
+            responses = self.init_requests.pop_front().unwrap().await?;
         } else if self.stream.as_mut().peek().now_or_never().is_some() {
             // If there are no init requests, and there is data in the stream, pop it off
             // This is to try to catch any reorgs ASAP
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+            responses = self.stream.next().await.ok_or_eyre("stream closed")?;
         }
 
         loop {
-            for partial_block in blocks {
-                let block = self.block_builder.build_block(&partial_block?.block())?;
+            for resp in responses {
+                let partial_block = resp?.block();
+                let delayed_msgs_data = delayed_msgs_data_from_partial_block(
+                    &partial_block,
+                    &self.client,
+                    self.inbox_addr,
+                )
+                .await?;
+                let block = self.block_builder.build_block(&partial_block, delayed_msgs_data)?;
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
@@ -318,7 +376,7 @@ impl<
             }
 
             // If there are no valid blocks in the buffer, await the next block from the stream
-            blocks = self.stream.next().await.ok_or_eyre("stream closed")?
+            responses = self.stream.next().await.ok_or_eyre("stream closed")?
         }
     }
 }
@@ -392,7 +450,7 @@ impl IndexedBlockData {
 
 #[allow(missing_docs)]
 #[async_trait]
-pub trait Provider: Sync {
+pub trait IngestorProvider: Sync {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
         &self,
         method: &'static str,
@@ -443,6 +501,7 @@ pub trait Provider: Sync {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
+        inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         Ok(BlockStream::new(
             self.subscribe::<_, Message>(
@@ -453,7 +512,9 @@ pub trait Provider: Sync {
             .await?,
             block_builder,
             start_block,
-            (client, addresses, 0),
+            client,
+            (addresses, 0),
+            inbox_addr,
         ))
     }
 }
@@ -482,12 +543,13 @@ impl Default for IngestorProviderConfig {
     }
 }
 
+/// Ingestor provider - tuple of a [`WsClient`] and the maximum number of blocks to fetch per
+/// request
 #[derive(Debug, Clone)]
-#[allow(missing_docs)]
-pub struct IngestorProvider(Arc<WsClient>, u64);
+pub struct IngestorProviderImpl(Arc<WsClient>, u64);
 
 #[allow(missing_docs)]
-impl IngestorProvider {
+impl IngestorProviderImpl {
     pub async fn new(url: &str, config: IngestorProviderConfig) -> Self {
         match tokio::time::timeout(
             config.timeout,
@@ -514,7 +576,7 @@ impl IngestorProvider {
 }
 
 #[async_trait]
-impl Provider for IngestorProvider {
+impl IngestorProvider for IngestorProviderImpl {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
         &self,
         method: &'static str,
@@ -539,17 +601,22 @@ impl Provider for IngestorProvider {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
+        inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
-        Ok(BlockStream::new(
-            self.subscribe::<_, Message>(
+        let stream = self
+            .subscribe::<_, Message>(
                 "subscribe_blocks",
                 (start_block, addresses.clone()),
                 "unsubscribe_blocks",
             )
-            .await?,
+            .await?;
+        Ok(BlockStream::new(
+            stream,
             block_builder,
             start_block,
-            (client, addresses, self.1),
+            client,
+            (addresses, self.1),
+            inbox_addr,
         ))
     }
 }
@@ -599,7 +666,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl<X: Send + Sync> Provider for RpcModule<X> {
+    impl<X: Send + Sync> IngestorProvider for RpcModule<X> {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             method: &'static str,

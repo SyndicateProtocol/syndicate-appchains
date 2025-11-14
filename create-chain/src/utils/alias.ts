@@ -1,10 +1,5 @@
 import { toHex } from "viem"
 
-async function main() {
-  const addressToAlias = "0x0000000000000000000000000000000000000000"
-  console.log(applyL1ToL2Alias(addressToAlias))
-}
-
 const ALIAS_OFFSET = BigInt("0x1111000000000000000000000000000000001111")
 
 /**
@@ -20,7 +15,3 @@ export function applyL1ToL2Alias(l1Address: string): string {
 export function undoL1ToL2Alias(l2Address: string): string {
   return toHex(BigInt(l2Address) - ALIAS_OFFSET)
 }
-
-await main()
-
-export { main }

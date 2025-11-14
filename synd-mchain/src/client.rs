@@ -83,8 +83,8 @@ pub trait Provider: Send + Sync {
     #[instrument(skip_all, err, fields(otel.kind = ?SpanKind::Client))]
     async fn reconcile_mchain_with_source_chains(
         &self,
-        sequencing_client: &impl synd_chain_ingestor::client::Provider,
-        settlement_client: &impl synd_chain_ingestor::client::Provider,
+        sequencing_client: &impl synd_chain_ingestor::client::IngestorProvider,
+        settlement_client: &impl synd_chain_ingestor::client::IngestorProvider,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -106,8 +106,8 @@ pub trait Provider: Send + Sync {
     #[instrument(skip_all, fields(otel.kind = ?SpanKind::Client))]
     async fn get_safe_state(
         &self,
-        sequencing_client: &impl synd_chain_ingestor::client::Provider,
-        settlement_client: &impl synd_chain_ingestor::client::Provider,
+        sequencing_client: &impl synd_chain_ingestor::client::IngestorProvider,
+        settlement_client: &impl synd_chain_ingestor::client::IngestorProvider,
     ) -> (Option<KnownState>, Option<u64>) {
         info!("getting safe state");
         let mut current_block = BlockNumberOrTag::Pending;
@@ -153,7 +153,7 @@ pub trait Provider: Send + Sync {
 }
 
 async fn validate_block_add_timestamp(
-    client: &impl synd_chain_ingestor::client::Provider,
+    client: &impl synd_chain_ingestor::client::IngestorProvider,
     expected_block: &mut BlockRef,
 ) -> bool {
     #[allow(clippy::unwrap_used)]
@@ -280,7 +280,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl synd_chain_ingestor::client::Provider for MockRPCClient {
+    impl synd_chain_ingestor::client::IngestorProvider for MockRPCClient {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             _: &'static str,
