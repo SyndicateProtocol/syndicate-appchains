@@ -1,5 +1,5 @@
-import { teeKeyManagerABI } from "@/scripts/abi/synd/TeeKeyManager"
-import { teeModuleABI, teeModuleBytecode } from "@/scripts/abi/synd/TeeModule"
+import { teeKeyManagerABI } from "@/src/abi/synd/TeeKeyManager"
+import { teeModuleABI, teeModuleBytecode } from "@/src/abi/synd/TeeModule"
 import { sleep } from "bun"
 import {
   type Hex,
