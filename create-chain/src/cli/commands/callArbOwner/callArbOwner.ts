@@ -8,7 +8,6 @@ import {
 	formatUnits,
 	http,
 } from "viem";
-import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { ERC20InboxABI } from "../../../abi/nitro/ERC20Inbox";
 import { InboxABI } from "../../../abi/nitro/Inbox";
 import { NodeInterfaceABI } from "../../../abi/nitro/NodeInterface";
@@ -35,7 +34,7 @@ Flow:
 	Appchain (Child):  Retryable auto-redeems → ChildUpgradeExecutor → ArbOwner.<functionName>()
 */
 
-export interface CallArbOwnerParams {
+interface CallArbOwnerParams {
 	parentRpc: string;
 	childRpc?: string;
 	parentUpgradeExecutor: Address;
