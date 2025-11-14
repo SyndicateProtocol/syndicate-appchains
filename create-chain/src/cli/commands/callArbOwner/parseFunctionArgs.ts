@@ -2,6 +2,16 @@ import type { Abi, AbiFunction } from "viem";
 import { exitWithError } from "../../../utils/print";
 
 /**
+ * Formats a function signature for display
+ */
+function formatFunctionSignature(functionAbi: AbiFunction): string {
+	const params = functionAbi.inputs
+		.map((input) => `${input.type} ${input.name || ""}`.trim())
+		.join(", ");
+	return `${functionAbi.name}(${params})`;
+}
+
+/**
  * Parses command line arguments into the correct types for a function's ABI inputs
  */
 export function parseFunctionArgs(
@@ -19,10 +29,11 @@ export function parseFunctionArgs(
 	}
 
 	const inputs = functionAbi.inputs;
+	const signature = formatFunctionSignature(functionAbi);
 
 	if (args.length !== inputs.length) {
 		return exitWithError(
-			`Function ${functionName} expects ${inputs.length} argument(s) but got ${args.length}`,
+			`Function ${functionName} expects ${inputs.length} argument(s) but got ${args.length}.\n${signature}`,
 		);
 	}
 
@@ -91,7 +102,7 @@ export function parseFunctionArgs(
 			return arg;
 		} catch (error) {
 			return exitWithError(
-				`Invalid argument at position ${index} (${input.name || "unnamed"}): ${error instanceof Error ? error.message : "Unknown error"}`,
+				`Invalid argument at position ${index} (${input.name || "unnamed"}): ${error instanceof Error ? error.message : "Unknown error"}.\n${signature}`,
 			);
 		}
 	});
