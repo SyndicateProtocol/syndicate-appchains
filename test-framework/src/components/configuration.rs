@@ -12,7 +12,7 @@ use contract_bindings::synd::{
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
-use synd_migration::migration::RollupState;
+use synd_migration_cli::migration::RollupState;
 use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
 use tracing::info;
 

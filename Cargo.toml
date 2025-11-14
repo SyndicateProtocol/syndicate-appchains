@@ -7,7 +7,7 @@ members = [
   "synd-chain-ingestor",
   "synd-maestro",
   "synd-mchain",
-  "synd-migration",
+  "synd-migration-cli",
   "synd-stake-cli",
   "synd-translator/bin/synd-translator",
   "synd-translator/crates/common",
@@ -55,7 +55,7 @@ synd-block-builder                        = { path = "synd-translator/crates/syn
 synd-chain-ingestor                       = { path = "synd-chain-ingestor" }
 synd-maestro                              = { path = "synd-maestro" }
 synd-mchain                               = { path = "synd-mchain" }
-synd-migration                            = { path = "synd-migration" }
+synd-migration-cli                        = { path = "synd-migration-cli" }
 synd-slotter                              = { path = "synd-translator/crates/synd-slotter" }
 synd-tee-attestation-zk-proofs-aws-nitro  = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/aws-nitro" }
 synd-tee-attestation-zk-proofs-sp1-script = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/sp1/script" }

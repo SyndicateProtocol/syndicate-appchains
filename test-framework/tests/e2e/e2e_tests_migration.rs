@@ -22,7 +22,7 @@ use synd_mchain::{
     db::MigrationParams,
     methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
 };
-use synd_migration::migration::{get_migration_data, RollupState};
+use synd_migration_cli::migration::{get_migration_data, RollupState};
 use test_framework::components::{
     batch_sequencer::BatchSequencerConfig,
     chain_ingestor::ChainIngestorConfig,

@@ -5,7 +5,7 @@
 
 use clap::Parser;
 use std::path::PathBuf;
-use synd_migration::migration::get_migration_data;
+use synd_migration_cli::migration::get_migration_data;
 use tracing::error;
 
 #[derive(Parser, Debug)]

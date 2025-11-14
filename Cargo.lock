@@ -7775,7 +7775,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "synd-migration"
+name = "synd-migration-cli"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -8002,7 +8002,7 @@ dependencies = [
  "synd-chain-ingestor",
  "synd-maestro",
  "synd-mchain",
- "synd-migration",
+ "synd-migration-cli",
  "test-utils",
  "tokio",
  "tracing",
