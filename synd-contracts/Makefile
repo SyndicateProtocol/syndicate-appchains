@@ -205,3 +205,5 @@ test-upgrade-fork-verbose :; forge test --match-contract UpgradeFlowIntegrationT
 
 # Deploy emissions contracts
 deploy-emissions :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --private-key ${PRIVATE_KEY} --rpc-url eth --broadcast -vvv
+
+test-forwarder :; forge script script/TestSyndForwarder.s.sol:TestSyndForwarder --rpc-url sepolia --keystore ${ETH_KEYSTORE} --froms ${ETH_FROM} --broadcast -vvv

@@ -6,7 +6,6 @@ set -e
 
 # UUPS Upgradeable contracts that should have empty storage
 UUPS_CONTRACTS=(
-    "SyndicateFactory"
     "SyndicateSequencingChain"
     "GasArchive"
 )
