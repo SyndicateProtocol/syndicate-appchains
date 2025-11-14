@@ -1,11 +1,14 @@
 import { exitWithError, print } from "@/src/utils/print";
 import type { Command } from "@commander-js/extra-typings";
-import type { AbiFunction } from "viem";
+import type { AbiFunction, ExtractAbiFunctionNames } from "viem";
 import { encodeFunctionData } from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { callArbOwnerOptionsSchema, handleSchemaErrors } from "../../schema";
 import { generateCallArbOwnerTx } from "./callArbOwner";
 import { formatFunctionSignatureForDisplay, preprocessArgs } from "./helpers";
+
+// Extract valid function names from ArbOwner ABI as a type-safe union
+type ArbOwnerFunctionName = ExtractAbiFunctionNames<typeof ArbOwnerABI>;
 
 export function callArbOwnerCommand(program: Command) {
 	const callArbOwner = program
@@ -84,28 +87,26 @@ export function callArbOwnerCommand(program: Command) {
 					return handleSchemaErrors(error);
 				}
 
-				// Validate argument count
 				if (args.length !== functionAbi.inputs.length) {
 					return exitWithError(
 						`Function '${functionName}' expects ${functionAbi.inputs.length} argument(s) but got ${args.length}.\n${formatFunctionSignatureForDisplay(functionAbi)}`,
 					);
 				}
 
-				// Preprocess arguments (minimal - just type conversion)
-				// Then let viem's encodeFunctionData do all the validation
-				let arbOwnerCalldata;
+				let preprocessedArgs: unknown[] = [];
 				try {
-					const preprocessedArgs = preprocessArgs(functionAbi, args);
-					arbOwnerCalldata = encodeFunctionData({
-						abi: ArbOwnerABI,
-						functionName: functionName as never,
-						args: preprocessedArgs as never,
-					});
+					preprocessedArgs = preprocessArgs(functionAbi, args);
 				} catch (error) {
 					return exitWithError(
 						`Invalid arguments: ${error instanceof Error ? error.message : "Unknown error"}\n${formatFunctionSignatureForDisplay(functionAbi)}`,
 					);
 				}
+
+				const arbOwnerCalldata = encodeFunctionData({
+					abi: ArbOwnerABI,
+					functionName: functionName as ArbOwnerFunctionName,
+					args: preprocessedArgs as any,
+				});
 
 				await generateCallArbOwnerTx({
 					...validatedOptions,
