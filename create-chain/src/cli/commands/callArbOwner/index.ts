@@ -5,30 +5,17 @@ import { encodeFunctionData } from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { callArbOwnerOptionsSchema, handleSchemaErrors } from "../../schema";
 import { generateCallArbOwnerTx } from "./callArbOwner";
+import { formatFunctionSignatureForDisplay } from "./helpers";
 import { parseFunctionArgs } from "./parseFunctionArgs";
-
-/**
- * Formats a function signature for display
- */
-function formatFunctionSignature(functionAbi: AbiFunction): string {
-	const params = functionAbi.inputs
-		.map((input) => `${input.type} ${input.name || ""}`.trim())
-		.join(", ");
-	return `${functionAbi.name}(${params})`;
-}
 
 export function callArbOwnerCommand(program: Command) {
 	const callArbOwner = program
 		.command("callArbOwner")
 		.description("Call ArbOwner functions through the UpgradeExecutor");
 
-	// Helper to get only non-view/pure functions (state-changing functions)
 	const getWriteFunctions = () => {
 		return ArbOwnerABI.filter(
-			(item) =>
-				item.type === "function" &&
-				item.stateMutability !== "view" &&
-				item.stateMutability !== "pure",
+			(item) => item.type === "function" && item.stateMutability !== "view",
 		) as AbiFunction[];
 	};
 
@@ -38,13 +25,10 @@ export function callArbOwnerCommand(program: Command) {
 		.description("List all available ArbOwner write functions")
 		.action(() => {
 			const functions = getWriteFunctions();
-
 			print("\nAvailable ArbOwner write functions:\n");
 			for (const fn of functions) {
-				const signature = formatFunctionSignature(fn);
-				print(`  ${signature}`);
+				print(`  ${formatFunctionSignatureForDisplay(fn)}`);
 			}
-			print("");
 		});
 
 	// Call a specific function
@@ -83,20 +67,12 @@ export function callArbOwnerCommand(program: Command) {
 
 				if (!functionAbi) {
 					const availableFunctions = getWriteFunctions();
-					exitWithError(
+					return exitWithError(
 						`Function '${functionName}' not found in ArbOwner ABI.\n\nAvailable write functions:\n${availableFunctions
-							.map((fn) => `  ${formatFunctionSignature(fn)}`)
-							.join("\n")}\n\nTip: Run 'synd-cli callArbOwner list' to see all available functions.`,
-					);
-				}
-
-				// Check if the function is a view/pure function (read-only)
-				if (
-					functionAbi.stateMutability === "view" ||
-					functionAbi.stateMutability === "pure"
-				) {
-					exitWithError(
-						`Function '${functionName}' is a read-only function (${functionAbi.stateMutability}).\nThis command only supports state-changing functions.\n\nTip: Run 'synd-cli callArbOwner list' to see all available write functions.`,
+							.map((fn) => `  ${formatFunctionSignatureForDisplay(fn)}`)
+							.join(
+								"\n",
+							)}\n\nTip: Run 'synd-cli callArbOwner list' to see all available functions.`,
 					);
 				}
 

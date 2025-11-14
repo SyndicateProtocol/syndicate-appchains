@@ -24,7 +24,7 @@ import {
 	printSection,
 	printSeparator,
 } from "../../../utils/print";
-import { detectCustomNativeToken } from "./detectCustomNativeToken";
+import { detectCustomNativeToken } from "./helpers";
 
 /*
 Flow:

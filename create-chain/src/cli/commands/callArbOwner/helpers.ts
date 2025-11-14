@@ -1,5 +1,10 @@
 import { getNativeCurrency } from "@/src/utils/helpers";
-import { type Address, type PublicClient, parseAbiItem } from "viem";
+import {
+	type AbiFunction,
+	type Address,
+	type PublicClient,
+	parseAbiItem,
+} from "viem";
 
 export async function detectCustomNativeToken(
 	publicClient: PublicClient,
@@ -32,4 +37,13 @@ export async function detectCustomNativeToken(
 		console.warn("⚠️  Could not detect native token, assuming ETH-native chain");
 		return null;
 	}
+}
+
+export function formatFunctionSignatureForDisplay(
+	functionAbi: AbiFunction,
+): string {
+	const params = functionAbi.inputs
+		.map((input) => `${input.type} ${input.name || ""}`.trim())
+		.join(", ");
+	return `${functionAbi.name}(${params})`;
 }
