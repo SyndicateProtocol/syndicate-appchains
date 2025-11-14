@@ -1,14 +1,12 @@
 import { exitWithError, print } from "@/src/utils/print";
 import type { Command } from "@commander-js/extra-typings";
-import type { AbiFunction, ExtractAbiFunctionNames } from "viem";
+import type { ExtractAbiFunctionNames } from "abitype";
+import type { AbiFunction } from "viem";
 import { encodeFunctionData } from "viem";
 import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
 import { callArbOwnerOptionsSchema, handleSchemaErrors } from "../../schema";
 import { generateCallArbOwnerTx } from "./callArbOwner";
 import { formatFunctionSignatureForDisplay, preprocessArgs } from "./helpers";
-
-// Extract valid function names from ArbOwner ABI as a type-safe union
-type ArbOwnerFunctionName = ExtractAbiFunctionNames<typeof ArbOwnerABI>;
 
 export function callArbOwnerCommand(program: Command) {
 	const callArbOwner = program
@@ -104,7 +102,10 @@ export function callArbOwnerCommand(program: Command) {
 
 				const arbOwnerCalldata = encodeFunctionData({
 					abi: ArbOwnerABI,
-					functionName: functionName as ArbOwnerFunctionName,
+					functionName: functionName as ExtractAbiFunctionNames<
+						typeof ArbOwnerABI
+					>,
+					// biome-ignore lint/suspicious/noExplicitAny: args could be of any type here, we rely on viem to validate
 					args: preprocessedArgs as any,
 				});
 
