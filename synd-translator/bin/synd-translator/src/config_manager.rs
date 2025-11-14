@@ -8,7 +8,7 @@ use contract_bindings::synd::{
     arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
 };
 use eyre::Result;
-use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig, Provider as _};
+use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig, IngestorProviderImpl};
 use tracing::{debug, error, info, warn};
 
 async fn rpc_client_from_urls(urls: &[String]) -> RpcClient {
@@ -102,7 +102,7 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         }
     };
 
-    let ingestor_provider = IngestorProvider::new(
+    let ingestor_provider = IngestorProviderImpl::new(
         config.settlement.settlement_ws_url.as_ref(),
         IngestorProviderConfig {
             timeout: config.ws_request_timeout,

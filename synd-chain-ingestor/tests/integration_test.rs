@@ -4,7 +4,7 @@ use common::types::SequencingBlock;
 use shared::types::{BlockBuilder, PartialBlock};
 use std::{sync::Arc, time::Duration};
 use synd_chain_ingestor::{
-    client::{BlockStreamT, IngestorProvider, IngestorProviderConfig, Provider},
+    client::{BlockStreamT, IngestorProvider, IngestorProviderConfig, IngestorProviderImpl},
     eth_client::EthClient,
 };
 use test_framework::components::chain_ingestor::ChainIngestorConfig;
@@ -20,12 +20,17 @@ use tracing::info;
 
 mod tests {
     use super::*;
+    use shared::types::DelayedMsgsData;
     use url::Url;
 
     struct MockBlockBuilder;
 
     impl BlockBuilder<SequencingBlock> for MockBlockBuilder {
-        fn build_block(&self, block: &PartialBlock) -> eyre::Result<SequencingBlock> {
+        fn build_block(
+            &self,
+            block: &PartialBlock,
+            _msgs_data: DelayedMsgsData,
+        ) -> eyre::Result<SequencingBlock> {
             Ok(SequencingBlock {
                 block_ref: block.block_ref.clone(),
                 parent_hash: block.parent_hash,
@@ -82,7 +87,7 @@ mod tests {
         let ingestor_ws_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
 
         let client =
-            IngestorProvider::new(&ingestor_ws_url, IngestorProviderConfig::default()).await;
+            IngestorProviderImpl::new(&ingestor_ws_url, IngestorProviderConfig::default()).await;
 
         wait_until!(client.ready().await?, Duration::from_secs(10));
 
@@ -103,7 +108,7 @@ mod tests {
         let anvil = anvil.unwrap();
 
         let client =
-            IngestorProvider::new(&ingestor_ws_url, IngestorProviderConfig::default()).await;
+            IngestorProviderImpl::new(&ingestor_ws_url, IngestorProviderConfig::default()).await;
 
         for _ in 0..initial_blocks {
             mine_block(&anvil.provider, 10).await?;
@@ -122,8 +127,9 @@ mod tests {
         )
         .await;
 
-        let mut block_stream =
-            client.get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
+        let mut block_stream = client
+            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, None)
+            .await?;
 
         for _ in 0..post_init_blocks {
             mine_block(&anvil.provider, 10).await?;
@@ -153,7 +159,7 @@ mod tests {
         let (anvil, _ingestor, ingestor_ws_url) = setup(None).await?;
         let anvil = anvil.unwrap();
 
-        let client = IngestorProvider::new(
+        let client = IngestorProviderImpl::new(
             &ingestor_ws_url,
             IngestorProviderConfig { max_blocks_per_request: 5, ..Default::default() },
         )
@@ -178,8 +184,9 @@ mod tests {
         )
         .await;
 
-        let mut block_stream =
-            client.get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client).await?;
+        let mut block_stream = client
+            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, None)
+            .await?;
 
         for _ in 0..post_init_blocks {
             mine_block(&anvil.provider, 10).await?;
