@@ -3,9 +3,9 @@ import { type Account, type Hex, zeroAddress } from "viem"
 import {
   allowlistSequencingModuleABI,
   allowlistSequencingModuleBytecode
-} from "@/scripts/abi/synd/AllowlistSequencingModule"
-import { requireAndModuleABI } from "@/scripts/abi/synd/RequireAndModule"
-import { syndicateSequencingChainABI } from "@/scripts/abi/synd/SyndicateSequencingChain"
+} from "@/src/abi/synd/AllowlistSequencingModule"
+import { requireAndModuleABI } from "@/src/abi/synd/RequireAndModule"
+import { syndicateSequencingChainABI } from "@/src/abi/synd/SyndicateSequencingChain"
 import { getFoundationConfig } from "../utils/config"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"
