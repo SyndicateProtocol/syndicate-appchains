@@ -148,7 +148,6 @@ async fn get_config<T: Provider + Clone>(
     let default_sequencing_chain_ws_rpc_url_call =
         arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL();
 
-    let migrated_before_batch_acc_call = arb_chain_config_contract.MIGRATED_BEFORE_BATCH_ACC();
     let migrated_batch_acc_call = arb_chain_config_contract.MIGRATED_BATCH_ACC();
     let migrated_batch_count_call = arb_chain_config_contract.MIGRATED_BATCH_COUNT();
     let migrated_delayed_msgs_acc_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_ACC();
@@ -162,7 +161,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block,
         sequencing_contract_address,
         default_sequencing_chain_ws_rpc_url,
-        migrated_before_batch_acc,
         migrated_batch_acc,
         migrated_batch_count,
         migrated_delayed_msgs_acc,
@@ -175,7 +173,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block_call.call(),
         sequencing_contract_address_call.call(),
         default_sequencing_chain_ws_rpc_url_call.call(),
-        migrated_before_batch_acc_call.call(),
         migrated_batch_acc_call.call(),
         migrated_batch_count_call.call(),
         migrated_delayed_msgs_acc_call.call(),
@@ -190,7 +187,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block,
         sequencing_contract_address,
         default_sequencing_chain_ws_rpc_url,
-        migrated_before_batch_acc,
         migrated_batch_acc,
         migrated_batch_count,
         migrated_delayed_msgs_acc,
@@ -209,7 +205,6 @@ struct ChainConfig {
     sequencing_start_block: U256,
     sequencing_contract_address: Address,
     default_sequencing_chain_ws_rpc_url: String,
-    migrated_before_batch_acc: U256,
     migrated_batch_acc: U256,
     migrated_batch_count: U256,
     migrated_delayed_msgs_acc: U256,
@@ -234,7 +229,6 @@ mod test {
             sequencing_start_block: U256::from(200),
             sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
             default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_before_batch_acc: U256::ZERO,
             migrated_batch_acc: U256::ZERO,
             migrated_batch_count: U256::ZERO,
             migrated_delayed_msgs_acc: U256::ZERO,
@@ -290,7 +284,6 @@ mod test {
             sequencing_start_block: U256::from(200),
             sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
             default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_before_batch_acc: U256::ZERO,
             migrated_batch_acc: U256::ZERO,
             migrated_batch_count: U256::ZERO,
             migrated_delayed_msgs_acc: U256::ZERO,
@@ -327,45 +320,6 @@ mod test {
         assert_eq!(
             config.sequencing.sequencing_ws_url,
             Some(onchain.default_sequencing_chain_ws_rpc_url)
-        );
-    }
-
-    #[test]
-    fn test_override_with_onchain_config_migration_values() {
-        let mut config = TranslatorConfig::default();
-
-        // Create onchain config with non-zero migration values
-        let onchain = ChainConfig {
-            arbitrum_bridge_address: address!("0x1111111111111111111111111111111111111111"),
-            arbitrum_inbox_address: address!("0x2222222222222222222222222222222222222222"),
-            settlement_delay: U256::from(30),
-            settlement_start_block: U256::from(100),
-            sequencing_start_block: U256::from(200),
-            sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
-            default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_before_batch_acc: U256::ZERO,
-            migrated_batch_acc: U256::from(0x1234567890abcdefu64),
-            migrated_batch_count: U256::from(42),
-            migrated_delayed_msgs_acc: U256::from(0xfedcba9876543210u64),
-            migrated_delayed_msgs_count: U256::from(99),
-        };
-
-        // Apply overrides
-        config = override_with_onchain_config(config, &onchain);
-
-        // Assert all migration fields are correctly set
-        assert_eq!(config.migrated_batch_acc, Some(onchain.migrated_batch_acc.into()));
-        assert_eq!(
-            config.migrated_batch_count,
-            Some(onchain.migrated_batch_count.try_into().unwrap())
-        );
-        assert_eq!(
-            config.migrated_delayed_msgs_acc,
-            Some(onchain.migrated_delayed_msgs_acc.into())
-        );
-        assert_eq!(
-            config.migrated_delayed_msgs_count,
-            Some(onchain.migrated_delayed_msgs_count.try_into().unwrap())
         );
     }
 }

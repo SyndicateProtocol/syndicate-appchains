@@ -13,7 +13,7 @@ use eyre::Result;
 use std::time::Duration;
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use synd_chain_ingestor::client::{IngestorProviderConfig, IngestorProviderImpl};
-use synd_mchain::client::Provider as _;
+use synd_mchain::client::MchainProvider as _;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::{TestComponents, SETTLEMENT_CHAIN_ID},

@@ -289,6 +289,7 @@ pub trait ArbitrumDB {
         }
     }
 
+    /// Adds a regular batch to the chain (non migration)
     fn add_batch(&self, mblock: MBlock) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
         self.add_batch_base(mblock, false)
     }
@@ -409,7 +410,6 @@ pub trait ArbitrumDB {
     fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
         let MigrationParams {
             settlement_start_block,
-            before_batch_acc, // TODO remove
             batch_acc,
             batch_count,
             delayed_msgs_acc,
@@ -432,7 +432,7 @@ pub trait ArbitrumDB {
 
         self.put_migration_offset(offset);
 
-        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, before_batch_acc: {before_batch_acc}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
+        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
 
         //prepare the state so add_batch is able to add an empty batch
         self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
@@ -477,8 +477,6 @@ pub trait ArbitrumDB {
 pub struct MigrationParams {
     /// The initial settlement block number at point of migration
     pub settlement_start_block: u64,
-    /// The before batch accumulator at point of migration
-    pub before_batch_acc: B256, // TODO remove me
     /// The batch accumulator at point of migration
     pub batch_acc: B256,
     /// The batch count at point of migration

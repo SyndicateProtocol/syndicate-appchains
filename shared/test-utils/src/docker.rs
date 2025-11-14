@@ -239,8 +239,6 @@ pub async fn start_mchain(
             migration.settlement_start_block.to_string(),
             "--migrated-batch-acc".to_string(),
             migration.batch_acc.to_string(),
-            "--migrated-before-batch-acc".to_string(),
-            migration.before_batch_acc.to_string(),
             "--migrated-batch-count".to_string(),
             migration.batch_count.to_string(),
             "--migrated-delayed-msgs-acc".to_string(),

@@ -115,7 +115,7 @@ pub async fn setup_config_manager(
     let config = ArbChainConfig::new(config_address, set_provider.clone());
 
     if let Some(migration_data) = migration_data {
-        migrate_chain_config(&config, options, &migration_data).await?;
+        chain_config_migration(&config, options, &migration_data).await?;
     }
 
     match options.base_chains_type {
@@ -129,7 +129,7 @@ pub async fn setup_config_manager(
     Ok(config_manager.address().to_owned())
 }
 
-async fn migrate_chain_config(
+async fn chain_config_migration(
     config: &ArbChainConfigInstance<FilledProvider>,
     options: &ConfigurationOptions,
     migration_data: &RollupState,
@@ -139,12 +139,11 @@ async fn migrate_chain_config(
         .migration(
             migration_data.parent_chain_block.try_into()?,
             options.sequencing_start_block.try_into()?,
-            migration_data.before_batch_acc.into(),
             migration_data.batch_acc.into(),
             migration_data.batch_count.try_into()?,
             migration_data.delayed_msgs_acc.into(),
             migration_data.delayed_msgs_count.try_into()?,
-            migration_data.block_hash.into(),
+            migration_data.last_block_hash.into(),
         )
         .send()
         .await?

@@ -3,7 +3,7 @@ use alloy::{
     primitives::B256,
     rlp::{Decodable, RlpDecodable},
 };
-use eyre::{Context, Result};
+use eyre::{eyre, Context, Result};
 use rocksdb::{Options, DB};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -108,14 +108,16 @@ pub struct ChainConfig {
 /// Rollup state information
 #[derive(Debug, Clone, Default)]
 pub struct RollupState {
-    /// The block number
-    pub block_number: u64,
-    /// The block hash
-    pub block_hash: B256,
+    /// The last block number
+    pub last_block_number: u64,
+    /// The last block hash
+    pub last_block_hash: B256,
+    /// The safe block number
+    pub safe_block_number: Option<u64>,
+    /// The safe block hash
+    pub safe_block_hash: Option<B256>,
     /// The batch count
     pub batch_count: u64,
-    /// The before batch accumulator
-    pub before_batch_acc: B256,
     /// The batch accumulator
     pub batch_acc: B256,
     /// The parent chain block
@@ -161,15 +163,23 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     debug!("chain config: {:#?}", chain_config);
 
     println!("\n---------------\n");
-    println!("MIGRATED_BEFORE_BATCH_ACC {}", rollup_state.before_batch_acc);
     println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
     println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
     println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
     println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
-    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {}", rollup_state.block_hash);
+    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {:?}", rollup_state.last_block_hash);
     println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
     println!("\n---------------\n");
     println!("last batch arb msg count: {}", rollup_state.batch_message_count);
+
+    println!(
+        "last rollup block: {:?} - {:?}",
+        rollup_state.last_block_number, rollup_state.last_block_hash
+    );
+    println!(
+        "safe rollup block: {:?} - {:?}",
+        rollup_state.safe_block_number, rollup_state.safe_block_hash
+    );
 
     // TODO obtain and log GENESIS_CONFIG here
 
@@ -222,58 +232,61 @@ struct BatchMetadata {
     parent_chain_block: u64,
 }
 
+#[allow(clippy::unwrap_used)]
+fn get_block_info(db: &DB, key: &[u8]) -> Result<(Option<u64>, Option<B256>)> {
+    match db.get(key)?.map(|bytes| B256::from_slice(&bytes)) {
+        Some(block_hash) => {
+            let mut block_number_key = [0u8; 33];
+            block_number_key[0] = b'H';
+            block_number_key[1..].copy_from_slice(block_hash.as_ref());
+
+            let block_number = db
+                .get(block_number_key)?
+                .map(|bytes| u64::from_be_bytes(bytes[..8].try_into().unwrap()));
+            Ok((block_number, Some(block_hash)))
+        }
+        None => Ok((None, None)),
+    }
+}
+
 /// Retrieves rollup state information from the database
 /// `DBkeys` used can be found in <https://github.com/SyndicateProtocol/go-ethereum/blob/HEAD/core/rawdb/schema.go>
 #[allow(clippy::unwrap_used)]
 fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
-    let block_hash = db.get(b"LastBlock").unwrap().map(|bytes| B256::from_slice(&bytes)).unwrap();
+    let (last_block_number, last_block_hash) = get_block_info(db, b"LastBlock")?;
+    let (safe_block_number, safe_block_hash) = get_block_info(db, b"LastFinalized")?;
 
-    let mut block_number_key = [0u8; 33];
-    block_number_key[0] = b'H';
-    block_number_key[1..].copy_from_slice(block_hash.as_ref());
+    let last_block_hash = last_block_hash.ok_or_else(|| eyre!("last block hash is None"))?;
+    let last_block_number = last_block_number.ok_or_else(|| eyre!("last block number is None"))?;
 
-    let block_number = db
-        .get(block_number_key)?
-        .map(|bytes| u64::from_be_bytes(bytes[..8].try_into().unwrap()))
-        .ok_or_else(|| eyre::eyre!("Failed to get block number"))?;
-
-    let batch_count_bytes = arb_db
-        .get(b"_sequencerBatchCount")?
-        .ok_or_else(|| eyre::eyre!("Failed to get batch count"))?;
+    let batch_count_bytes =
+        arb_db.get(b"_sequencerBatchCount")?.ok_or_else(|| eyre!("Failed to get batch count"))?;
 
     let batch_count = u64::decode(&mut &batch_count_bytes[..])
-        .map_err(|e| eyre::eyre!("Failed to decode batch count: {e}"))?;
+        .map_err(|e| eyre!("Failed to decode batch count: {e}"))?;
 
-    // let delayed_msgs_count = arb_db
-    //     .get(b"_delayedMessageCount")?
-    //     .map(|bytes| u64::decode(&mut &bytes[..]).unwrap())
-    //     .ok_or_else(|| eyre::eyre!("Failed to get delayed message count"))?;
-    //
+    // SequencerBatchMetaPrefix is "s", and maps batch_seq_num to batch metadata
     let batch_data = arb_db
         .get(make_numbered_key(b"s", batch_count - 1, &[]))?
         .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
-        .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?;
+        .ok_or_else(|| eyre!("Failed to get batch data"))?;
+    debug!("batch_data: {:#?}", batch_data);
 
     let delayed_msgs_count = batch_data.delayed_message_count;
 
-    debug!("batch_data: {:#?}", batch_data);
-
-    let before_batch_acc = arb_db
-        .get(make_numbered_key(b"s", batch_count - 2, &[]))?
-        .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
-        .ok_or_else(|| eyre::eyre!("Failed to get batch data"))?
-        .acc;
-
+    // RlpDelayedMessagePrefix is "e" and maps delayed messages sequence_num to
+    // [delayedMsgsAcc(32bytes) + RLP encoded L1IncomingMessage]
     let delayed_msgs_acc = arb_db
         .get(make_numbered_key(b"e", delayed_msgs_count - 1, &[]))?
         .map(|bytes| B256::from_slice(&bytes[..32]))
-        .ok_or_else(|| eyre::eyre!("Failed to get delayed message accumulator"))?;
+        .ok_or_else(|| eyre!("Failed to get delayed message accumulator"))?;
 
     Ok(RollupState {
-        block_number,
-        block_hash,
+        last_block_number,
+        last_block_hash,
+        safe_block_number,
+        safe_block_hash,
         batch_count,
-        before_batch_acc,
         batch_acc: batch_data.acc,
         parent_chain_block: batch_data.parent_chain_block,
         delayed_msgs_count,
