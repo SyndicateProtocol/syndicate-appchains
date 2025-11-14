@@ -126,7 +126,7 @@ pub struct NitroBlock {
     pub timestamp: U256,
 }
 
-const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1000000000000000000000000000000000000001");
+const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1111000000000000000000000000000000001111");
 /// Computes the L2 alias of an L1 address.
 ///
 /// When a contract on L1 sends a message to L2 via the Inbox, the sender address

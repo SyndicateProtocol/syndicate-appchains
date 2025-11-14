@@ -47,7 +47,7 @@ async fn build_partial_blocks_from_init_requests(
     start_block: u64,
     data: &IndexedBlockData,
     client: &EthClient,
-    addrs: Vec<Address>,
+    addrs: &[Address],
 ) -> eyre::Result<Vec<PartialBlock>> {
     let count = data.count();
     let mut blocks = Vec::default();
@@ -77,7 +77,9 @@ async fn build_partial_blocks_from_init_requests(
 
     info!("fetching partial logs from blocks {} to {}", start_block, end_block);
     let mut logs = client
-        .get_logs(&Filter::new().address(addrs.clone()).from_block(start_block).to_block(end_block))
+        .get_logs(
+            &Filter::new().address(addrs.to_vec()).from_block(start_block).to_block(end_block),
+        )
         .await?;
 
     if let Some(log) = logs.last() {
@@ -127,7 +129,7 @@ async fn build_partial_blocks_from_init_requests(
             let mut block_logs = client
                 .get_logs(
                     &Filter::new()
-                        .address(addrs.clone())
+                        .address(addrs.to_vec())
                         .at_block_hash(blocks[(i - start_block) as usize].block_ref.hash),
                 )
                 .await?;
@@ -237,34 +239,32 @@ impl<
             // get start and end blocks for batching
             let mut start_block = self.indexed_block_number;
 
-            let create_request =
-                |init_data: IndexedBlockData, block_num: u64, addrs: Vec<Address>| {
-                    let client_clone = self.client.clone();
-                    Box::pin(async move {
-                        let blocks = build_partial_blocks_from_init_requests(
-                            block_num,
-                            &init_data,
-                            &client_clone,
-                            addrs,
-                        )
-                        .await?
-                        .into_iter()
-                        .map(|x| Ok(Message::Block(x)))
-                        .collect();
-                        Ok(blocks)
-                    })
-                };
+            let addrs_arc = Arc::new(addrs.clone());
+
+            let create_request = |init_data: IndexedBlockData, block_num: u64| {
+                let client_clone = self.client.clone();
+                let addrs_clone = addrs_arc.clone();
+                Box::pin(async move {
+                    let blocks = build_partial_blocks_from_init_requests(
+                        block_num,
+                        &init_data,
+                        &client_clone,
+                        &addrs_clone,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|x| Ok(Message::Block(x)))
+                    .collect();
+                    Ok(blocks)
+                })
+            };
 
             if max_blocks_per_request == 0 {
-                self.init_requests.push_back(create_request(init, start_block, addrs));
+                self.init_requests.push_back(create_request(init, start_block));
             } else {
                 while init.count() > 0 {
                     let (init_batch, remaining) = init.split_at(max_blocks_per_request)?;
-                    self.init_requests.push_back(create_request(
-                        init_batch,
-                        start_block,
-                        addrs.clone(),
-                    ));
+                    self.init_requests.push_back(create_request(init_batch, start_block));
                     start_block += max_blocks_per_request;
                     init = remaining;
                 }
