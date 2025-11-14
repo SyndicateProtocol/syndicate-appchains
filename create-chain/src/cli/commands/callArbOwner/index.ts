@@ -19,7 +19,6 @@ export function callArbOwnerCommand(program: Command) {
 		) as AbiFunction[];
 	};
 
-	// List available functions
 	callArbOwner
 		.command("list")
 		.description("List all available ArbOwner write functions")
@@ -31,7 +30,6 @@ export function callArbOwnerCommand(program: Command) {
 			}
 		});
 
-	// Call a specific function
 	callArbOwner
 		.command("call")
 		.description("Call a specific ArbOwner function")

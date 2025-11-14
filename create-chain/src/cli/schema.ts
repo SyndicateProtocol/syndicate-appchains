@@ -48,9 +48,6 @@ export const callArbOwnerOptionsSchema = z
 	})
 	.strict();
 
-// Alias for backward compatibility
-export const setWasmMaxStackDepthOptionsSchema = callArbOwnerOptionsSchema;
-
 export function handleSchemaErrors(errors: z.ZodError) {
 	const err = errors.issues
 		.map((err) => `  - ${err.path.join(".")}: ${err.message}`)
