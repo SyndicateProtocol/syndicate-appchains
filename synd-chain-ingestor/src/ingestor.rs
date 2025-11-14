@@ -14,7 +14,7 @@ use shared::{
     tracing::SpanKind,
     types::{BlockRef, PartialBlock},
 };
-use std::{cmp::Ordering, collections::HashMap, sync::Mutex};
+use std::{cmp::Ordering, sync::Mutex};
 use tracing::{error, info_span, instrument, warn};
 
 #[allow(missing_docs)]
@@ -137,7 +137,6 @@ pub async fn run(
                         parent_hash: block.parent_hash,
                         logs,
                         log_tx_hashes,
-                        log_txs: HashMap::new(),
                     };
 
                     sink.try_send(SubscriptionMessage::from(

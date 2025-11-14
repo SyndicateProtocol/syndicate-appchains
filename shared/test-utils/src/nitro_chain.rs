@@ -130,20 +130,12 @@ pub struct NitroBlock {
     pub timestamp: U256,
 }
 
+const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1111000000000000000000000000000000001111");
 /// Computes the L2 alias of an L1 address.
 ///
 /// When a contract on L1 sends a message to L2 via the Inbox, the sender address
 /// on L2 is aliased by adding this offset. This prevents address collisions and
 /// distinguishes L1-originated messages from native L2 messages.
-///
-/// The offset is: 0x1111000000000000000000000000000000001111
-///
-/// # Arguments
-/// * `l1_address` - The original L1 address
-///
-/// # Returns
-/// The aliased L2 address
-const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1000000000000000000000000000000000000001");
 pub fn apply_l1_to_l2_alias(l1_address: Address) -> Address {
     Address::from(
         U160::from_be_slice(&l1_address[..])
@@ -223,7 +215,7 @@ pub async fn execute_withdrawal(params: ExecuteWithdrawalParams<'_>) {
             params.withdrawal_value,                // value
             Bytes::new(),                           // data (always empty)
         )
-        // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+        // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
         .nonce(
             params
                 .settlement_provider

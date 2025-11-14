@@ -18,14 +18,9 @@ use alloy::{
     sol_types::SolEvent as _,
 };
 use common::types::{SequencingBlock, SettlementBlock};
-use contract_bindings::synd::{
-    i_bridge::IBridge::MessageDelivered,
-    i_delayed_message_provider::IDelayedMessageProvider::{
-        InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
-    },
-};
+use contract_bindings::synd::i_bridge::IBridge::MessageDelivered;
 use eyre::Result;
-use shared::types::{BlockBuilder, PartialBlock};
+use shared::types::{BlockBuilder, DelayedMsgsData, PartialBlock};
 use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
@@ -159,54 +154,23 @@ impl ArbitrumAdapter {
     }
 
     /// Processes settlement chain receipts into delayed messages
-    pub fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
-        // Create a local map to store message data
-        let mut message_data: HashMap<U256, Bytes> = HashMap::new();
+    pub fn process_delayed_messages(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<Vec<DelayedMessage>> {
         // Process all bridge logs in all receipts
         let delayed_messages = block.logs.iter().filter(|log| {
             log.address == self.bridge_address &&
                 log.topics()[0] == MessageDelivered::SIGNATURE_HASH
         });
 
-        // Process all inbox logs in all receipts
-        block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            let res = match log.topics()[0] {
-                InboxMessageDelivered::SIGNATURE_HASH => {
-                    let message_num: U256 = log.topics()[1].into();
-                    // Decode the event using the contract bindings
-                    let decoded = InboxMessageDelivered::abi_decode_data_validate(&log.data.data)
-                        .unwrap_or_else(|e| {
-                            panic!(
-                                "{}",
-                                ArbitrumBlockBuilderError::DecodingError(
-                                    "InboxMessageDelivered",
-                                    e.into()
-                                )
-                            )
-                        });
-                    Some((message_num, decoded.0))
-                }
-                InboxMessageDeliveredFromOrigin::SIGNATURE_HASH => {
-                    let message_num: U256 = log.topics()[1].into();
-                    let data = block.log_txs[&message_num].clone();
-                    Some((message_num, data))
-                }
-                e => {
-                    trace!("unsupported event type: {e}");
-                    None
-                }
-            };
-            if let Some((msg_num, calldata)) = res {
-                message_data.insert(msg_num, calldata);
-            }
-        });
-
-        trace!("Delayed message data: {:?}", message_data);
+        trace!("Delayed message data: {:?}", msgs_data);
         trace!("Delayed messages: {:?}", delayed_messages);
 
         let delayed_msg_txns = delayed_messages
             .filter_map(|msg_log| {
-                match self.delayed_message_to_mchain_txn(msg_log, &message_data) {
+                match self.delayed_message_to_mchain_txn(msg_log, &msgs_data) {
                     Ok(txn) => Some(txn),
                     Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
                         L1MessageType::Initialize,
@@ -347,7 +311,15 @@ impl ArbitrumAdapter {
 }
 
 impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
+    fn build_block(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<SequencingBlock> {
+        assert!(
+            msgs_data.is_empty(),
+            "delayed messages found on sequencing block: {block:?}, {msgs_data:?}"
+        );
         let (tx_count, batch) = self.build_batch(block)?;
         Ok(SequencingBlock {
             block_ref: block.block_ref.clone(),
@@ -359,11 +331,15 @@ impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
 }
 
 impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
+    fn build_block(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<SettlementBlock> {
         Ok(SettlementBlock {
             block_ref: block.block_ref.clone(),
             parent_hash: block.parent_hash,
-            messages: self.process_delayed_messages(block)?,
+            messages: self.process_delayed_messages(block, msgs_data)?,
         })
     }
 }

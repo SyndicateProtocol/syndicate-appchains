@@ -12,8 +12,8 @@ use contract_bindings::synd::{i_inbox::IInbox, rollup::Rollup};
 use eyre::Result;
 use std::time::Duration;
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
-use synd_chain_ingestor::client::{IngestorProvider, IngestorProviderConfig};
-use synd_mchain::client::MchainProvider as _;
+use synd_chain_ingestor::client::{IngestorProviderConfig, IngestorProviderImpl};
+use synd_mchain::client::Provider as _;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::{TestComponents, SETTLEMENT_CHAIN_ID},
@@ -794,12 +794,12 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
 
         // assert that restarting and rolling back here will not make synd-mchain go back to
         // block 1
-        let seq_mchain_client = IngestorProvider::new(
+        let seq_mchain_client = IngestorProviderImpl::new(
             components.sequencing_ingestor_rpc_url.as_ref(),
             IngestorProviderConfig { timeout: Duration::from_secs(1), ..Default::default() },
         )
         .await;
-        let settlement_client = IngestorProvider::new(
+        let settlement_client = IngestorProviderImpl::new(
             components.settlement_ingestor_rpc_url.as_ref(),
             IngestorProviderConfig { timeout: Duration::from_secs(1), ..Default::default() },
         )
