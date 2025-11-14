@@ -9,7 +9,9 @@ use alloy::{
     sol_types::{SolCall, SolEvent as _},
 };
 use contract_bindings::synd::{
-    i_delayed_message_provider::IDelayedMessageProvider::InboxMessageDeliveredFromOrigin,
+    i_delayed_message_provider::IDelayedMessageProvider::{
+        InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
+    },
     i_inbox::IInbox::sendL2MessageFromOriginCall,
 };
 use eyre::{eyre, OptionExt as _};
@@ -29,16 +31,10 @@ use jsonrpsee::{
 use serde::de::DeserializeOwned;
 use shared::{
     tracing::SpanKind,
-    types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock},
+    types::{BlockBuilder, BlockRef, DelayedMsgsData, GetBlockRef, PartialBlock},
 };
-use std::{
-    collections::{HashMap, VecDeque},
-    future::Future,
-    pin::Pin,
-    sync::Arc,
-    time::Duration,
-};
-use tracing::{info, instrument};
+use std::{collections::VecDeque, future::Future, pin::Pin, sync::Arc, time::Duration};
+use tracing::{info, instrument, trace};
 
 /// Uses the [`EthClient`] to fetch log data for blocks in a range and combines them with raw
 /// (timestamp, block hash) data from the db to build partial blocks
@@ -63,7 +59,6 @@ async fn build_partial_blocks_from_init_requests(
             parent_hash,
             logs: Default::default(),
             log_tx_hashes: Default::default(),
-            log_txs: HashMap::new(),
         });
         parent_hash = hash;
     }
@@ -158,25 +153,45 @@ async fn build_partial_blocks_from_init_requests(
     Ok(blocks)
 }
 
-/// Fills a partial block with tx calldata for logs of `InboxMessageDeliveredFromOrigin` event
+/// Obtains delayed message data for the delayed messages in the block
 #[allow(clippy::cognitive_complexity)]
-pub async fn fill_partial_block_with_l2msg_from_origin_txs(
-    mut block: PartialBlock,
+pub async fn delayed_msgs_data_from_partial_block(
+    block: &PartialBlock,
     client: &EthClient,
-) -> eyre::Result<PartialBlock> {
-    for (i, log) in block.logs.iter().enumerate() {
-        if log.topics()[0] == InboxMessageDeliveredFromOrigin::SIGNATURE_HASH {
-            let tx = client
-                .get_transaction_by_hash(block.log_tx_hashes[i])
-                .await
-                .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+    inbox_addr: Option<Address>,
+) -> eyre::Result<DelayedMsgsData> {
+    let mut result = DelayedMsgsData::new();
 
-            let decoded_tx = sendL2MessageFromOriginCall::abi_decode_validate(tx.input())?;
-            let seq_num: U256 = log.topics()[1].into();
-            block.log_txs.insert(seq_num, decoded_tx.messageData);
+    // if no inbox_addr is set, it's a seq chain block and there's no need to iterate the logs
+    let Some(inbox_addr) = inbox_addr else {
+        return Ok(result);
+    };
+
+    for (i, log) in block.logs.iter().enumerate() {
+        if log.address != inbox_addr {
+            continue;
+        };
+
+        match log.topics()[0] {
+            InboxMessageDelivered::SIGNATURE_HASH => {
+                let seq_num: U256 = log.topics()[1].into();
+                let decoded = InboxMessageDelivered::abi_decode_data_validate(&log.data.data)?;
+                result.insert(seq_num, decoded.0);
+            }
+            InboxMessageDeliveredFromOrigin::SIGNATURE_HASH => {
+                let tx = client
+                    .get_transaction_by_hash(block.log_tx_hashes[i])
+                    .await
+                    .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+
+                let decoded_tx = sendL2MessageFromOriginCall::abi_decode_validate(tx.input())?;
+                let seq_num: U256 = log.topics()[1].into();
+                result.insert(seq_num, decoded_tx.messageData);
+            }
+            e => trace!("unsupported event type: {e}"),
         };
     }
-    Ok(block)
+    Ok(result)
 }
 
 struct BlockStream<
@@ -188,6 +203,7 @@ struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     indexed_block_number: u64,
+    inbox_addr: Option<Address>,
     client: EthClient,
     init_data: Option<(Vec<Address>, u64)>,
     #[allow(clippy::type_complexity)]
@@ -214,6 +230,7 @@ impl<
         start_block: u64,
         client: EthClient,
         init_data: (Vec<Address>, u64),
+        inbox_addr: Option<Address>,
     ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
@@ -223,6 +240,7 @@ impl<
             client,
             init_data: Some(init_data),
             init_requests: Default::default(),
+            inbox_addr,
         }
     }
 
@@ -316,10 +334,14 @@ impl<
 
         loop {
             for resp in responses {
-                let partial_block =
-                    fill_partial_block_with_l2msg_from_origin_txs(resp?.block(), &self.client)
-                        .await?;
-                let block = self.block_builder.build_block(&partial_block)?;
+                let partial_block = resp?.block();
+                let delayed_msgs_data = delayed_msgs_data_from_partial_block(
+                    &partial_block,
+                    &self.client,
+                    self.inbox_addr,
+                )
+                .await?;
+                let block = self.block_builder.build_block(&partial_block, delayed_msgs_data)?;
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
@@ -428,7 +450,7 @@ impl IndexedBlockData {
 
 #[allow(missing_docs)]
 #[async_trait]
-pub trait Provider: Sync {
+pub trait IngestorProvider: Sync {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
         &self,
         method: &'static str,
@@ -479,6 +501,7 @@ pub trait Provider: Sync {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
+        inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         Ok(BlockStream::new(
             self.subscribe::<_, Message>(
@@ -491,6 +514,7 @@ pub trait Provider: Sync {
             start_block,
             client,
             (addresses, 0),
+            inbox_addr,
         ))
     }
 }
@@ -522,10 +546,10 @@ impl Default for IngestorProviderConfig {
 /// Ingestor provider - tuple of a [`WsClient`] and the maximum number of blocks to fetch per
 /// request
 #[derive(Debug, Clone)]
-pub struct IngestorProvider(Arc<WsClient>, u64);
+pub struct IngestorProviderImpl(Arc<WsClient>, u64);
 
 #[allow(missing_docs)]
-impl IngestorProvider {
+impl IngestorProviderImpl {
     pub async fn new(url: &str, config: IngestorProviderConfig) -> Self {
         match tokio::time::timeout(
             config.timeout,
@@ -552,7 +576,7 @@ impl IngestorProvider {
 }
 
 #[async_trait]
-impl Provider for IngestorProvider {
+impl IngestorProvider for IngestorProviderImpl {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
         &self,
         method: &'static str,
@@ -577,6 +601,7 @@ impl Provider for IngestorProvider {
         addresses: Vec<Address>,
         block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
         client: EthClient,
+        inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         let stream = self
             .subscribe::<_, Message>(
@@ -585,7 +610,14 @@ impl Provider for IngestorProvider {
                 "unsubscribe_blocks",
             )
             .await?;
-        Ok(BlockStream::new(stream, block_builder, start_block, client, (addresses, self.1)))
+        Ok(BlockStream::new(
+            stream,
+            block_builder,
+            start_block,
+            client,
+            (addresses, self.1),
+            inbox_addr,
+        ))
     }
 }
 
@@ -634,7 +666,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl<X: Send + Sync> Provider for RpcModule<X> {
+    impl<X: Send + Sync> IngestorProvider for RpcModule<X> {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             method: &'static str,

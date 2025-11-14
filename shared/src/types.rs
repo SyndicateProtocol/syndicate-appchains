@@ -28,11 +28,14 @@ pub trait GetBlockRef {
     fn block_ref(&self) -> &BlockRef;
 }
 
+/// auxiliary data for delayed messages in a hashmap by sequence number to msg contents
+pub type DelayedMsgsData = HashMap<U256, Bytes>;
+
 /// A trait for building blocks from the sequencing and settlement chains.
 #[async_trait]
 pub trait BlockBuilder<T>: Send {
     /// Process a single slot
-    fn build_block(&self, block: &PartialBlock) -> eyre::Result<T>;
+    fn build_block(&self, block: &PartialBlock, msgs_data: DelayedMsgsData) -> eyre::Result<T>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -96,8 +99,6 @@ pub struct PartialBlock {
     pub logs: Vec<Log>,
     /// associated transaction hashes for each log
     pub log_tx_hashes: Vec<FixedBytes<32>>,
-    /// auxiliary tx data for `InboxMessageDeliveredFromOrigin` events (mapped by seqNum)
-    pub log_txs: HashMap<U256, Bytes>,
 }
 
 impl GetBlockRef for PartialBlock {
