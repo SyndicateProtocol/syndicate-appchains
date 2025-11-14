@@ -27,7 +27,7 @@ generate-contract-abis:
 	
 	@echo "Generating RequireAndModule..."
 	@cd ../synd-contracts && \
-	  echo "export const requireAndModuleABI = $$(forge inspect src/requirement-modules/RequireAndModule.sol:RequireAndModule abi --json) as const" > ../create-chain/scripts/abi/synd/RequireAndModule.ts
+	  echo "export const requireAndModuleABI = $$(forge inspect src/requirement-modules/RequireAndModule.sol:RequireAndModule abi --json) as const" > ../create-chain/src/abi/synd/RequireAndModule.ts
 
 	@echo "Generating SyndicateSequencingChain..."
 	@cd ../synd-contracts && \
