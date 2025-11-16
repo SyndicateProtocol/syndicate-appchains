@@ -1,7 +1,7 @@
 import { getBatchPosters } from "./batchPoster"
 import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts"
 
-import type { CreateSettlementRollupParams } from "@/scripts/types"
+import type { CreateSettlementRollupParams } from "@/src/types"
 import { sleep } from "bun"
 import { stringify } from "viem"
 import { getFoundationConfig } from "../utils/config"

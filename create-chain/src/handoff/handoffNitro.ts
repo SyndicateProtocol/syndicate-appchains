@@ -1,4 +1,4 @@
-import { ArbOwnerABI } from "@/scripts/abi/nitro/ArbOwner"
+import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner"
 import {
   upgradeExecutorPrepareAddExecutorTransactionRequest,
   upgradeExecutorPrepareRemoveExecutorTransactionRequest

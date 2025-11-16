@@ -27,8 +27,7 @@ source "$HOME/.cargo/env"
 
 echo "⚙️ Installing SP1..."
 curl -L https://sp1up.succinct.xyz | bash
-source ~/.bashrc || true
-sp1up || true
+~/.sp1/bin/sp1up
 
 
 echo "🐳 Installing Docker via get.docker.com script..."

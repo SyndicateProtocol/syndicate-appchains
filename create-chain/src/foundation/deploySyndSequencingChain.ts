@@ -3,12 +3,12 @@ import { type Account, type Hex, parseEventLogs, toBytes, toHex } from "viem"
 import {
   allowlistSequencingModuleABI,
   allowlistSequencingModuleBytecode
-} from "@/scripts/abi/synd/AllowlistSequencingModule"
-import { requireAndModuleABI } from "@/scripts/abi/synd/RequireAndModule"
-import { requireAndModuleFactoryABI } from "@/scripts/abi/synd/RequireAndModuleFactory"
-import { syndicateFactoryABI } from "@/scripts/abi/synd/SyndicateFactory"
-import { syndicateSequencingChainABI } from "@/scripts/abi/synd/SyndicateSequencingChain"
-import { supportedSequencingChains } from "@/scripts/utils/constants"
+} from "@/src/abi/synd/AllowlistSequencingModule"
+import { requireAndModuleABI } from "@/src/abi/synd/RequireAndModule"
+import { requireAndModuleFactoryABI } from "@/src/abi/synd/RequireAndModuleFactory"
+import { syndicateFactoryABI } from "@/src/abi/synd/SyndicateFactory"
+import { syndicateSequencingChainABI } from "@/src/abi/synd/SyndicateSequencingChain"
+import { supportedSequencingChains } from "@/src/utils/constants"
 import { getFoundationConfig } from "../utils/config"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"

@@ -33,6 +33,4 @@ async fn main() {
         error!("\nMigration failed. {e}");
         std::process::exit(1);
     }
-
-    // TODO publish pending batches on altDA + on-chain
 }

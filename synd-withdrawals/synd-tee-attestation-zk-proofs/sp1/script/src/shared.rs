@@ -2,6 +2,9 @@ use sp1_sdk::include_elf;
 use std::fs;
 use x509_cert::der::{DecodePem, Encode};
 
+pub const TEE_ATTESTATION_VALIDATION_ELF_FILE: &str =
+    env!("SP1_ELF_synd-tee-attestation-zk-proofs-sp1-program");
+
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
 pub const TEE_ATTESTATION_VALIDATION_ELF: &[u8] =
     include_elf!("synd-tee-attestation-zk-proofs-sp1-program");
