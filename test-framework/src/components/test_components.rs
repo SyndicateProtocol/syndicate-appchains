@@ -420,11 +420,6 @@ impl TestComponents {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
         }
 
-        info!("Starting components...");
-        info!("Starting synd-mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.finality_delay, None).await?;
-
         // Setup config manager and get chain config address
         let config_manager_address = setup_config_manager(
             &set_provider,
@@ -435,6 +430,17 @@ impl TestComponents {
             seq_rpc_ws_url.clone(),
             "https://example.com/explorer".to_string(),
             None,
+        )
+        .await?;
+
+        info!("Starting components...");
+        info!("Starting synd-mchain...");
+        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
+            options.appchain_chain_id,
+            options.finality_delay,
+            None,
+            Some(set_rpc_ws_url.clone()),
+            Some(config_manager_address),
         )
         .await?;
 

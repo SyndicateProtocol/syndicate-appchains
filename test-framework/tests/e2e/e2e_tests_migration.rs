@@ -18,10 +18,7 @@ use eyre::Result;
 use shared::types::FilledProvider;
 use std::{collections::HashMap, path::PathBuf, time::Duration};
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
-use synd_mchain::{
-    db::MigrationParams,
-    methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID},
-};
+use synd_mchain::methods::common::{APPCHAIN_CONTRACT, MCHAIN_ID};
 use synd_migration_cli::migration::{get_migration_data, RollupState};
 use test_framework::components::{
     batch_sequencer::BatchSequencerConfig,
@@ -114,16 +111,14 @@ async fn spin_up_syndicate_stack(
     )
     .await?;
 
-    // TODO remove, this should be read from the cfg_mgr
-    let migration_params = MigrationParams {
-        settlement_start_block: migration_data.parent_chain_block,
-        batch_acc: migration_data.batch_acc,
-        batch_count: migration_data.batch_count,
-        delayed_msgs_acc: migration_data.delayed_msgs_acc,
-        delayed_msgs_count: migration_data.delayed_msgs_count,
-    };
-    let (mchain_rpc_url, mchain, _mchain_provider) =
-        start_mchain(appchain_chain_id, opt.finality_delay, Some(migration_params)).await?;
+    let (mchain_rpc_url, mchain, _mchain_provider) = start_mchain(
+        appchain_chain_id,
+        opt.finality_delay,
+        None,
+        Some(settlement_rpc_url.clone()),
+        Some(config_manager_address),
+    )
+    .await?;
 
     let temp = test_path("chain_ingestor");
     let seq_chain_ingestor_cfg = ChainIngestorConfig {
@@ -335,8 +330,6 @@ async fn e2e_migration() -> Result<()> {
         .unwrap()
         .status());
 
-    println!("potato");
-
     // wait for a batch to be posted
     wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
@@ -378,7 +371,7 @@ async fn e2e_migration() -> Result<()> {
     assert_eq!(migration_data.batch_acc, batch_acc);
     assert_eq!(migration_data.batch_count, 2);
     // TODO not sure how to fix this in the test - we're now taking the delayed_msg acc/count from
-    // the batch data
+    // the batch data (maybe has to do with nitro saying "no finalization data" or something)
     // assert_eq!(U256::from(migration_data.delayed_msgs_count), delayed_msgs_count);
     // assert_eq!(migration_data.delayed_msgs_acc, delayed_msgs_acc);
 

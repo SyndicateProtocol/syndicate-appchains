@@ -217,6 +217,8 @@ pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
     migration_params: Option<MigrationParams>,
+    config_manager_rpc_url: Option<String>,
+    config_manager_address: Option<Address>,
 ) -> Result<(String, E2EProcess, MProvider)> {
     let tmp_dir = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
@@ -246,6 +248,14 @@ pub async fn start_mchain(
             "--migrated-delayed-msgs-count".to_string(),
             migration.delayed_msgs_count.to_string(),
         ]);
+    }
+
+    if let Some(url) = config_manager_rpc_url {
+        args.extend(vec!["--config_manager-rpc-url".to_string(), url]);
+    }
+
+    if let Some(address) = config_manager_address {
+        args.extend(vec!["--config-manager-address".to_string(), address.to_string()]);
     }
 
     let docker = start_component(

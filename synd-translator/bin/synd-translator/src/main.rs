@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     });
 
     // Load chain config from ConfigManager if available
-    let config = with_onchain_config(&base_config).await;
+    let config = with_onchain_config(base_config).await;
     config.validate_strict()?;
 
     synd_translator::spawn::run(&config).await?;

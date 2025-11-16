@@ -339,7 +339,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None,).await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
             state
         );
         // check safe state again
@@ -383,7 +383,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None).await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
             state
         );
         // check safe state again
@@ -418,7 +418,7 @@ mod tests {
         );
         // reconcile
         assert_eq!(
-            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client, None).await?,
+            mchain.reconcile_mchain_with_source_chains(&seq_client, &set_client).await?,
             None
         );
         // check safe state again

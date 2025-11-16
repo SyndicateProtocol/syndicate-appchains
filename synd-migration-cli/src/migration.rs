@@ -181,7 +181,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
         rollup_state.safe_block_number, rollup_state.safe_block_hash
     );
 
-    // TODO obtain and log GENESIS_CONFIG here
+    // TODO obtain and log GENESIS_CONFIG and chain-json for nitro
 
     Ok(rollup_state)
 }

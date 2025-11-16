@@ -91,9 +91,8 @@ fn override_with_onchain_config(
     config
 }
 
-/// Fetches chain config if it exists
-pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
-    let config = config.clone();
+/// Fetches chain config if it exists and extends the passed config with any missing values
+pub async fn with_onchain_config(config: TranslatorConfig) -> TranslatorConfig {
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => {
@@ -148,11 +147,6 @@ async fn get_config<T: Provider + Clone>(
     let default_sequencing_chain_ws_rpc_url_call =
         arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL();
 
-    let migrated_batch_acc_call = arb_chain_config_contract.MIGRATED_BATCH_ACC();
-    let migrated_batch_count_call = arb_chain_config_contract.MIGRATED_BATCH_COUNT();
-    let migrated_delayed_msgs_acc_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_ACC();
-    let migrated_delayed_msgs_count_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_COUNT();
-
     let (
         arbitrum_bridge_address,
         arbitrum_inbox_address,
@@ -161,10 +155,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block,
         sequencing_contract_address,
         default_sequencing_chain_ws_rpc_url,
-        migrated_batch_acc,
-        migrated_batch_count,
-        migrated_delayed_msgs_acc,
-        migrated_delayed_msgs_count,
     ) = tokio::try_join!(
         arbitrum_bridge_address_call.call(),
         arbitrum_inbox_address_call.call(),
@@ -173,10 +163,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block_call.call(),
         sequencing_contract_address_call.call(),
         default_sequencing_chain_ws_rpc_url_call.call(),
-        migrated_batch_acc_call.call(),
-        migrated_batch_count_call.call(),
-        migrated_delayed_msgs_acc_call.call(),
-        migrated_delayed_msgs_count_call.call(),
     )?;
 
     Ok(ChainConfig {
@@ -187,10 +173,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block,
         sequencing_contract_address,
         default_sequencing_chain_ws_rpc_url,
-        migrated_batch_acc,
-        migrated_batch_count,
-        migrated_delayed_msgs_acc,
-        migrated_delayed_msgs_count,
     })
 }
 
@@ -205,10 +187,6 @@ struct ChainConfig {
     sequencing_start_block: U256,
     sequencing_contract_address: Address,
     default_sequencing_chain_ws_rpc_url: String,
-    migrated_batch_acc: U256,
-    migrated_batch_count: U256,
-    migrated_delayed_msgs_acc: U256,
-    migrated_delayed_msgs_count: U256,
 }
 
 #[cfg(test)]
@@ -229,10 +207,6 @@ mod test {
             sequencing_start_block: U256::from(200),
             sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
             default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_batch_acc: U256::ZERO,
-            migrated_batch_count: U256::ZERO,
-            migrated_delayed_msgs_acc: U256::ZERO,
-            migrated_delayed_msgs_count: U256::ZERO,
         };
 
         // Apply overrides
@@ -284,10 +258,6 @@ mod test {
             sequencing_start_block: U256::from(200),
             sequencing_contract_address: address!("0x3333333333333333333333333333333333333333"),
             default_sequencing_chain_ws_rpc_url: "wss://test-sequencing.example.com".to_string(),
-            migrated_batch_acc: U256::ZERO,
-            migrated_batch_count: U256::ZERO,
-            migrated_delayed_msgs_acc: U256::ZERO,
-            migrated_delayed_msgs_count: U256::ZERO,
         };
 
         // Apply overrides
