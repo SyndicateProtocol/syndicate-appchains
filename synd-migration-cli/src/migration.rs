@@ -14,7 +14,7 @@ use tracing::{debug, info};
 #[serde(rename_all = "PascalCase")]
 pub struct ArbitrumChainParams {
     /// Whether arbOS is enabled
-    #[serde(default)]
+    #[serde(default, rename = "EnableArbOS")]
     pub enable_arb_os: bool,
 
     /// Allow debug precompiles
@@ -25,24 +25,24 @@ pub struct ArbitrumChainParams {
     pub data_availability_committee: bool,
 
     /// Initial arbOS version
-    #[serde(default)]
+    #[serde(default, rename = "InitialArbOSVersion")]
     pub initial_arb_os_version: u64,
-
-    /// Initial chain owner address
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub initial_chain_owner: Option<String>,
 
     /// Genesis block number
     #[serde(default)]
     pub genesis_block_num: u64,
 
     /// Maximum code size
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_code_size: Option<u64>,
+    #[serde(default)]
+    pub max_code_size: u64,
 
     /// Maximum init code size
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_init_code_size: Option<u64>,
+    #[serde(default)]
+    pub max_init_code_size: u64,
+
+    /// Initial chain owner address
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initial_chain_owner: Option<String>,
 
     /// Syndicate flag
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -53,20 +53,36 @@ pub struct ArbitrumChainParams {
     pub eigen_da: Option<bool>,
 }
 
+/// Clique consensus configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[allow(missing_docs)]
+pub struct CliqueConfig {
+    pub period: u64,
+    pub epoch: u64,
+}
+
 /// Ethereum chain configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChainConfig {
-    /// Chain ID
-    pub chain_id: u64,
-
     /// Homestead block
     #[serde(default)]
     pub homestead_block: u64,
 
+    /// DAO fork block
+    pub dao_fork_block: Option<u64>,
+
+    /// DAO fork support
+    #[serde(default)]
+    pub dao_fork_support: bool,
+
     /// EIP150 block
     #[serde(default)]
     pub eip150_block: u64,
+
+    /// EIP150 hash
+    #[serde(default)]
+    pub eip150_hash: B256,
 
     /// EIP155 block
     #[serde(default)]
@@ -92,6 +108,10 @@ pub struct ChainConfig {
     #[serde(default)]
     pub istanbul_block: u64,
 
+    /// Muir Glacier block
+    #[serde(default)]
+    pub muir_glacier_block: u64,
+
     /// Berlin block
     #[serde(default)]
     pub berlin_block: u64,
@@ -100,9 +120,16 @@ pub struct ChainConfig {
     #[serde(default)]
     pub london_block: u64,
 
+    /// Clique consensus configuration
+    #[serde(default)]
+    pub clique: CliqueConfig,
+
     /// Arbitrum-specific parameters
     #[serde(default)]
     pub arbitrum: ArbitrumChainParams,
+
+    /// Chain ID
+    pub chain_id: u64,
 }
 
 /// Rollup state information
@@ -162,14 +189,32 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     debug!("rollup state: {:#?}", rollup_state);
     debug!("chain config: {:#?}", chain_config);
 
-    println!("\n---------------\n");
+    println!("\n---------------TRANSLATOR / MCHAIN config ---------------\n");
     println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
     println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
     println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
     println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
     println!("MIGRATED_APPCHAIN_BLOCK_HASH: {:?}", rollup_state.last_block_hash);
     println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    println!("\n---------------\n");
+    println!("GENESIS_CONFIG: '{}'", serde_json::to_string(&chain_config).unwrap());
+    println!("\n------------------------------\n\n");
+
+    println!("\n--------------- NITRO configuration ---------------\n");
+    println!(
+        "--chain.info-json={}",
+        get_nitro_chain_cfg(
+            chain_config.chain_id.to_string(),
+            rollup_state.parent_chain_block.to_string()
+        )
+    );
+    if chain_config.arbitrum.data_availability_committee {
+        println!("--node.data-availability.enable=true");
+        println!("--node.data-availability.rest-aggregator.urls=https://no.op");
+        println!("--node.data-availability.rest-aggregator.enable=true");
+    }
+
+    println!("\n------------------------------\n\n");
+
     println!("last batch arb msg count: {}", rollup_state.batch_message_count);
 
     println!(
@@ -181,9 +226,21 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
         rollup_state.safe_block_number, rollup_state.safe_block_hash
     );
 
-    // TODO obtain and log GENESIS_CONFIG and chain-json for nitro
+    if rollup_state.safe_block_hash.is_some() &&
+        rollup_state.safe_block_hash.unwrap() == rollup_state.last_block_hash
+    {
+        println!("✅✅✅✅✅ Rollup is in safe state to be migrated");
+    } else {
+        println!(
+            "❌❌❌❌❌ Rollup is not in safe state to be migrated - a reorg is likely to happen"
+        );
+    }
 
     Ok(rollup_state)
+}
+
+fn get_nitro_chain_cfg(appchain_chain_id: String, deployed_at: String) -> String {
+    format!("--chain.info-json=[{{\"chain-id\":{appchain_chain_id},\"parent-chain-id\":511000,\"parent-chain-is-arbitrum\":false,\"chain-name\":\"unite-testnet\",\"chain-config\":{{\"homesteadBlock\":0,\"daoForkBlock\":null,\"daoForkSupport\":true,\"eip150Block\":0,\"eip150Hash\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"eip155Block\":0,\"eip158Block\":0,\"byzantiumBlock\":0,\"constantinopleBlock\":0,\"petersburgBlock\":0,\"istanbulBlock\":0,\"muirGlacierBlock\":0,\"berlinBlock\":0,\"londonBlock\":0,\"clique\":{{\"period\":0,\"epoch\":0}},\"arbitrum\":{{\"EnableArbOS\":true,\"AllowDebugPrecompiles\":false,\"DataAvailabilityCommittee\":true,\"InitialArbOSVersion\":32,\"GenesisBlockNum\":0,\"MaxCodeSize\":24576,\"MaxInitCodeSize\":49152,\"InitialChainOwner\":\"0x6dedc20540fd54348fa0d7b0af2378f5494ab240\"}},\"chainId\":{appchain_chain_id}}},\"rollup\":{{\"bridge\":\"0x0000000000000000000000000000000000511000\",\"inbox\":\"0x0000000000000000000000000000000000511000\",\"sequencer-inbox\":\"0x0000000000000000000000000000000000511000\",\"rollup\":\"0x0000000000000000000000000000000000511000\",\"validator-utils\":\"0x0000000000000000000000000000000000511000\",\"validator-wallet-creator\":\"0x0000000000000000000000000000000000511000\",\"deployed-at\":{deployed_at}}}}}]")
 }
 
 /// Retrieves the chain config from the database.
@@ -203,7 +260,10 @@ fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
     let chain_config: ChainConfig = db
         .get(config_key.clone())
         .unwrap()
-        .map(|bytes| serde_json::from_slice(&bytes).unwrap())
+        .map(|bytes| {
+            println!("RAW FROM DB: {}", std::str::from_utf8(&bytes).unwrap());
+            serde_json::from_slice(&bytes).unwrap()
+        })
         .unwrap();
 
     Ok((chain_config, config_key))
