@@ -107,44 +107,44 @@ pub async fn run(
         {
             let _guard = info_span!("send_subscriptions").entered();
 
-            let partial_block = PartialBlock {
-                block_ref: BlockRef {
-                    number: block.number,
-                    timestamp: block.timestamp,
-                    hash: block.hash,
-                },
-                parent_hash: block.parent_hash,
-                logs: receipts
-                    .into_iter()
-                    .enumerate()
-                    .flat_map(|(i, x)| {
-                        assert_eq!(x.block_hash, block.hash);
-                        assert_eq!(x.transaction_index, i as u64);
-                        x.logs
-                    })
-                    .collect(),
-            };
-
             ctx.lock()
                 .map_err(|e| eyre::eyre!("Failed to acquire mutex lock: {}", e))?
                 .subs
                 .retain_mut(|(sink, addrs)| {
-                    !sink.is_closed() &&
-                        sink.try_send(SubscriptionMessage::from(
-                            serde_json::value::to_raw_value(&Message::Block(PartialBlock {
-                                logs: partial_block
-                                    .logs
-                                    .clone()
-                                    .into_iter()
-                                    .filter(|log| addrs.contains(&log.address))
-                                    .collect(),
-                                block_ref: partial_block.block_ref.clone(),
-                                parent_hash: partial_block.parent_hash,
-                            }))
+                    if sink.is_closed() {
+                        return false;
+                    }
+
+                    let mut logs = Vec::new();
+                    let mut log_tx_hashes = Vec::new();
+                    for (i, receipt) in receipts.iter().enumerate() {
+                        assert_eq!(receipt.block_hash, block.hash);
+                        assert_eq!(receipt.transaction_index, i as u64);
+                        for log in &receipt.logs {
+                            if addrs.contains(&log.address) {
+                                logs.push(log.clone());
+                                log_tx_hashes.push(receipt.transaction_hash);
+                            }
+                        }
+                    }
+
+                    let partial_block = PartialBlock {
+                        block_ref: BlockRef {
+                            number: block.number,
+                            timestamp: block.timestamp,
+                            hash: block.hash,
+                        },
+                        parent_hash: block.parent_hash,
+                        logs,
+                        log_tx_hashes,
+                    };
+
+                    sink.try_send(SubscriptionMessage::from(
+                        serde_json::value::to_raw_value(&Message::Block(partial_block))
                             .unwrap_or_else(|e| panic!("failed to serialize message: {e}")),
-                        ))
-                        .inspect_err(|err| error!("try_send failed: {err}"))
-                        .is_ok()
+                    ))
+                    .inspect_err(|err| error!("try_send failed: {err}"))
+                    .is_ok()
                 });
         }
     }

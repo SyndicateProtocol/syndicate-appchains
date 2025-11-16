@@ -14,18 +14,13 @@ use crate::{
     config::BlockBuilderConfig,
 };
 use alloy::{
-    primitives::{Address, Bytes, FixedBytes, Log, U256},
+    primitives::{Address, Bytes, Log, U256},
     sol_types::SolEvent as _,
 };
 use common::types::{SequencingBlock, SettlementBlock};
-use contract_bindings::synd::{
-    i_bridge::IBridge::MessageDelivered,
-    i_delayed_message_provider::IDelayedMessageProvider::{
-        InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
-    },
-};
+use contract_bindings::synd::i_bridge::IBridge::MessageDelivered;
 use eyre::Result;
-use shared::types::{BlockBuilder, PartialBlock};
+use shared::types::{BlockBuilder, DelayedMsgsData, PartialBlock};
 use std::collections::HashMap;
 use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
@@ -36,11 +31,6 @@ use tracing::{debug, error, info, trace};
 // Eventually once the translator uses nitro to simulate tx execution, transactions can be slotted
 // into blocks based on gas usage instead.
 const TX_PER_BLOCK: usize = 100;
-
-const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
-const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
-const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
-    InboxMessageDeliveredFromOrigin::SIGNATURE_HASH;
 
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, Error)]
@@ -164,50 +154,23 @@ impl ArbitrumAdapter {
     }
 
     /// Processes settlement chain receipts into delayed messages
-    pub fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
-        // Create a local map to store message data
-        let mut message_data: HashMap<U256, Bytes> = HashMap::new();
+    pub fn process_delayed_messages(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<Vec<DelayedMessage>> {
         // Process all bridge logs in all receipts
         let delayed_messages = block.logs.iter().filter(|log| {
-            log.address == self.bridge_address && log.topics()[0] == MSG_DELIVERED_EVENT_HASH
+            log.address == self.bridge_address &&
+                log.topics()[0] == MessageDelivered::SIGNATURE_HASH
         });
 
-        // Process all inbox logs in all receipts
-        block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            match log.topics()[0] {
-                INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = log.topics()[1].into();
-
-                    // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data_validate(&log.data.data) {
-                        Ok(decoded) => {
-                            message_data.insert(message_num, decoded.0);
-                        }
-                        Err(e) => {
-                            panic!(
-                                "{}",
-                                ArbitrumBlockBuilderError::DecodingError(
-                                    "InboxMessageDelivered",
-                                    e.into()
-                                )
-                            );
-                        }
-                    }
-                }
-
-                INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    panic!("unsupported inbox message delivered from origin: {}", log.topics()[1]);
-                }
-                _ => {}
-            }
-        });
-
-        trace!("Delayed message data: {:?}", message_data);
+        trace!("Delayed message data: {:?}", msgs_data);
         trace!("Delayed messages: {:?}", delayed_messages);
 
         let delayed_msg_txns = delayed_messages
             .filter_map(|msg_log| {
-                match self.delayed_message_to_mchain_txn(msg_log, &message_data) {
+                match self.delayed_message_to_mchain_txn(msg_log, &msgs_data) {
                     Ok(txn) => Some(txn),
                     Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
                         L1MessageType::Initialize,
@@ -348,7 +311,15 @@ impl ArbitrumAdapter {
 }
 
 impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
+    fn build_block(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<SequencingBlock> {
+        assert!(
+            msgs_data.is_empty(),
+            "delayed messages found on sequencing block: {block:?}, {msgs_data:?}"
+        );
         let (tx_count, batch) = self.build_batch(block)?;
         Ok(SequencingBlock {
             block_ref: block.block_ref.clone(),
@@ -360,11 +331,15 @@ impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
 }
 
 impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
+    fn build_block(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<SettlementBlock> {
         Ok(SettlementBlock {
             block_ref: block.block_ref.clone(),
             parent_hash: block.parent_hash,
-            messages: self.process_delayed_messages(block)?,
+            messages: self.process_delayed_messages(block, msgs_data)?,
         })
     }
 }
@@ -376,7 +351,7 @@ mod tests {
     use alloy::{
         eips::Encodable2718,
         network::{EthereumWallet, TransactionBuilder as _},
-        primitives::{hex, keccak256},
+        primitives::{hex, keccak256, FixedBytes},
         rpc::types::TransactionRequest,
         signers::local::PrivateKeySigner,
     };
@@ -531,7 +506,11 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
@@ -573,7 +552,11 @@ mod tests {
 
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
@@ -592,7 +575,7 @@ mod tests {
         // Create log with invalid event data
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH],
+            vec![MessageDelivered::SIGNATURE_HASH],
             Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
         );
 
@@ -627,7 +610,11 @@ mod tests {
         // Create the log
         let log = Log::new_unchecked(
             builder.bridge_address,
-            vec![MSG_DELIVERED_EVENT_HASH, message_index.into(), FixedBytes::from([1u8; 32])],
+            vec![
+                MessageDelivered::SIGNATURE_HASH,
+                message_index.into(),
+                FixedBytes::from([1u8; 32]),
+            ],
             msg_delivered.encode_data().into(),
         );
 
