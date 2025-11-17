@@ -8016,6 +8016,7 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "jsonrpsee",
+ "libc",
  "redis",
  "serde",
  "serde_json",
