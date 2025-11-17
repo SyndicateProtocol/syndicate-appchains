@@ -9,7 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use tracing::debug;
+use tracing::{debug, trace};
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -175,7 +175,7 @@ pub trait ArbitrumDB {
     /// Gets the block associated with the given key
     fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
         let state = self.get_state();
-        debug!("get_block: key: {key}, state.batch_count: {}", state.batch_count);
+        trace!("get_block: key: {key}, state.batch_count: {}", state.batch_count);
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
                 || Err(to_err(format!("could not find block {key}"))),
