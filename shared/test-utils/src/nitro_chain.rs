@@ -1,6 +1,10 @@
 //! Appchain utils for the integration tests
 
-use crate::{chain_info::PRIVATE_KEY, docker::E2EProcess};
+use crate::{
+    chain_info::PRIVATE_KEY,
+    docker::E2EProcess,
+    utils::{copy_dir_all, test_path},
+};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
@@ -14,9 +18,9 @@ use contract_bindings::synd::{
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::{fs, process::Command};
-use tracing::{error, info};
+use tracing::info;
 
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
@@ -271,33 +275,41 @@ pub async fn deploy_nitro_rollup(
     use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = Path::new(project_root)
-        .join("synd-contracts/lib/nitro-contracts")
-        .to_string_lossy()
-        .to_string();
-    info!("Nitro contracts dir: {nitro_contracts_dir}");
+
+    // Create a unique temp directory for this deployment to avoid race conditions
+    let tmp_dir = test_path("nitro-deploy");
+
+    // Copy nitro-contracts to temp directory
+    let source_nitro_contracts = Path::new(project_root).join("synd-contracts/lib/nitro-contracts");
+    let nitro_contracts_dir = PathBuf::from(&tmp_dir).join("nitro-contracts");
+
+    info!(
+        "Copying nitro-contracts from {} to {}",
+        source_nitro_contracts.display(),
+        nitro_contracts_dir.display()
+    );
+    copy_dir_all(&source_nitro_contracts, &nitro_contracts_dir).await?;
+
+    let nitro_contracts_dir_path = nitro_contracts_dir.clone();
+    let nitro_contracts_dir = nitro_contracts_dir.to_string_lossy().to_string();
+    info!("Nitro contracts working dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
-    // apply patch to hardhat.config.ts to add custom network
-    let patch_path = Path::new(project_root)
-        .join("shared/test-utils/src/nitro-hardhat-config.patch")
-        .to_string_lossy()
-        .to_string();
-    let status = E2EProcess::new(
-        Command::new("git")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("apply")
-            .arg("--recount")
-            .arg(patch_path),
-        "patch-nitro-contracts",
-    )?
-    .wait()
-    .await?;
-    if !status.success() {
-        // log an error instead of failing the test as this exits with code 1 if the patch has
-        // already been applied
-        error!("Failed to apply patch to hardhat.config.ts");
-    }
+    // Modify hardhat.config.ts to add custom network
+    let hardhat_config_path = nitro_contracts_dir_path.join("hardhat.config.ts");
+    let hardhat_config = fs::read_to_string(&hardhat_config_path).await?;
+
+    // Insert custom network configuration after baseSepolia and before geth
+    let custom_network = r#"    custom: {
+      url: process.env['CUSTOM_RPC_URL'] || 'N/A',
+    },
+    "#;
+
+    let modified_config = hardhat_config
+        .replace("    },\n    geth: {", &format!("    }},\n{custom_network}    geth: {{"));
+
+    fs::write(&hardhat_config_path, modified_config).await?;
+    info!("Applied custom network configuration to hardhat.config.ts");
 
     // install and build dependencies
     let status = E2EProcess::new(
@@ -401,27 +413,6 @@ pub async fn deploy_nitro_rollup(
     let deploy_json_path = format!("{nitro_contracts_dir}/deploy.json");
     let deploy_info: NitroDeployment =
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
-
-    // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
-    let status = E2EProcess::new(
-        Command::new("git")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("checkout")
-            .arg("--")
-            .arg("hardhat.config.ts"),
-        "cleanup-nitro-contracts-submodule-checkout",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to cleanup nitro contracts submodule");
-
-    let status = E2EProcess::new(
-        Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
-        "cleanup-nitro-contracts-submodule",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to cleanup nitro contracts submodule");
 
     Ok(deploy_info)
 }
