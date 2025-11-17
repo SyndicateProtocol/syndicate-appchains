@@ -19,11 +19,12 @@ contract ArbChainConfig is Initializable {
     event Migration(
         uint256 setStartBlock,
         uint256 seqStartBlock,
-        uint256 batchAcc,
+        uint256 indexed batchAcc,
         uint256 batchCount,
-        uint256 delayedMsgsAcc,
+        uint256 indexed delayedMsgsAcc,
         uint256 delayedMsgsCount,
-        uint256 indexed appchainBlockHash
+        uint256 indexed appchainBlockHash,
+        bytes genesisConfig
     );
 
     address public owner;
@@ -52,6 +53,7 @@ contract ArbChainConfig is Initializable {
     uint256 public MIGRATED_DELAYED_MSGS_ACC;
     uint256 public MIGRATED_DELAYED_MSGS_COUNT;
     uint256 public MIGRATED_APPCHAIN_BLOCK_HASH;
+    bytes public MIGRATED_GENESIS_CONFIG;
 
     /**
      * @dev Constructor for the implementation contract
@@ -128,21 +130,23 @@ contract ArbChainConfig is Initializable {
     }
 
     function migration(
-        uint256 _set_start_block,
-        uint256 _seq_start_block,
-        uint256 _batch_acc,
-        uint256 _batch_count,
-        uint256 _delayed_msgs_acc,
-        uint256 _delayed_msgs_count,
-        uint256 _appchain_block_hash
+        uint256 _setStartBlock,
+        uint256 _seqStartBlock,
+        uint256 _batchAcc,
+        uint256 _batchCount,
+        uint256 _delayedMsgsAcc,
+        uint256 _delayedMsgsCount,
+        uint256 _appchainBlockHash,
+        bytes calldata _genesisConfig
     ) external onlyOwner {
-        SETTLEMENT_START_BLOCK = _set_start_block;
-        SEQUENCING_START_BLOCK = _seq_start_block;
-        MIGRATED_BATCH_ACC = _batch_acc;
-        MIGRATED_BATCH_COUNT = _batch_count;
-        MIGRATED_DELAYED_MSGS_ACC = _delayed_msgs_acc;
-        MIGRATED_DELAYED_MSGS_COUNT = _delayed_msgs_count;
-        MIGRATED_APPCHAIN_BLOCK_HASH = _appchain_block_hash;
+        SETTLEMENT_START_BLOCK = _setStartBlock;
+        SEQUENCING_START_BLOCK = _seqStartBlock;
+        MIGRATED_BATCH_ACC = _batchAcc;
+        MIGRATED_BATCH_COUNT = _batchCount;
+        MIGRATED_DELAYED_MSGS_ACC = _delayedMsgsAcc;
+        MIGRATED_DELAYED_MSGS_COUNT = _delayedMsgsCount;
+        MIGRATED_APPCHAIN_BLOCK_HASH = _appchainBlockHash;
+        MIGRATED_GENESIS_CONFIG = _genesisConfig;
         emit Migration(
             SETTLEMENT_START_BLOCK,
             SEQUENCING_START_BLOCK,
@@ -150,7 +154,8 @@ contract ArbChainConfig is Initializable {
             MIGRATED_BATCH_COUNT,
             MIGRATED_DELAYED_MSGS_ACC,
             MIGRATED_DELAYED_MSGS_COUNT,
-            MIGRATED_APPCHAIN_BLOCK_HASH
+            MIGRATED_APPCHAIN_BLOCK_HASH,
+            MIGRATED_GENESIS_CONFIG
         );
     }
 

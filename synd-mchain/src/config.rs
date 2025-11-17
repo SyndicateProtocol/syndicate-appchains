@@ -2,7 +2,7 @@
 
 use crate::db::MigrationParams;
 use alloy::{
-    primitives::{Address, B256, U256},
+    primitives::{Address, Bytes, B256, U256},
     providers::{Provider, ProviderBuilder},
 };
 use clap::Parser;
@@ -113,6 +113,7 @@ struct ChainConfig {
     migrated_batch_count: U256,
     migrated_delayed_msgs_acc: U256,
     migrated_delayed_msgs_count: U256,
+    migrated_genesis_config: Bytes,
 }
 
 /// Fetches chain config if it exists and extends the passed config with any missing values
@@ -161,6 +162,7 @@ async fn get_config<T: Provider + Clone>(
     let migrated_batch_count_call = arb_chain_config_contract.MIGRATED_BATCH_COUNT();
     let migrated_delayed_msgs_acc_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_ACC();
     let migrated_delayed_msgs_count_call = arb_chain_config_contract.MIGRATED_DELAYED_MSGS_COUNT();
+    let migrated_genesis_config_call = arb_chain_config_contract.MIGRATED_GENESIS_CONFIG();
 
     let (
         settlement_start_block,
@@ -168,12 +170,14 @@ async fn get_config<T: Provider + Clone>(
         migrated_batch_count,
         migrated_delayed_msgs_acc,
         migrated_delayed_msgs_count,
+        migrated_genesis_config,
     ) = tokio::try_join!(
         settlement_start_block_call.call(),
         migrated_batch_acc_call.call(),
         migrated_batch_count_call.call(),
         migrated_delayed_msgs_acc_call.call(),
         migrated_delayed_msgs_count_call.call(),
+        migrated_genesis_config_call.call(),
     )?;
 
     Ok(ChainConfig {
@@ -182,6 +186,7 @@ async fn get_config<T: Provider + Clone>(
         migrated_batch_count,
         migrated_delayed_msgs_acc,
         migrated_delayed_msgs_count,
+        migrated_genesis_config,
     })
 }
 
@@ -247,6 +252,15 @@ fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig)
         );
     }
 
+    if config.genesis_config.is_none() && !onchain.migrated_genesis_config.is_empty() {
+        info!(
+            "Using the genesis_config from on-chain config (length: {} bytes)",
+            onchain.migrated_genesis_config.len()
+        );
+        config.genesis_config =
+            Some(String::from_utf8_lossy(&onchain.migrated_genesis_config).to_string());
+    }
+
     config
 }
 
@@ -284,6 +298,7 @@ mod test {
             migrated_batch_count: U256::from(50),
             migrated_delayed_msgs_acc: U256::from(0x2222_u64),
             migrated_delayed_msgs_count: U256::from(75),
+            migrated_genesis_config: Bytes::from(b"test_genesis_config".to_vec()),
         };
 
         // Apply overrides
@@ -307,6 +322,10 @@ mod test {
             config.migrated_delayed_msgs_count,
             Some(onchain.migrated_delayed_msgs_count.try_into().unwrap())
         );
+        assert_eq!(
+            config.genesis_config,
+            Some(String::from_utf8_lossy(&onchain.migrated_genesis_config).to_string())
+        );
     }
 
     #[test]
@@ -325,6 +344,7 @@ mod test {
             migrated_batch_count: U256::from(50),
             migrated_delayed_msgs_acc: U256::from(0x2222_u64),
             migrated_delayed_msgs_count: U256::from(75),
+            migrated_genesis_config: Bytes::from(b"another_genesis_config".to_vec()),
         };
 
         // Apply overrides
@@ -349,6 +369,10 @@ mod test {
         assert_eq!(
             config.migrated_delayed_msgs_count,
             Some(onchain.migrated_delayed_msgs_count.try_into().unwrap())
+        );
+        assert_eq!(
+            config.genesis_config,
+            Some(String::from_utf8_lossy(&onchain.migrated_genesis_config).to_string())
         );
     }
 }

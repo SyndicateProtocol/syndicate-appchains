@@ -160,7 +160,7 @@ pub struct RollupState {
 /// Migration command - it inspects a given Nitro database, extracts relevant information and sets
 /// `DataAvailabilityCommittee` to false in the chain config.
 #[allow(clippy::unwrap_used, clippy::cognitive_complexity)]
-pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
+pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Vec<u8>)> {
     info!("Nitro DB path: {:?}", nitro_db_path);
     let chaindata_path = nitro_db_path.join("l2chaindata");
     if !chaindata_path.exists() {
@@ -196,7 +196,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
     println!("MIGRATED_APPCHAIN_BLOCK_HASH: {:?}", rollup_state.last_block_hash);
     println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    println!("GENESIS_CONFIG: '{}'", raw_genesis_from_db);
+    println!("GENESIS_CONFIG: '{}'", std::str::from_utf8(&raw_genesis_from_db).unwrap());
     println!("\n------------------------------\n\n");
 
     println!("\n--------------- NITRO configuration ---------------\n");
@@ -236,7 +236,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
         );
     }
 
-    Ok(rollup_state)
+    Ok((rollup_state, raw_genesis_from_db))
 }
 
 fn get_nitro_chain_cfg(appchain_chain_id: String, deployed_at: String) -> String {
@@ -248,9 +248,9 @@ fn get_nitro_chain_cfg(appchain_chain_id: String, deployed_at: String) -> String
 ///
 /// Returns the chain config, and the database key used.
 #[allow(clippy::unwrap_used)]
-fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>, String)> {
+fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>, Vec<u8>)> {
     // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
-    let mut raw_genesis = String::new();
+    let mut raw_genesis: Vec<u8> = vec![];
     let genesis_hash = db
         .get(make_numbered_key(b"h", 0, b"n"))
         .unwrap()
@@ -262,7 +262,7 @@ fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>, String)> {
         .get(config_key.clone())
         .unwrap()
         .map(|bytes| {
-            raw_genesis = std::str::from_utf8(&bytes).unwrap().to_string();
+            raw_genesis = bytes.clone();
             serde_json::from_slice(&bytes).unwrap()
         })
         .unwrap();

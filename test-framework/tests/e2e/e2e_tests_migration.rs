@@ -23,7 +23,7 @@ use synd_migration_cli::migration::{get_migration_data, RollupState};
 use test_framework::components::{
     batch_sequencer::BatchSequencerConfig,
     chain_ingestor::ChainIngestorConfig,
-    configuration::{setup_config_manager, ConfigurationOptions},
+    configuration::{setup_config_manager, ConfigurationOptions, MigrationData},
     maestro::MaestroConfig,
     test_components::{SEQUENCING_CHAIN_ID, SETTLEMENT_CHAIN_ID},
     translator::TranslatorConfig,
@@ -43,7 +43,7 @@ use test_utils::{
 use tracing::info;
 
 async fn start_base_chain(chain_id: u64) -> Result<ChainInfo> {
-    let chain_info = start_anvil_with_args(chain_id, &[]).await?;
+    let chain_info = start_anvil_with_args(chain_id, &["--slots-in-an-epoch", "1"]).await?;
     chain_info.provider.anvil_set_auto_mine(true).await?;
     Ok(chain_info)
 }
@@ -86,7 +86,7 @@ async fn spin_up_syndicate_stack(
     appchain_deployment: NitroDeployment,
     sequencing_rpc_url: String,
     settlement_rpc_url: String,
-    migration_data: RollupState,
+    migration_data: MigrationData,
     migrated_appchain_deployment: NitroDeployment,
     data_dir: String,
 ) -> Result<SyndicateStack> {
@@ -141,7 +141,7 @@ async fn spin_up_syndicate_stack(
         ws_urls: vec![settlement_rpc_url.clone()],
         db_file: temp + "/settlement_chain.db",
         // needs -1 otherwise ingestor wont have the bloc
-        start_block: migration_data.parent_chain_block - 1,
+        start_block: migration_data.rollup.parent_chain_block - 1,
         port: PortManager::instance().next_port().await,
         metrics_port: PortManager::instance().next_port().await,
     };
@@ -253,12 +253,11 @@ async fn e2e_migration() -> Result<()> {
     let appchain_chain_id = 15u64;
     let appchain_owner = test_account1();
     let batch_poster = test_account8();
-    let test_user = test_account1(); // TODO try to use test_account9 instead
+    let test_user = test_account1();
 
     let set_chain = start_base_chain(SETTLEMENT_CHAIN_ID).await?;
     let seq_chain = start_base_chain(SEQUENCING_CHAIN_ID).await?;
 
-    // TODO
     // mine a few blocks so base chains diverge in block number (edge case)
     let block = set_chain.provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
     set_chain
@@ -311,34 +310,16 @@ async fn e2e_migration() -> Result<()> {
     );
 
     let storage_contract_pre_migration_instance =
-        Storage::deploy(appchain.provider.clone(), U256::from(40)).await?;
+        Storage::deploy(appchain.provider.clone(), U256::from(42)).await?;
     let storage_contract_address = *storage_contract_pre_migration_instance.address();
 
     let arb_sequencer_inbox =
         ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
 
-    // TODO rm?
-    // send another tx so a batch is posted on chain (necessary for the last batch data to be
-    // confirmed on the DB)
-    assert!(storage_contract_pre_migration_instance
-        .set(U256::from(42))
-        .send()
-        .await
-        .unwrap()
-        .get_receipt()
-        .await
-        .unwrap()
-        .status());
-
-    // wait for a batch to be posted
     wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
     let bridge = IBridge::new(appchain_deployment.bridge, &set_chain.provider);
-    let delayed_msgs_count = bridge.delayedMessageCount().call().await?;
-    let delayed_msgs_acc =
-        bridge.delayedInboxAccs(delayed_msgs_count - U256::from(1)).call().await?;
     let batch_count = bridge.sequencerMessageCount().call().await?;
-    info!("batch_count: {batch_count}");
     let batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(1)).call().await?;
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
@@ -347,15 +328,15 @@ async fn e2e_migration() -> Result<()> {
     drop(appchain);
 
     // run the migration cli code to obtain migration data from the nitro node
-    let mut migration_data: RollupState = Default::default();
+    let mut res: (RollupState, Vec<u8>) = Default::default();
     wait_until!(
         {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
             match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await
             {
                 Ok(data) => {
-                    migration_data = data;
-                    // wait until we see the latest info on the db
-                    // U256::from(migration_data.delayed_msgs_count) == delayed_msgs_count
+                    res = data;
                     true
                 }
                 Err(e) => {
@@ -367,13 +348,8 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10),
         Duration::from_secs(1)
     );
-
-    assert_eq!(migration_data.batch_acc, batch_acc);
-    assert_eq!(migration_data.batch_count, 2);
-    // TODO not sure how to fix this in the test - we're now taking the delayed_msg acc/count from
-    // the batch data (maybe has to do with nitro saying "no finalization data" or something)
-    // assert_eq!(U256::from(migration_data.delayed_msgs_count), delayed_msgs_count);
-    // assert_eq!(migration_data.delayed_msgs_acc, delayed_msgs_acc);
+    let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
+    assert_eq!(migration_data.rollup.batch_acc, batch_acc);
 
     // spin up the syndicate stack
     let migrated_appchain_deployment = NitroDeployment {
@@ -396,7 +372,7 @@ async fn e2e_migration() -> Result<()> {
         appchain_deployment.clone(),
         seq_chain.ws_url.clone(),
         set_chain.ws_url.clone(),
-        migration_data.clone(),
+        migration_data,
         migrated_appchain_deployment,
         data_dir.clone(),
     )

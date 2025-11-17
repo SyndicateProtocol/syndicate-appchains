@@ -2,7 +2,7 @@
 
 use crate::components::test_components::SEQUENCING_CHAIN_ID;
 use alloy::{
-    primitives::{Address, U256},
+    primitives::{Address, Bytes, U256},
     providers::WalletProvider,
 };
 use contract_bindings::synd::{
@@ -63,6 +63,13 @@ impl Default for ConfigurationOptions {
     }
 }
 
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct MigrationData {
+    pub rollup: RollupState,
+    pub genesis_config: Bytes,
+}
+
 /// Sets up the config manager and creates the chain configuration
 #[allow(clippy::unwrap_used, clippy::too_many_arguments)]
 pub async fn setup_config_manager(
@@ -73,7 +80,7 @@ pub async fn setup_config_manager(
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: String,
     appchain_block_explorer_url: String,
-    migration_data: Option<RollupState>,
+    migration_data: Option<MigrationData>,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -132,18 +139,19 @@ pub async fn setup_config_manager(
 async fn chain_config_migration(
     config: &ArbChainConfigInstance<FilledProvider>,
     options: &ConfigurationOptions,
-    migration_data: &RollupState,
+    migration_data: &MigrationData,
 ) -> Result<()> {
     info!("Migrating chain config with data: {:#?}", migration_data);
     let receipt = config
         .migration(
-            migration_data.parent_chain_block.try_into()?,
+            migration_data.rollup.parent_chain_block.try_into()?,
             options.sequencing_start_block.try_into()?,
-            migration_data.batch_acc.into(),
-            migration_data.batch_count.try_into()?,
-            migration_data.delayed_msgs_acc.into(),
-            migration_data.delayed_msgs_count.try_into()?,
-            migration_data.last_block_hash.into(),
+            migration_data.rollup.batch_acc.into(),
+            migration_data.rollup.batch_count.try_into()?,
+            migration_data.rollup.delayed_msgs_acc.into(),
+            migration_data.rollup.delayed_msgs_count.try_into()?,
+            migration_data.rollup.last_block_hash.into(),
+            migration_data.genesis_config.clone(),
         )
         .send()
         .await?
