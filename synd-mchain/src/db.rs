@@ -408,7 +408,7 @@ pub trait ArbitrumDB {
 
     /// Applies a custom batch with appchain migration information
     /// NOTE: The offset is the difference between the initial settlement block and the batch
-    /// count. We use settlement_start_block as the block number for mchain blocks, that is
+    /// count. We use `settlement_start_block` as the block number for mchain blocks, that is
     /// because the migrated nitro state expects blocks to be after the last seen parent block
     /// Because mchain is designed so that block number = batch count we need to save the offset
     /// in order to get the correct block from a given batch count.

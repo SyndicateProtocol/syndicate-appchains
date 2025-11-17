@@ -251,7 +251,7 @@ pub async fn start_mchain(
     }
 
     if let Some(url) = config_manager_rpc_url {
-        args.extend(vec!["--config_manager-rpc-url".to_string(), url]);
+        args.extend(vec!["--config-manager-rpc-url".to_string(), url]);
     }
 
     if let Some(address) = config_manager_address {
