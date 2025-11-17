@@ -164,6 +164,19 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     info!("Nitro DB path: {:?}", nitro_db_path);
     let chaindata_path = nitro_db_path.join("l2chaindata");
     if !chaindata_path.exists() {
+        // Log the contents of nitro_db_path to help debug
+        match std::fs::read_dir(nitro_db_path) {
+            Ok(entries) => {
+                let contents: Vec<String> = entries
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.file_name().to_string_lossy().to_string())
+                    .collect();
+                info!("Contents of {:?}: {:?}", nitro_db_path, contents);
+            }
+            Err(e) => {
+                info!("Failed to read directory {:?}: {}", nitro_db_path, e);
+            }
+        }
         eyre::bail!(
             "L2 chaindata path does not exist: {:?}. Make sure you're pointing to the Nitro database directory (parent of l2chaindata)",
             chaindata_path

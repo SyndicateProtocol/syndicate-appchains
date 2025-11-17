@@ -324,9 +324,6 @@ async fn e2e_migration() -> Result<()> {
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
 
-    // shutdown the nitro node
-    drop(appchain);
-
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
     wait_until!(
@@ -343,11 +340,14 @@ async fn e2e_migration() -> Result<()> {
                 }
             }
         },
-        Duration::from_secs(60),
+        Duration::from_secs(20),
         Duration::from_secs(1)
     );
     let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
     assert_eq!(migration_data.rollup.batch_acc, batch_acc);
+
+    // shutdown the nitro node
+    drop(appchain);
 
     // spin up the syndicate stack
     let migrated_appchain_deployment = NitroDeployment {
