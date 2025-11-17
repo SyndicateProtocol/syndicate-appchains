@@ -407,6 +407,11 @@ pub trait ArbitrumDB {
     }
 
     /// Applies a custom batch with appchain migration information
+    /// NOTE: The offset is the difference between the initial settlement block and the batch
+    /// count. We use settlement_start_block as the block number for mchain blocks, that is
+    /// because the migrated nitro state expects blocks to be after the last seen parent block
+    /// Because mchain is designed so that block number = batch count we need to save the offset
+    /// in order to get the correct block from a given batch count.
     fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
         let MigrationParams {
             settlement_start_block,
@@ -415,11 +420,6 @@ pub trait ArbitrumDB {
             delayed_msgs_acc,
             delayed_msgs_count,
         } = params;
-        // NOTE: The offset is the difference between the initial settlement block and the batch
-        // count. We use settlement_start_block as the block number for mchain blocks, that is
-        // because the migrated nitro state expects blocks to be after the last seen parent block
-        // Because mchain is designed so that block number = batch count we need to save the offset
-        // in order to get the correct block from a given batch count.
 
         assert!((batch_count <= settlement_start_block), "batch count: {batch_count} higher than start settlement block: {settlement_start_block}");
         let offset = settlement_start_block - batch_count;

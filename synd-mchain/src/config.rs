@@ -43,7 +43,7 @@ pub struct MchainConfig {
 
     /// The block number at which the migration took place (last known L1 block from the rollup
     /// point-of-view)
-    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
+    #[arg(long, env = "SETTLEMENT_START_BLOCK")]
     pub settlement_start_block: Option<u64>,
 
     /// The batch accumulator at the point of migration
@@ -63,12 +63,12 @@ pub struct MchainConfig {
     pub migrated_delayed_msgs_count: Option<u64>,
 
     /// The WS URL of the sequencing chain ingestor
-    #[arg(long = "config_manager-rpc-url", env = "CONFIG_MANAGER_RPC_URL")]
+    #[arg(long, env = "CONFIG_MANAGER_RPC_URL")]
     pub config_manager_rpc_url: Option<String>,
 
     /// The address of the `ConfigManager` contract on the settlement chain
     #[arg(
-        long = "config-manager-address",
+        long,
         env = "CONFIG_MANAGER_ADDRESS",
         value_parser = parse_address
     )]

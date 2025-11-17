@@ -149,6 +149,19 @@ export const arbChainConfigABI = [
   },
   {
     "type": "function",
+    "name": "MIGRATED_GENESIS_CONFIG",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "SEQUENCING_CHAIN_ID",
     "inputs": [],
     "outputs": [
@@ -285,39 +298,44 @@ export const arbChainConfigABI = [
     "name": "migration",
     "inputs": [
       {
-        "name": "_set_start_block",
+        "name": "_setStartBlock",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_seq_start_block",
+        "name": "_seqStartBlock",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_batch_acc",
+        "name": "_batchAcc",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_batch_count",
+        "name": "_batchCount",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_delayed_msgs_acc",
+        "name": "_delayedMsgsAcc",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_delayed_msgs_count",
+        "name": "_delayedMsgsCount",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_appchain_block_hash",
+        "name": "_appchainBlockHash",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_genesisConfig",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
     "outputs": [],
@@ -433,7 +451,7 @@ export const arbChainConfigABI = [
       {
         "name": "batchAcc",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
       },
       {
@@ -445,7 +463,7 @@ export const arbChainConfigABI = [
       {
         "name": "delayedMsgsAcc",
         "type": "uint256",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256"
       },
       {
@@ -459,6 +477,12 @@ export const arbChainConfigABI = [
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      },
+      {
+        "name": "genesisConfig",
+        "type": "bytes",
+        "indexed": false,
+        "internalType": "bytes"
       }
     ],
     "anonymous": false
