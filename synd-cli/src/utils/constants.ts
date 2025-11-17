@@ -73,6 +73,8 @@ export const supportedSequencingChains: SupportedSequencingChains = {
 	},
 };
 
+// rollupCreator deploys: v3.1.1 of nitro-core
+// tokenBridgeCreator deploys: v1.2.5 of token bridge contracts
 export const supportedSettlementChains: SupportedSettlementChains = {
 	[baseSepolia.id]: {
 		chain: baseSepolia,
@@ -83,27 +85,26 @@ export const supportedSettlementChains: SupportedSettlementChains = {
 	},
 	[sepolia.id]: {
 		chain: sepolia,
-		// @note TODO: update with address
-		rollupCreatorAddress: "0x",
+		rollupCreatorAddress: "0x06d499101874a6260990AfcB5b41866Cc8BE6e08",
 		tokenBridgeCreatorAddress: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
 		arbConfigManagerAddress: "0xc18feFb2E79Ec35Ca9f3c3e7F1920EC1cad06e8F",
 		teeKeyManagerAddress: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187",
 	},
 	[base.id]: {
 		chain: base,
-		rollupCreatorAddress: "0x33121778f219Ec1b57E0F463f80c88BE5dD3d02b",
+		// @note TODO: update
+		rollupCreatorAddress: "0x",
 		tokenBridgeCreatorAddress: "0x882bCF9413885EFDAD307FD9fa369CC670304740",
 		arbConfigManagerAddress: "0x65e6D336E311C92D1F19C66CfE68Ec6bE5b4f50B",
 		teeKeyManagerAddress: "0x9CF9FF139C09Df70BD94b31ff935DFD648e0fa54",
 	},
-	// @note TODO: to support mainnet as the settlement chain we need to deploy the TeeKeyManager to mainnet
 	// [mainnet.id]: {
-	//   chain: mainnet,
-	//   rollupCreatorAddress: "0x8ecd355787FB7ca241Bd52b6bC487931FA6BD78B",
-	//   tokenBridgeCreatorAddress: "0x5f8aeF00194334B3033E2Ed97c48eCAeDcEFDCaE",
-	//   arbConfigManagerAddress: "0xec2ba05a9cFFcb86e3225F7A046bA9124419397C",
-	//   teeKeyManagerAddress: "0x0000000000000000000000000000000000000000"
-	// }
+	// chain: mainnet,
+	// rollupCreatorAddress: "0x1AEdB6C4F5332a08251545066c686AD251c90bA2",
+	// tokenBridgeCreatorAddress: "0x5f8aeF00194334B3033E2Ed97c48eCAeDcEFDCaE",
+	// arbConfigManagerAddress: "0xec2ba05a9cFFcb86e3225F7A046bA9124419397C",
+	// teeKeyManagerAddress: "0x0000000000000000000000000000000000000000", // @note TODO: to support mainnet as the settlement chain we need to deploy the TeeKeyManager to mainnet
+	// },
 };
 
 export const supportedEthereumChains: SupportedEthereumChains = {

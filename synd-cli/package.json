@@ -1,12 +1,8 @@
 {
-	"name": "create-chain",
-	"version": "0.1.0",
+	"name": "synd-cli",
+	"version": "1.0.0",
 	"private": true,
 	"scripts": {
-		"foundation": "bun run src/foundation/foundation.ts",
-		"features": "bun run src/features/features.ts",
-		"handoff": "bun run src/handoff/handoff.ts",
-		"e2e": "bun run src/e2e/index.ts",
 		"synd-cli": "bun run src/cli/index.ts",
 		"format": "biome format --write .",
 		"lint": "biome lint --write .",

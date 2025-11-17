@@ -1,4 +1,4 @@
-import { Command } from "@commander-js/extra-typings";
+import { Command } from "@/node_modules/@commander-js/extra-typings";
 import { aliasCommand } from "./commands/alias";
 import { appchainCommand } from "./commands/appchain";
 

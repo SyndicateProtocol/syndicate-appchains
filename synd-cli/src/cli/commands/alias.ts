@@ -1,4 +1,4 @@
-import type { Command } from "@commander-js/extra-typings";
+import type { Command } from "@/node_modules/@commander-js/extra-typings";
 import { applyL1ToL2Alias } from "../../utils/alias";
 import { print } from "../../utils/print";
 import { ethAddressSchema, handleSchemaErrors } from "../schema";

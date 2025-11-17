@@ -1,4 +1,4 @@
-name: Typecheck create-chain
+name: Typecheck synd-cli
 permissions:
   contents: read
 
@@ -17,11 +17,11 @@ concurrency:
 jobs:
   typecheck:
     if: github.event.pull_request.draft == false
-    name: create-chain Typecheck
+    name: synd-cli Typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: "create-chain"
+        working-directory: "synd-cli"
     steps:
       - uses: actions/checkout@v4
 

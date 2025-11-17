@@ -35,11 +35,11 @@ Flow:
 */
 
 interface CallArbOwnerParams {
-	parentRpc: string;
-	childRpc?: string;
-	parentUpgradeExecutor: Address;
-	parentInbox: Address;
-	childUpgradeExecutor: Address;
+	settlementRpc: string;
+	appchainRpc?: string;
+	settlementUpgradeExecutor: Address;
+	settlementInbox: Address;
+	appchainUpgradeExecutor: Address;
 	refundAddress: Address;
 	gasLimit?: bigint;
 	maxFeePerGas?: bigint;
@@ -51,11 +51,11 @@ const DEFAULT_GAS_LIMIT = BigInt(100_000);
 const DEFAULT_MAX_FEE_PER_GAS = BigInt(100_000_000); // 0.1 gwei
 
 export async function generateCallArbOwnerTx({
-	parentRpc,
-	childRpc,
-	parentUpgradeExecutor,
-	parentInbox,
-	childUpgradeExecutor,
+	settlementRpc,
+	appchainRpc,
+	settlementUpgradeExecutor,
+	settlementInbox,
+	appchainUpgradeExecutor,
 	gasLimit,
 	maxFeePerGas,
 	refundAddress,
@@ -63,12 +63,12 @@ export async function generateCallArbOwnerTx({
 	arbOwnerCalldata,
 }: CallArbOwnerParams) {
 	const publicClient = createPublicClient({
-		transport: http(parentRpc),
+		transport: http(settlementRpc),
 	});
 
 	const customNativeToken = await detectCustomNativeToken(
 		publicClient,
-		parentInbox,
+		settlementInbox,
 	);
 	const useCustomGasToken = !!customNativeToken;
 
@@ -82,9 +82,9 @@ export async function generateCallArbOwnerTx({
 	let estimatedGasLimit: bigint;
 	let estimatedMaxFeePerGas: bigint;
 
-	if (childRpc) {
+	if (appchainRpc) {
 		const childPublicClient = createPublicClient({
-			transport: http(childRpc),
+			transport: http(appchainRpc),
 		});
 
 		try {
@@ -95,9 +95,9 @@ export async function generateCallArbOwnerTx({
 					abi: NodeInterfaceABI,
 					functionName: "estimateRetryableTicket",
 					args: [
-						parentUpgradeExecutor, // sender (will be aliased from parent)
+						settlementUpgradeExecutor, // sender (will be aliased from parent)
 						BigInt(0), // deposit (not needed for estimation)
-						childUpgradeExecutor, // to
+						appchainUpgradeExecutor, // to
 						BigInt(0), // l2CallValue
 						refundAddress, // excessFeeRefundAddress
 						refundAddress, // callValueRefundAddress
@@ -153,7 +153,7 @@ export async function generateCallArbOwnerTx({
 			const block = await publicClient.getBlock();
 			const baseFeePerGas = block.baseFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS;
 			submissionCost = await publicClient.readContract({
-				address: parentInbox,
+				address: settlementInbox,
 				abi: InboxABI,
 				functionName: "calculateRetryableSubmissionFee",
 				args: [dataLength, baseFeePerGas],
@@ -185,7 +185,7 @@ export async function generateCallArbOwnerTx({
 			abi: ERC20InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				childUpgradeExecutor, // to
+				appchainUpgradeExecutor, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -202,7 +202,7 @@ export async function generateCallArbOwnerTx({
 			abi: InboxABI,
 			functionName: "createRetryableTicket",
 			args: [
-				childUpgradeExecutor, // to
+				appchainUpgradeExecutor, // to
 				BigInt(0), // l2CallValue
 				maxSubmissionCost, // maxSubmissionCost
 				refundAddress, // excessFeeRefundAddress
@@ -217,7 +217,7 @@ export async function generateCallArbOwnerTx({
 	const upgradeExecutorCalldata = encodeFunctionData({
 		abi: UpgradeExecutorABI,
 		functionName: "executeCall",
-		args: [parentInbox, inboxCalldata],
+		args: [settlementInbox, inboxCalldata],
 	});
 
 	const tokenAmount = formatUnits(
@@ -249,14 +249,14 @@ export async function generateCallArbOwnerTx({
 		const transferCalldata = encodeFunctionData({
 			abi: ERC20Abi,
 			functionName: "transfer",
-			args: [parentUpgradeExecutor, totalValue],
+			args: [settlementUpgradeExecutor, totalValue],
 		});
 
 		// UpgradeExecutor needs to approve Inbox (via executeCall on the UpgradeExecutor)
 		const inboxApprovalCalldata = encodeFunctionData({
 			abi: ERC20Abi,
 			functionName: "approve",
-			args: [parentInbox, totalValue],
+			args: [settlementInbox, totalValue],
 		});
 
 		const upgradeExecutorApprovalCalldata = encodeFunctionData({
@@ -276,18 +276,18 @@ export async function generateCallArbOwnerTx({
 		print(
 			`2. [UpgradeExecutor → Token] Have the UpgradeExecutor approve Inbox to spend ${tokenAmount} ${tokenSymbol}:`,
 		);
-		printIndented("Target", parentUpgradeExecutor);
+		printIndented("Target", settlementUpgradeExecutor);
 		!useCustomGasToken && printIndented("Value", "0");
 		printIndented("Calldata", upgradeExecutorApprovalCalldata);
 		print("");
 		print("3. [UpgradeExecutor → Inbox] Call the parent UpgradeExecutor:");
-		printIndented("Target", parentUpgradeExecutor);
+		printIndented("Target", settlementUpgradeExecutor);
 		!useCustomGasToken &&
 			printIndented("Value", `0 (no ETH, uses approved ${tokenSymbol})`);
 		printIndented("Calldata", upgradeExecutorCalldata);
 	} else {
 		print("");
-		printIndented("Target", parentUpgradeExecutor);
+		printIndented("Target", settlementUpgradeExecutor);
 		printIndented("Value", totalValue.toString());
 		printIndented("Calldata", upgradeExecutorCalldata);
 	}

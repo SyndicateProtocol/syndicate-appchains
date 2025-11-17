@@ -1,10 +1,10 @@
+import type { Command } from "@/node_modules/@commander-js/extra-typings";
 import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner";
 import {
 	callArbOwnerOptionsSchema,
 	handleSchemaErrors,
 } from "@/src/cli/schema";
 import { exitWithError } from "@/src/utils/print";
-import type { Command } from "@commander-js/extra-typings";
 import type { AbiFunction, ExtractAbiFunctionNames } from "abitype";
 import { encodeFunctionData } from "viem";
 import {
@@ -20,21 +20,24 @@ export function callArbOwnerCommand(program: Command) {
 		.description("Call a specific ArbOwner function")
 		.argument("<functionName>", "Name of the ArbOwner function to call")
 		.argument("[args...]", "Arguments for the function")
-		.requiredOption("--parent-rpc <url>", "Parent chain RPC URL")
+		.requiredOption("--settlement-rpc <url>", "Parent chain RPC URL")
+		.option("--appchain-rpc <url>", "Appchain RPC URL")
 		.requiredOption(
-			"--parent-upgrade-executor <address>",
+			"--settlement-upgrade-executor <address>",
 			"Parent chain UpgradeExecutor address",
 		)
-		.requiredOption("--parent-inbox <address>", "Parent chain Inbox address")
 		.requiredOption(
-			"--child-upgrade-executor <address>",
+			"--settlement-inbox <address>",
+			"Parent chain Inbox address",
+		)
+		.requiredOption(
+			"--appchain-upgrade-executor <address>",
 			"Appchain UpgradeExecutor address",
 		)
 		.requiredOption(
 			"--refund-address <address>",
 			"Address on appchain to receive excess fees",
 		)
-		.option("--child-rpc <url>", "Appchain RPC URL")
 		.option("--gas-limit <limit>", "Gas limit for retryable ticket")
 		.option("--max-fee-per-gas <wei>", "Max fee per gas in wei")
 		.action(

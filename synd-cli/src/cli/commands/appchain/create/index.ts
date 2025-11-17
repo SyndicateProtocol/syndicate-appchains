@@ -1,4 +1,4 @@
-import type { Command } from "@commander-js/extra-typings";
+import type { Command } from "@/node_modules/@commander-js/extra-typings";
 import { createFeaturesCommand } from "./features";
 import { createFoundationCommand } from "./foundation";
 

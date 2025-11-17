@@ -86,7 +86,7 @@ run.sh
 
 .ignore
 
-create-chain/*.config.json
-!create-chain/*.config.json.example
-create-chain/node_modules
-create-chain/*.tsbuildinfo
+synd-cli/*.config.json
+!synd-cli/*.config.json.example
+synd-cli/node_modules
+synd-cli/*.tsbuildinfo
