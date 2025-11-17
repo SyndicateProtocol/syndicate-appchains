@@ -331,8 +331,6 @@ async fn e2e_migration() -> Result<()> {
     let mut res: (RollupState, Vec<u8>) = Default::default();
     wait_until!(
         {
-            mine_block(&seq_chain.provider.clone(), 70).await?;
-            mine_block(&set_chain.provider.clone(), 70).await?;
             match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await
             {
                 Ok(data) => {
@@ -345,7 +343,7 @@ async fn e2e_migration() -> Result<()> {
                 }
             }
         },
-        Duration::from_secs(10),
+        Duration::from_secs(60),
         Duration::from_secs(1)
     );
     let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
