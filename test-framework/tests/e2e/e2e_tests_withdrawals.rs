@@ -15,7 +15,7 @@ use alloy::{
     },
     signers::local::PrivateKeySigner,
     sol,
-    sol_types::SolValue,
+    sol_types::{SolCall, SolValue},
 };
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster, i_bridge::IBridge, i_inbox::IInbox, i_rollup::IRollup,
@@ -55,6 +55,16 @@ async fn e2e_tee_withdrawal() -> Result<()> {
     // use calldata
     e2e_tee_withdrawal_basic_flow(BaseChainsType::Nitro).await?;
     Ok(())
+}
+
+const STYLUS_COUNTER_SMARTCACHE: &[u8] = include_bytes!("../../config/stylus-counter-smartcache");
+
+sol! {
+    function activateProgram(
+        address program
+    ) external payable returns (uint16 version, uint256 dataFee);
+    function setNumberSmartcacheArbitrumMainnetNetwork (uint256 new_number);
+    function number() return uint256;
 }
 
 #[allow(clippy::unwrap_used)]
@@ -390,6 +400,85 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             assert_eq!(
                 components.appchain_provider.get_balance(alias_address).await?,
                 parse_ether("0.101")?
+            );
+
+            assert_eq!(components.appchain_provider.get_block_number().await.unwrap(), 0xb);
+
+            // Deploy a stylus contract
+            let stylus_tx = TransactionRequest::default()
+                .with_deploy_code(STYLUS_COUNTER_SMARTCACHE)
+                .with_nonce(101)
+                .with_gas_limit(10_000_000)
+                .with_chain_id(components.appchain_chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(components.sequencing_provider.wallet())
+                .await?
+                .encoded_2718();
+
+            let stylus = components
+                .sequence_tx(&stylus_tx, 0, true)
+                .await?
+                .unwrap()
+                .contract_address
+                .unwrap();
+
+            // Activate the stylus contract
+            let active_tx = TransactionRequest::default()
+                // ArbWasm
+                .with_to(address!("0x0000000000000000000000000000000000000071"))
+                .input(activateProgramCall { program: stylus }.abi_encode().into())
+                .with_value(parse_ether("0.5").unwrap())
+                .with_nonce(102)
+                .with_gas_limit(10_000_000)
+                .with_chain_id(components.appchain_chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(components.sequencing_provider.wallet())
+                .await?
+                .encoded_2718();
+
+            components.sequence_tx(&active_tx, 0, false).await?;
+
+            // Set a value on the stylus contract
+            let set_value_tx = TransactionRequest::default()
+                .with_to(stylus)
+                .input(
+                    setNumberSmartcacheArbitrumMainnetNetworkCall { new_number: U256::from(34) }
+                        .abi_encode()
+                        .into(),
+                )
+                .with_nonce(103)
+                .with_gas_limit(1_000_000)
+                .with_chain_id(components.appchain_chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(components.sequencing_provider.wallet())
+                .await?
+                .encoded_2718();
+
+            components.sequence_tx(&set_value_tx, 0, true).await?.unwrap();
+
+            // Wait for the blocks to be mined
+            wait_until!(
+                components.appchain_provider.get_block_number().await.unwrap() == 0xe,
+                Duration::from_secs(10)
+            );
+
+            // check the value
+            assert_eq!(
+                U256::try_from_be_slice(
+                    &components
+                        .appchain_provider
+                        .call(
+                            TransactionRequest::default()
+                                .with_to(stylus)
+                                .input(numberCall {}.abi_encode().into()),
+                        )
+                        .await?,
+                )
+                .unwrap(),
+                U256::from(34)
             );
 
             // send a contract tx to trigger the nitro fork code.
