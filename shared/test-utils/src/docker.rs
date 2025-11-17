@@ -356,6 +356,13 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     docker_cmd.arg("run").arg("--init").arg("--rm");
 
     if let Some(data_dir) = &args.data_dir {
+        // fix permissions on CI
+        #[cfg(unix)]
+        {
+            // let chain_subdir = Path::new(data_dir).join(&args.chain_name);
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(Path::new(data_dir), std::fs::Permissions::from_mode(0o777))?;
+        }
         docker_cmd.arg(format!("--volume={data_dir}:/home/user/.arbitrum"));
     }
 
