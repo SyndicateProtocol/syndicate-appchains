@@ -18,6 +18,7 @@ pub struct ProposerConfig {
     pub close_challenge_interval: String,
     pub port: u16,
     pub private_key: String,
+    pub max_fee_per_gas: u128,
 }
 
 impl ProposerConfig {
@@ -57,6 +58,8 @@ impl ProposerConfig {
             self.port.to_string(),
             "--mtls-enabled-enclave".to_string(),
             "false".to_string(),
+            "--max-fee-per-gas".to_string(),
+            self.max_fee_per_gas.to_string(),
         ]
     }
 }

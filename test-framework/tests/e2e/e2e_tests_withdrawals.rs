@@ -308,6 +308,8 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 sequencing_bridge_address_on_l1: sequencing_bridge_address,
                 settlement_delay,
                 private_key: PRIVATE_KEY3.to_string().strip_prefix("0x").unwrap().to_string(),
+                // Defaulted to 1,000,000 gwei
+                max_fee_per_gas: 1_000_000_000_000_000,
             };
 
             // add the TEE signer address to the key manager using a mock proof
