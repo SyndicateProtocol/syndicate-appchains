@@ -55,13 +55,13 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         base_fee_l1: U256::ZERO,
     };
     let mut pending_ts: VecDeque<u64> = Default::default();
-    let mut finalized_batch = 1u64;
+    let mut finalized_batch_count = 1u64;
     if db.get_state().batch_count == 0 {
         let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
         if let Some(migration_params) = migration_params {
             db.appchain_migration(migration_params).unwrap();
-            finalized_batch = db.get_state().batch_count;
+            finalized_batch_count = db.get_state().batch_count;
         }
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;
@@ -73,29 +73,29 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             );
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
-        finalized_batch = db.get_state().batch_count;
+        finalized_batch_count = db.get_state().batch_count;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        while finalized_batch > 1 {
-            let block_ts = db.get_block(finalized_batch).unwrap().timestamp;
+        while finalized_batch_count > 1 {
+            let block_ts = db.get_block(finalized_batch_count).unwrap().timestamp;
             if block_ts + finality_delay <= now {
                 break;
             }
-            finalized_batch -= 1;
+            finalized_batch_count -= 1;
             pending_ts.push_front(block_ts);
         }
     }
     assert_eq!(
-        finalized_batch + pending_ts.len() as u64,
+        finalized_batch_count + pending_ts.len() as u64,
         db.get_state().batch_count,
         "Finalized block count ({}) + pending timestamps ({}) doesn't equal total batch count ({})",
-        finalized_batch,
+        finalized_batch_count,
         pending_ts.len(),
         db.get_state().batch_count
     );
     let mut module = RpcModule::new((
         db,
         metrics,
-        Mutex::new(Context { finalized_batch, pending_ts, subs: Default::default() }),
+        Mutex::new(Context { finalized_batch_count, pending_ts, subs: Default::default() }),
     ));
 
     // -------------------------------------------------

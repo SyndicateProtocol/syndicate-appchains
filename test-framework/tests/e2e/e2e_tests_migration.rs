@@ -329,6 +329,22 @@ async fn e2e_migration() -> Result<()> {
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
+
+    #[cfg(unix)]
+    // fix permissions on CI
+    {
+        let status = E2EProcess::new(
+            tokio::process::Command::new("chmod")
+                .current_dir(PathBuf::from(data_dir.clone()))
+                .arg("-R")
+                .arg("777")
+                .arg("."),
+            "change-nitro-dir-permissions",
+        )?
+        .wait()
+        .await?;
+        assert!(status.success(), "failed to change permissions");
+    }
     wait_until!(
         {
             match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await

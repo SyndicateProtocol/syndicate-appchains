@@ -213,12 +213,11 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     println!("\n------------------------------\n\n");
 
     println!("\n--------------- NITRO configuration ---------------\n");
+
+    let appchain_chain_id = chain_config.chain_id.to_string();
+    let deployed_at = rollup_state.parent_chain_block.to_string();
     println!(
-        "--chain.info-json={}",
-        get_nitro_chain_cfg(
-            chain_config.chain_id.to_string(),
-            rollup_state.parent_chain_block.to_string()
-        )
+        "--chain.info-json=[{{\"chain-id\":{appchain_chain_id},\"parent-chain-id\":511000,\"parent-chain-is-arbitrum\":false,\"chain-name\":\"unite-testnet\",\"chain-config\":{{\"homesteadBlock\":0,\"daoForkBlock\":null,\"daoForkSupport\":true,\"eip150Block\":0,\"eip150Hash\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"eip155Block\":0,\"eip158Block\":0,\"byzantiumBlock\":0,\"constantinopleBlock\":0,\"petersburgBlock\":0,\"istanbulBlock\":0,\"muirGlacierBlock\":0,\"berlinBlock\":0,\"londonBlock\":0,\"clique\":{{\"period\":0,\"epoch\":0}},\"arbitrum\":{{\"EnableArbOS\":true,\"AllowDebugPrecompiles\":false,\"DataAvailabilityCommittee\":true,\"InitialArbOSVersion\":32,\"GenesisBlockNum\":0,\"MaxCodeSize\":24576,\"MaxInitCodeSize\":49152,\"InitialChainOwner\":\"0x6dedc20540fd54348fa0d7b0af2378f5494ab240\"}},\"chainId\":{appchain_chain_id}}},\"rollup\":{{\"bridge\":\"0x0000000000000000000000000000000000511000\",\"inbox\":\"0x0000000000000000000000000000000000511000\",\"sequencer-inbox\":\"0x0000000000000000000000000000000000511000\",\"rollup\":\"0x0000000000000000000000000000000000511000\",\"validator-utils\":\"0x0000000000000000000000000000000000511000\",\"validator-wallet-creator\":\"0x0000000000000000000000000000000000511000\",\"deployed-at\":{deployed_at}}}}}]"
     );
     if chain_config.arbitrum.data_availability_committee {
         println!("--node.data-availability.enable=true");
@@ -250,10 +249,6 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     }
 
     Ok((rollup_state, raw_genesis_from_db))
-}
-
-fn get_nitro_chain_cfg(appchain_chain_id: String, deployed_at: String) -> String {
-    format!("--chain.info-json=[{{\"chain-id\":{appchain_chain_id},\"parent-chain-id\":511000,\"parent-chain-is-arbitrum\":false,\"chain-name\":\"unite-testnet\",\"chain-config\":{{\"homesteadBlock\":0,\"daoForkBlock\":null,\"daoForkSupport\":true,\"eip150Block\":0,\"eip150Hash\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"eip155Block\":0,\"eip158Block\":0,\"byzantiumBlock\":0,\"constantinopleBlock\":0,\"petersburgBlock\":0,\"istanbulBlock\":0,\"muirGlacierBlock\":0,\"berlinBlock\":0,\"londonBlock\":0,\"clique\":{{\"period\":0,\"epoch\":0}},\"arbitrum\":{{\"EnableArbOS\":true,\"AllowDebugPrecompiles\":false,\"DataAvailabilityCommittee\":true,\"InitialArbOSVersion\":32,\"GenesisBlockNum\":0,\"MaxCodeSize\":24576,\"MaxInitCodeSize\":49152,\"InitialChainOwner\":\"0x6dedc20540fd54348fa0d7b0af2378f5494ab240\"}},\"chainId\":{appchain_chain_id}}},\"rollup\":{{\"bridge\":\"0x0000000000000000000000000000000000511000\",\"inbox\":\"0x0000000000000000000000000000000000511000\",\"sequencer-inbox\":\"0x0000000000000000000000000000000000511000\",\"rollup\":\"0x0000000000000000000000000000000000511000\",\"validator-utils\":\"0x0000000000000000000000000000000000511000\",\"validator-wallet-creator\":\"0x0000000000000000000000000000000000511000\",\"deployed-at\":{deployed_at}}}}}]")
 }
 
 /// Retrieves the chain config from the database.

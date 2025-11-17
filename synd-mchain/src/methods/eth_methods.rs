@@ -234,14 +234,14 @@ pub fn eth_get_block_by_number(
                     break;
                 }
                 ts = *block_ts;
-                data.finalized_batch += 1;
+                data.finalized_batch_count += 1;
                 data.pending_ts.pop_front();
             }
             if ts > 0 {
-                metrics.record_finalized_block(data.finalized_batch, ts);
+                metrics.record_finalized_block(data.finalized_batch_count, ts);
             }
 
-            data.finalized_batch
+            data.finalized_batch_count
         }
         _ => return Err(format!("invalid tag: {tag}")).map_err(to_err),
     };
@@ -260,7 +260,7 @@ pub fn eth_call(
     (db, _, _): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> Result<Bytes, ErrorObjectOwned> {
-    let (input, block_number): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
+    let (input, _): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
     if input.to != Some(alloy::primitives::TxKind::Call(APPCHAIN_CONTRACT)) {
         return Ok(Default::default());
     }
@@ -271,12 +271,9 @@ pub fn eth_call(
         IBridge::delayedMessageCountCall::SELECTOR => {
             Ok(db.get_state().message_count.abi_encode().into())
         }
-        ISequencerInbox::batchCountCall::SELECTOR => Ok(match block_number {
-            BlockNumberOrTag::Number(number) => db.get_block_with_offset(number)?.1,
-            _ => db.get_state().batch_count,
+        ISequencerInbox::batchCountCall::SELECTOR => {
+            Ok(db.get_state().batch_count.abi_encode().into())
         }
-        .abi_encode()
-        .into()),
         IBridge::delayedInboxAccsCall::SELECTOR => {
             let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref()).map_err(to_err)?;
             let index = data.0.try_into().map_err(to_err)?;
@@ -333,7 +330,11 @@ mod tests {
         (
             TestDB::new(),
             MchainMetrics::new(&mut MetricsState::default().registry),
-            Mutex::new(Context { finalized_batch: 0, pending_ts: VecDeque::new(), subs: vec![] }),
+            Mutex::new(Context {
+                finalized_batch_count: 0,
+                pending_ts: VecDeque::new(),
+                subs: vec![],
+            }),
         )
     }
 

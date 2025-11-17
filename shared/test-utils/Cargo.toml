@@ -13,7 +13,6 @@ alloy             = { workspace = true, features = ["node-bindings", "providers"
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
 jsonrpsee         = { workspace = true }
-libc              = { workspace = true }
 redis             = { workspace = true, features = ["tokio-comp"] }
 serde             = { workspace = true }
 serde_json        = { workspace = true }

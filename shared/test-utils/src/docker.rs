@@ -355,14 +355,13 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     let mut docker_cmd = Command::new("docker");
     docker_cmd.arg("run").arg("--init").arg("--rm");
 
-    #[cfg(unix)]
-    {
-        let uid = unsafe { libc::getuid() };
-        let gid = unsafe { libc::getgid() };
-        docker_cmd.arg(format!("--user={uid}:{gid}"));
-    }
-
     if let Some(data_dir) = &args.data_dir {
+        #[cfg(unix)]
+        // fix permissions on CI
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(Path::new(data_dir), std::fs::Permissions::from_mode(0o777))?;
+        }
         docker_cmd.arg(format!("--volume={data_dir}:/home/user/.arbitrum"));
     }
 

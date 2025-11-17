@@ -98,7 +98,7 @@ pub fn appchain_config(chain_id: u64) -> String {
 #[derive(Debug)]
 pub struct Context {
     /// The finalized block number
-    pub finalized_batch: u64,
+    pub finalized_batch_count: u64,
     /// The pending timestamps
     pub pending_ts: VecDeque<u64>,
     /// The subscriptions

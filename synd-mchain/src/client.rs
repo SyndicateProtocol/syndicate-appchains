@@ -97,7 +97,7 @@ pub trait MchainProvider: Send + Sync {
             let mchain_block_before = self.get_block_number().await;
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
-            warn!("rolled back to block {mchain_block_number:?}, before: {mchain_block_before:?}, after: {mchain_block_after:?}",);
+            warn!("rolled back to block {mchain_block_number:?}, before: {mchain_block_before:?}, after: {mchain_block_after:?}, safe_state: {safe_state:?}",);
         }
         Ok(safe_state)
     }
@@ -111,6 +111,7 @@ pub trait MchainProvider: Send + Sync {
         sequencing_client: &impl synd_chain_ingestor::client::IngestorProvider,
         settlement_client: &impl synd_chain_ingestor::client::IngestorProvider,
     ) -> (Option<KnownState>, Option<u64>) {
+        debug!("getting safe state");
         let mut current_block = BlockNumberOrTag::Pending;
         loop {
             #[allow(clippy::unwrap_used)]

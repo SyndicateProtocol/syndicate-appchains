@@ -30,7 +30,7 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
             metrics.record_last_block(*batch_count, timestamp);
             let mut data = mutex.lock().unwrap();
             data.pending_ts.push_back(timestamp);
-            assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, *batch_count);
+            assert_eq!(data.finalized_batch_count + data.pending_ts.len() as u64, *batch_count);
             data.subs.retain_mut(|sink| {
                 if sink.is_closed() {
                     return false;
@@ -66,7 +66,6 @@ pub fn rollback_to_block(
 
     // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
-    let clone_block = block.clone();
     let block_message_count = block.after_message_count();
     let timestamp = block.timestamp;
 
@@ -85,7 +84,7 @@ pub fn rollback_to_block(
         message_count: block.after_message_count(),
         message_acc: block.after_message_acc(),
         timestamp,
-        slot: block.slot,
+        slot: block.slot.clone(),
     });
 
     metrics.record_reorg(block_number, state.batch_count, timestamp);
@@ -100,9 +99,9 @@ pub fn rollback_to_block(
 
     // Update stale finality data
     let mut data = mutex.lock().unwrap();
-    if block_number < data.finalized_batch {
+    if block_number < data.finalized_batch_count {
         metrics.record_finalized_block(block_number, timestamp);
-        data.finalized_batch = block_number;
+        data.finalized_batch_count = block_number;
         data.pending_ts.clear();
     } else {
         let removed = (state.batch_count - block_number) as usize;
@@ -110,7 +109,7 @@ pub fn rollback_to_block(
         assert!(data_len >= removed);
         data.pending_ts.truncate(data_len - removed);
     }
-    assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, block_number);
+    assert_eq!(data.finalized_batch_count + data.pending_ts.len() as u64, block_number);
 
     data.subs.retain_mut(|sink| {
         !sink.is_closed() &&
@@ -118,7 +117,7 @@ pub fn rollback_to_block(
                 serde_json::value::to_raw_value(&create_header(
                     block_number,
                     db.get_migration_offset(),
-                    &clone_block,
+                    &block,
                 ))
                 .unwrap(),
             ))
@@ -197,8 +196,11 @@ mod tests {
         let mock_db = TestDB::new();
         let mut metrics_state = MetricsState::default();
         let metrics = MchainMetrics::new(&mut metrics_state.registry);
-        let context =
-            Mutex::new(Context { finalized_batch: 0, pending_ts: VecDeque::new(), subs: vec![] });
+        let context = Mutex::new(Context {
+            finalized_batch_count: 0,
+            pending_ts: VecDeque::new(),
+            subs: vec![],
+        });
         (mock_db, metrics, context)
     }
 

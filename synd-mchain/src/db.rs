@@ -394,7 +394,6 @@ pub trait ArbitrumDB {
         );
         let batch_count = state.batch_count + 1;
         self.put_block(batch_count, &block);
-        let block_clone = block.clone();
         // update the state last - incomplete blocks can be ignored / overwritten
         self.put_state(&State {
             batch_count,
@@ -402,9 +401,9 @@ pub trait ArbitrumDB {
             message_count: block.after_message_count(),
             message_acc: block.after_message_acc(),
             timestamp: block.timestamp,
-            slot: block.slot,
+            slot: block.slot.clone(),
         });
-        Ok(Some((batch_count, offset, block_clone)))
+        Ok(Some((batch_count, offset, block)))
     }
 
     /// Applies a custom batch with appchain migration information
