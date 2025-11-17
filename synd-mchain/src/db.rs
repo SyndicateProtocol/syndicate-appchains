@@ -195,7 +195,6 @@ pub trait ArbitrumDB {
         } else {
             return Err(to_err(format!("key {key} is less than offset {offset}")))
         };
-        debug!("get_block_with_offset: key: {key}, offset: {offset}");
         self.get_block(batch_count).map(|block| (block, batch_count, offset))
     }
     /// Puts the block associated with the given key
@@ -252,10 +251,12 @@ pub trait ArbitrumDB {
 
     /// Puts the offset for the initial migration
     fn put_migration_offset(&self, value: u64) {
+        assert!(self.get_migration_offset() == 0, "offset is already set");
         self.put(
             DBKey::MigrationOffset.to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
+        debug!("put_migration_offset: {value}");
     }
 
     /// Gets the offset for the initial migration
