@@ -98,7 +98,7 @@ pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> 
             "EnableArbOS": true,
             "AllowDebugPrecompiles": false,
             "DataAvailabilityCommittee": false,
-            "InitialArbOSVersion": 32,
+            "InitialArbOSVersion": 40,
             "InitialChainOwner": "{chain_owner}",
             "GenesisBlockNum": 0,
             "Syndicate": true,
