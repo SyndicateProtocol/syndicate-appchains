@@ -290,26 +290,23 @@ pub async fn deploy_nitro_rollup(
     );
     copy_dir_all(&source_nitro_contracts, &nitro_contracts_dir).await?;
 
-    let nitro_contracts_dir_path = nitro_contracts_dir.clone();
     let nitro_contracts_dir = nitro_contracts_dir.to_string_lossy().to_string();
     info!("Nitro contracts working dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
     // Modify hardhat.config.ts to add custom network
-    let hardhat_config_path = nitro_contracts_dir_path.join("hardhat.config.ts");
-    let hardhat_config = fs::read_to_string(&hardhat_config_path).await?;
-
-    // Insert custom network configuration after baseSepolia and before geth
-    let custom_network = r#"    custom: {
-      url: process.env['CUSTOM_RPC_URL'] || 'N/A',
-    },
-    "#;
-
-    let modified_config = hardhat_config
-        .replace("    },\n    geth: {", &format!("    }},\n{custom_network}    geth: {{"));
-
-    fs::write(&hardhat_config_path, modified_config).await?;
-    info!("Applied custom network configuration to hardhat.config.ts");
+    // apply patch to hardhat.config.ts to add custom network
+    let patch_path = Path::new(project_root)
+        .join("shared/test-utils/src/nitro-hardhat-config.patch")
+        .to_string_lossy()
+        .to_string();
+    let status = E2EProcess::new(
+        Command::new("patch").current_dir(nitro_contracts_dir.clone()).arg("-i").arg(patch_path),
+        "patch-nitro-contracts",
+    )?
+    .wait()
+    .await?;
+    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
 
     // install and build dependencies
     let status = E2EProcess::new(
