@@ -1,4 +1,4 @@
-name: Rust CI - Withdrawals-only
+name: Rust CI - Withdrawals & Migration
 
 on:
   pull_request:
@@ -33,7 +33,7 @@ env:
 jobs:
   e2e-withdrawals:
     if: github.event.pull_request.draft == false
-    name: E2E Withdrawal Tests
+    name: E2E Withdrawal & Migration Tests
     runs-on: shared-large-02
     timeout-minutes: 60
 
@@ -43,7 +43,7 @@ jobs:
           fetch-depth: 0 # Required for full diff detection
           submodules: recursive
 
-      - name: Determine whether to run Withdrawals tests
+      - name: Determine whether to run Withdrawals & Migration tests
         id: diff
         run: |
           echo "Fetching base ref..."
@@ -58,6 +58,9 @@ jobs:
             "synd-withdrawals/"
             "synd-contracts/src/withdrawal/"
             "test-framework/tests/e2e/e2e_tests_withdrawals.rs"
+            "synd-migration-cli/"
+            "synd-mchain"
+            "test-framework/tests/e2e/e2e_tests_migration.rs"
             "shared/"
           )
 
@@ -74,7 +77,7 @@ jobs:
 
       - name: Skip notice
         if: steps.diff.outputs.run_tests == 'false'
-        run: echo "No relevant files changed — skipping E2E withdrawal tests."
+        run: echo "No relevant files changed — skipping E2E withdrawal & migration tests."
 
       # All remaining steps are conditional on whether the withdrawals related files were modified
 
@@ -98,18 +101,24 @@ jobs:
         with:
           version: v1.3.5
 
+      - name: Pre-download docker test docker images
+        if: steps.diff.outputs.run_tests == 'true'
+        run: |
+          docker pull ghcr.io/syndicateprotocol/generate_batch
+          docker pull valkey/valkey:latest
+
       - name: Install nextest
         if: steps.diff.outputs.run_tests == 'true'
         uses: taiki-e/install-action@nextest
 
-      - name: Run E2E withdrawal tests
+      - name: Run E2E withdrawal & migration tests
         if: steps.diff.outputs.run_tests == 'true'
         run: |
           # sets debug logs for all syndicate services and info for everything else
           RUST_LOG="common=debug,shared=debug,synd_batch_sequencer=debug,synd_block_builder=debug,synd_chain_ingestor=debug,synd_maestro=debug,synd_mchain=debug,synd_slotter=debug,synd_tee_attestation_zk_proofs_aws_nitro=debug,synd_tee_attestation_zk_proofs_sp1_script=debug,synd_tee_attestation_zk_proofs_submitter=debug,synd_translator=debug,test_framework=debug,test_utils=debug,info" \
           RUST_LOG_DISABLE_JSON="true" \
           RUST_LOG_DISABLE_TELEMETRY="true" \
-          cargo build && cargo nextest run -p test-framework -E 'test(e2e_tee_withdrawal)' --test-threads=1
+          cargo build && cargo nextest run -p test-framework -E 'test(e2e_tee_withdrawal) or test(e2e_migration)' --test-threads=1
 
       # Needs to be the last job step
       - name: Notify Slack on Failure
