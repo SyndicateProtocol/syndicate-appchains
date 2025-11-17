@@ -76,14 +76,15 @@ export const supportedSequencingChains: SupportedSequencingChains = {
 export const supportedSettlementChains: SupportedSettlementChains = {
 	[baseSepolia.id]: {
 		chain: baseSepolia,
-		rollupCreatorAddress: "0x860b4eF98ff5A777aEAb715ce06d7fD8c8C1cC25",
+		rollupCreatorAddress: "0x234ea0E2aB220f1c7e15B5e62Ec53e01e526e241",
 		tokenBridgeCreatorAddress: "0x0369039c392E82AA8e4dB19B1149C486aB0c4698",
 		arbConfigManagerAddress: "0xbb53E8736Cc018bb46D0F67A9d2Dbe3C3b306E92",
 		teeKeyManagerAddress: "0x0831F5F32E424554E5742713B1AB3d5b9740eE19",
 	},
 	[sepolia.id]: {
 		chain: sepolia,
-		rollupCreatorAddress: "0xb8F414924D2f2DABb6bDe930f44632E055c2720A",
+		// @note TODO: update with address
+		rollupCreatorAddress: "0x",
 		tokenBridgeCreatorAddress: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
 		arbConfigManagerAddress: "0xc18feFb2E79Ec35Ca9f3c3e7F1920EC1cad06e8F",
 		teeKeyManagerAddress: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187",

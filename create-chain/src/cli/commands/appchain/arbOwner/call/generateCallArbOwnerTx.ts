@@ -8,22 +8,22 @@ import {
 	formatUnits,
 	http,
 } from "viem";
-import { ERC20InboxABI } from "../../../abi/nitro/ERC20Inbox";
-import { InboxABI } from "../../../abi/nitro/Inbox";
-import { NodeInterfaceABI } from "../../../abi/nitro/NodeInterface";
-import { UpgradeExecutorABI } from "../../../abi/nitro/UpgradeExecutor";
+import { ERC20InboxABI } from "../../../../../abi/nitro/ERC20Inbox";
+import { InboxABI } from "../../../../../abi/nitro/Inbox";
+import { NodeInterfaceABI } from "../../../../../abi/nitro/NodeInterface";
+import { UpgradeExecutorABI } from "../../../../../abi/nitro/UpgradeExecutor";
 import {
 	ARB_OWNER_PRECOMPILE_ADDRESS,
 	NODE_INTERFACE_ADDRESS,
-} from "../../../utils/constants";
-import { scaleByPercentage } from "../../../utils/helpers";
+} from "../../../../../utils/constants";
+import { scaleByPercentage } from "../../../../../utils/helpers";
 import {
 	print,
 	printIndented,
 	printSection,
 	printSeparator,
-} from "../../../utils/print";
-import { detectCustomNativeToken } from "./helpers";
+} from "../../../../../utils/print";
+import { detectCustomNativeToken } from "../helpers";
 
 /*
 Flow:

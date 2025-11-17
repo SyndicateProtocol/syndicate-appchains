@@ -1,3 +1,4 @@
+import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner";
 import { getNativeCurrency } from "@/src/utils/helpers";
 import {
 	type AbiFunction,
@@ -82,4 +83,10 @@ export function preprocessArgs(
 		// viem will validate and handle these
 		return arg;
 	});
+}
+
+export function getWriteFunctions() {
+	return ArbOwnerABI.filter(
+		(item) => item.type === "function" && item.stateMutability !== "view",
+	) as AbiFunction[];
 }

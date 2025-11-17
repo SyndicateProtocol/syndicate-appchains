@@ -1,36 +1,21 @@
-import { exitWithError, print } from "@/src/utils/print";
+import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner";
+import {
+	callArbOwnerOptionsSchema,
+	handleSchemaErrors,
+} from "@/src/cli/schema";
+import { exitWithError } from "@/src/utils/print";
 import type { Command } from "@commander-js/extra-typings";
-import type { ExtractAbiFunctionNames } from "abitype";
-import type { AbiFunction } from "viem";
+import type { AbiFunction, ExtractAbiFunctionNames } from "abitype";
 import { encodeFunctionData } from "viem";
-import { ArbOwnerABI } from "../../../abi/nitro/ArbOwner";
-import { callArbOwnerOptionsSchema, handleSchemaErrors } from "../../schema";
-import { generateCallArbOwnerTx } from "./callArbOwner";
-import { formatFunctionSignatureForDisplay, preprocessArgs } from "./helpers";
+import {
+	formatFunctionSignatureForDisplay,
+	getWriteFunctions,
+	preprocessArgs,
+} from "../helpers";
+import { generateCallArbOwnerTx } from "./generateCallArbOwnerTx";
 
 export function callArbOwnerCommand(program: Command) {
-	const callArbOwner = program
-		.command("callArbOwner")
-		.description("Call ArbOwner functions through the UpgradeExecutor");
-
-	const getWriteFunctions = () => {
-		return ArbOwnerABI.filter(
-			(item) => item.type === "function" && item.stateMutability !== "view",
-		) as AbiFunction[];
-	};
-
-	callArbOwner
-		.command("list")
-		.description("List all available ArbOwner write functions")
-		.action(() => {
-			const functions = getWriteFunctions();
-			print("\nAvailable ArbOwner write functions:\n");
-			for (const fn of functions) {
-				print(`  ${formatFunctionSignatureForDisplay(fn)}`);
-			}
-		});
-
-	callArbOwner
+	program
 		.command("call")
 		.description("Call a specific ArbOwner function")
 		.argument("<functionName>", "Name of the ArbOwner function to call")
