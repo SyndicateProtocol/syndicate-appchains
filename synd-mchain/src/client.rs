@@ -60,6 +60,12 @@ pub trait MchainProvider: Send + Sync {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
 
+    /// Gets the offset for the initial migration
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
+    async fn get_migration_offset(&self) -> eyre::Result<u64> {
+        Ok(self.request::<_, u64>("mchain_getMigrationOffset", [(); 0]).await?)
+    }
+
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure

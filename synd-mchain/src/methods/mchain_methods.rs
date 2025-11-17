@@ -22,14 +22,13 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     _: &Extensions,
 ) -> Result<Option<u64>, ErrorObjectOwned> {
     let (mblock,): (MBlock,) = p.parse()?;
-    Ok(db
+    let batch_count = db
         .add_batch(mblock)?
         .inspect(|(batch_count, offset, block)| {
             let timestamp = block.timestamp;
             metrics.record_sequencing_block(block.slot.seq_block_number, timestamp);
             metrics.record_last_block(*batch_count, timestamp);
             let mut data = mutex.lock().unwrap();
-            // What is this timestamp for?
             data.pending_ts.push_back(timestamp);
             assert_eq!(data.finalized_batch + data.pending_ts.len() as u64, *batch_count);
             data.subs.retain_mut(|sink| {
@@ -45,7 +44,8 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
             });
             drop(data);
         })
-        .map(|(batch_count, _, _)| batch_count))
+        .map(|(batch_count, _, _)| batch_count);
+    Ok(batch_count)
 }
 
 /// `mchain_rollbackToBlock`

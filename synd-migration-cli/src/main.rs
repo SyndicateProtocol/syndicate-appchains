@@ -5,7 +5,6 @@
 
 use clap::Parser;
 use std::path::PathBuf;
-use synd_migration_cli::migration::get_migration_data;
 use tracing::error;
 
 #[derive(Parser, Debug)]
@@ -13,7 +12,7 @@ use tracing::error;
     name = "synd-migration",
     version,
     about = "Migration tool for Syndicate appchains",
-    long_about = "CLI tool for inspecting and migrating existing Nitro rollups to the syndicate appchains stack"
+    long_about = "CLI tool for inspecting existing Nitro rollups DBs in preparation to migrate to the syndicate appchains stack"
 )]
 #[allow(missing_docs)]
 struct Args {
@@ -23,7 +22,10 @@ struct Args {
 }
 
 #[tokio::main]
+#[cfg(feature = "rocksdb")]
 async fn main() {
+    use synd_migration_cli::migration::get_migration_data;
+
     let args = Args::parse();
 
     shared::tracing::setup_global_logging()
@@ -33,4 +35,10 @@ async fn main() {
         error!("\nMigration failed. {e}");
         std::process::exit(1);
     }
+}
+
+#[tokio::main]
+#[cfg(not(feature = "rocksdb"))]
+async fn main() -> eyre::Result<()> {
+    Ok(())
 }

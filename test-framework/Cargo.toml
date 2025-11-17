@@ -30,7 +30,7 @@ synd-block-builder = { workspace = true }
 synd-chain-ingestor = { workspace = true }
 synd-maestro = { workspace = true }
 synd-mchain = { workspace = true }
-synd-migration-cli = { workspace = true }
+synd-migration-cli = { workspace = true, features = ["rocksdb"] }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }

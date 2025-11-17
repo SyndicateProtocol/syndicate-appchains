@@ -352,16 +352,15 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         }
     };
 
+    let mut docker_cmd = Command::new("docker");
+    docker_cmd.arg("run").arg("--init").arg("--rm");
+
+    if let Some(data_dir) = &args.data_dir {
+        docker_cmd.arg(format!("--volume={data_dir}:/home/user/.arbitrum"));
+    }
+
     let mut nitro = E2EProcess::new(
-        Command::new("docker")
-            .arg("run")
-            .arg("--init")
-            .arg("--rm")
-            .arg(if let Some(data_dir) = args.data_dir {
-                format!("--volume={data_dir}:/home/user/.arbitrum")
-            } else {
-                "".to_string()
-            })
+        docker_cmd
             .arg("--net=host")
             .arg(format!("ghcr.io/syndicateprotocol/nitro/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))

@@ -8,13 +8,17 @@ repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
+
+[features]
+rocksdb = ["dep:rocksdb"]
+
 [dependencies]
 alloy      = { workspace = true, features = ["k256", "rlp"] }
 alloy-rlp  = { workspace = true }
 clap       = { workspace = true, features = ["derive", "env"] }
 eyre       = { workspace = true }
 rlp        = { workspace = true }
-rocksdb    = { version = "0.23.0" }
+rocksdb    = { version = "0.23.0", optional = true }
 serde      = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 shared     = { workspace = true }

@@ -184,7 +184,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     let rollup_state = get_rollup_state(&db, &arb_db)?;
 
     // Get the chain config
-    let (chain_config, _config_key) = get_chain_config(&db)?;
+    let (chain_config, _config_key, raw_genesis_from_db) = get_chain_config(&db)?;
 
     debug!("rollup state: {:#?}", rollup_state);
     debug!("chain config: {:#?}", chain_config);
@@ -196,7 +196,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<RollupState> {
     println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
     println!("MIGRATED_APPCHAIN_BLOCK_HASH: {:?}", rollup_state.last_block_hash);
     println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    println!("GENESIS_CONFIG: '{}'", serde_json::to_string(&chain_config).unwrap());
+    println!("GENESIS_CONFIG: '{}'", raw_genesis_from_db);
     println!("\n------------------------------\n\n");
 
     println!("\n--------------- NITRO configuration ---------------\n");
@@ -248,8 +248,9 @@ fn get_nitro_chain_cfg(appchain_chain_id: String, deployed_at: String) -> String
 ///
 /// Returns the chain config, and the database key used.
 #[allow(clippy::unwrap_used)]
-fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
+fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>, String)> {
     // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
+    let mut raw_genesis = String::new();
     let genesis_hash = db
         .get(make_numbered_key(b"h", 0, b"n"))
         .unwrap()
@@ -261,12 +262,12 @@ fn get_chain_config(db: &DB) -> Result<(ChainConfig, Vec<u8>)> {
         .get(config_key.clone())
         .unwrap()
         .map(|bytes| {
-            println!("RAW FROM DB: {}", std::str::from_utf8(&bytes).unwrap());
+            raw_genesis = std::str::from_utf8(&bytes).unwrap().to_string();
             serde_json::from_slice(&bytes).unwrap()
         })
         .unwrap();
 
-    Ok((chain_config, config_key))
+    Ok((chain_config, config_key, raw_genesis))
 }
 
 fn make_numbered_key(prefix: &[u8], number: u64, suffix: &[u8]) -> Vec<u8> {

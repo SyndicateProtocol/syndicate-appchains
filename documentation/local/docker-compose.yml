@@ -1,12 +1,11 @@
 services:
   mchain:
-    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
-    # platform: linux/amd64
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
+    platform: linux/amd64
     build:
       context: ../../
       target: synd-mchain
       dockerfile: Dockerfile
-    # image: local-mchain:latest
     env_file: .env
     environment:
       APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
@@ -22,8 +21,8 @@ services:
       - appchains-network
 
   seq-ingestor:
-    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    # platform: linux/amd64
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    platform: linux/amd64
     build:
       context: ../../
       target: synd-chain-ingestor
@@ -42,8 +41,8 @@ services:
       - appchains-network
 
   set-ingestor:
-    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    # platform: linux/amd64
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
+    platform: linux/amd64
     build:
       context: ../../
       target: synd-chain-ingestor
@@ -72,8 +71,8 @@ services:
       - appchains-network
 
   translator:
-    # image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
-    # platform: linux/amd64
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
+    platform: linux/amd64
     build:
       context: ../../
       target: synd-translator

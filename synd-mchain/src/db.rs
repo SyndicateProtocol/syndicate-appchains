@@ -143,7 +143,7 @@ pub enum DBKey {
     Block(u64),
     /// State of the chain at the latest head
     State,
-    /// Message accumulator with message number (used for fast lookup by index in `eth_call`)
+    /// Message accumulator with message number (used for fast lookup by seqNum in `eth_call`)
     MessageAcc(u64),
     /// DB schema version
     Version,
@@ -416,15 +416,15 @@ pub trait ArbitrumDB {
             delayed_msgs_count,
         } = params;
         // NOTE: The offset is the difference between the initial settlement block and the batch
-        // count We use settlement_start_block as the block number as the batch count
-        // because that's what Nitro expects. Because mchain is designed so that block
-        // number = batch count we need to have an offset in order to get the correct block
-        // from a given batch count.
+        // count. We use settlement_start_block as the block number for mchain blocks, that is
+        // because the migrated nitro state expects blocks to be after the last seen parent block
+        // Because mchain is designed so that block number = batch count we need to save the offset
+        // in order to get the correct block from a given batch count.
 
         assert!((batch_count <= settlement_start_block), "batch count: {batch_count} higher than start settlement block: {settlement_start_block}");
         let offset = settlement_start_block - batch_count;
 
-        // copied init block so it is in the first migrated block
+        // copied init block so it is found in the first migrated block (settlement_start_block)
         let mut init_block = self.get_block(1).unwrap();
         // hack so the the acc matches when querying by seqNum
         init_block.after_batch_acc = batch_acc;
@@ -442,9 +442,6 @@ pub trait ArbitrumDB {
             message_count: delayed_msgs_count,
             message_acc: delayed_msgs_acc,
             timestamp: 0u64,
-            // NOTE: setting the slot to zero can cause an edge case where the "known state" is
-            // empty if the translator is re-started with just this migrated batch and nothing else
-            // on top
             slot: Slot {
                 seq_block_number: 0u64,
                 seq_block_hash: B256::ZERO,

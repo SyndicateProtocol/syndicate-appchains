@@ -188,6 +188,10 @@ async fn get_config<T: Provider + Clone>(
 /// Overrides the config with onchain values where the config values are None
 #[allow(clippy::cognitive_complexity)]
 fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig) -> MchainConfig {
+    if onchain.migrated_batch_acc == U256::ZERO {
+        return config;
+    };
+
     if config.settlement_start_block.is_none() {
         info!(
             "Using the settlement_start_block from on-chain config: {}",
