@@ -31,8 +31,12 @@ PRIVATE_KEY="0xYOUR_PRIVATE_KEY"
 # You will need to have foundry installed in the enclave. (curl -L https://foundry.paradigm.xyz | bash)
 ATTESTATION_DOCUMENT="0xYOUR_ATTESTATION_DOCUMENT"
 
+# Download the elf file from the github release & set the file path
+ELF_FILE_PATH="~/sp1-zk-v1.0.7-rc.1.elf"
+
 SP1_PROVER=cuda cargo run --release --bin proof-submitter \
   -- --deploy-new-contract-with-sp1-verifier "$V5_0_0_SP1_VERIFIER_GROTH16_ADDRESS" \
   --chain-rpc-url "$TARGET_RPC_URL" \
+  --elf-file-path "$ELF_FILE_PATH" \
   --private-key "$PRIVATE_KEY" \
   --attestation-document "$ATTESTATION_DOCUMENT"

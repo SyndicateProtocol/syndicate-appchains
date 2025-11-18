@@ -11,4 +11,4 @@ index 0b24341..31d687a 100644
 +    },
      geth: {
        url: 'http://localhost:8545',
-     },
+     },	

@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use shared::{tracing::SpanKind, types::PartialBlock};
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::VecDeque,
     io::Error,
     sync::{atomic::AtomicBool, Arc, Mutex},
 };
@@ -29,7 +29,7 @@ use url::Url;
 #[allow(missing_docs)]
 pub struct Context {
     pub db: Option<DB>,
-    pub subs: Vec<(SubscriptionSink, HashSet<Address>)>,
+    pub subs: Vec<(SubscriptionSink, Vec<Address>)>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -122,6 +122,8 @@ pub async fn sync_db(
     Ok(db)
 }
 
+const MAX_ADDRESS_PER_SUB: usize = 20;
+
 #[allow(clippy::unwrap_used)]
 fn handle_subscription(
     mut sink: SubscriptionSink,
@@ -141,7 +143,7 @@ fn handle_subscription(
 
     if start_block <= db.start_block {
         return Err(eyre!(
-            "start block {} not after chain ingestor start block {}",
+            "subscription start block {} before or equal to ingestor start block {}",
             start_block,
             db.start_block
         )
@@ -153,15 +155,19 @@ fn handle_subscription(
         return Err(eyre!("start block {} after next db block {}", start_block, next_block).into());
     }
 
-    let mut addrs = HashSet::new();
-    for addr in addresses {
-        addrs.insert(addr);
+    if addresses.len() > MAX_ADDRESS_PER_SUB {
+        return Err(eyre!(
+            "subscribing to more addresses than allowed: {}, max: {}",
+            addresses.len(),
+            MAX_ADDRESS_PER_SUB
+        )
+        .into());
     }
 
     let message = Message::Init(db.get_block_bytes(start_block - 1));
     sink.try_send(SubscriptionMessage::from(serde_json::value::to_raw_value(&message).unwrap()))?;
 
-    lock.subs.push((sink, addrs));
+    lock.subs.push((sink, addresses));
     drop(lock);
     Ok(())
 }

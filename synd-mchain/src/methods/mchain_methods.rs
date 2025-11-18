@@ -21,33 +21,31 @@ pub fn add_batch<T: ArbitrumDB + Send + Sync + 'static>(
     (db, metrics, mutex): &(T, MchainMetrics, Mutex<Context>),
     _: &Extensions,
 ) -> Result<Option<u64>, ErrorObjectOwned> {
-    let (batch,): (MBlock,) = p.parse()?;
-    let timestamp = batch.timestamp;
-    let seq_block_number = batch.slot.seq_block_number;
-    let block = db.add_batch(batch)?;
-
-    metrics.record_sequencing_block(seq_block_number, timestamp);
-
-    Ok(block.inspect(|&block| {
-        metrics.record_last_block(block, timestamp);
-        let mut data = mutex.lock().unwrap();
-        data.pending_ts.push_back(timestamp);
-        assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
-        data.subs.retain_mut(|sink| {
-            !sink.is_closed() &&
+    let (mblock,): (MBlock,) = p.parse()?;
+    let batch_count = db
+        .add_batch(mblock)?
+        .inspect(|(batch_count, offset, block)| {
+            let timestamp = block.timestamp;
+            metrics.record_sequencing_block(block.slot.seq_block_number, timestamp);
+            metrics.record_last_block(*batch_count, timestamp);
+            let mut data = mutex.lock().unwrap();
+            data.pending_ts.push_back(timestamp);
+            assert_eq!(data.finalized_batch_count + data.pending_ts.len() as u64, *batch_count);
+            data.subs.retain_mut(|sink| {
+                if sink.is_closed() {
+                    return false;
+                }
                 sink.try_send(SubscriptionMessage::from(
-                    serde_json::value::to_raw_value(&create_header(
-                        block,
-                        seq_block_number,
-                        timestamp,
-                    ))
-                    .unwrap(),
+                    serde_json::value::to_raw_value(&create_header(*batch_count, *offset, block))
+                        .unwrap(),
                 ))
                 .inspect_err(|err| error!("try_send failed: {err}"))
                 .is_ok()
-        });
-        drop(data);
-    }))
+            });
+            drop(data);
+        })
+        .map(|(batch_count, _, _)| batch_count);
+    Ok(batch_count)
 }
 
 /// `mchain_rollbackToBlock`
@@ -68,7 +66,6 @@ pub fn rollback_to_block(
 
     // Get the block to roll back to
     let block = db.get_block(block_number).unwrap();
-    let l1_block_number = block.slot.seq_block_number;
     let block_message_count = block.after_message_count();
     let timestamp = block.timestamp;
 
@@ -87,7 +84,7 @@ pub fn rollback_to_block(
         message_count: block.after_message_count(),
         message_acc: block.after_message_acc(),
         timestamp,
-        slot: block.slot,
+        slot: block.slot.clone(),
     });
 
     metrics.record_reorg(block_number, state.batch_count, timestamp);
@@ -102,9 +99,9 @@ pub fn rollback_to_block(
 
     // Update stale finality data
     let mut data = mutex.lock().unwrap();
-    if block_number < data.finalized_block {
+    if block_number < data.finalized_batch_count {
         metrics.record_finalized_block(block_number, timestamp);
-        data.finalized_block = block_number;
+        data.finalized_batch_count = block_number;
         data.pending_ts.clear();
     } else {
         let removed = (state.batch_count - block_number) as usize;
@@ -112,15 +109,15 @@ pub fn rollback_to_block(
         assert!(data_len >= removed);
         data.pending_ts.truncate(data_len - removed);
     }
-    assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block_number);
+    assert_eq!(data.finalized_batch_count + data.pending_ts.len() as u64, block_number);
 
     data.subs.retain_mut(|sink| {
         !sink.is_closed() &&
             sink.try_send(SubscriptionMessage::from(
                 serde_json::value::to_raw_value(&create_header(
                     block_number,
-                    l1_block_number,
-                    timestamp,
+                    db.get_migration_offset(),
+                    &block,
                 ))
                 .unwrap(),
             ))
@@ -149,6 +146,15 @@ pub fn get_source_chains_processed_blocks(
         }
         _ => Err(to_err(format!("unexpected block tag: {tag}"))),
     }
+}
+
+/// `mchain_getMigrationOffset`
+pub fn get_migration_offset(
+    _params: Params<'_>,
+    (db, _, _): &(impl ArbitrumDB + Send + Sync, MchainMetrics, Mutex<Context>),
+    _: &Extensions,
+) -> Result<u64, ErrorObjectOwned> {
+    Ok(db.get_migration_offset())
 }
 
 #[cfg(test)]
@@ -190,8 +196,11 @@ mod tests {
         let mock_db = TestDB::new();
         let mut metrics_state = MetricsState::default();
         let metrics = MchainMetrics::new(&mut metrics_state.registry);
-        let context =
-            Mutex::new(Context { finalized_block: 0, pending_ts: VecDeque::new(), subs: vec![] });
+        let context = Mutex::new(Context {
+            finalized_batch_count: 0,
+            pending_ts: VecDeque::new(),
+            subs: vec![],
+        });
         (mock_db, metrics, context)
     }
 

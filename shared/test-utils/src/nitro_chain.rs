@@ -1,10 +1,14 @@
 //! Appchain utils for the integration tests
 
-use crate::{chain_info::PRIVATE_KEY, docker::E2EProcess};
+use crate::{
+    chain_info::PRIVATE_KEY,
+    docker::E2EProcess,
+    utils::{copy_dir_all, test_path},
+};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
-    primitives::{address, Address, Bytes, B256, U256},
+    primitives::{address, Address, Bytes, B256, U160, U256},
     providers::{Provider, WalletProvider},
 };
 use contract_bindings::synd::{
@@ -14,9 +18,9 @@ use contract_bindings::synd::{
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::{fs, process::Command};
-use tracing::{error, info};
+use tracing::info;
 
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
@@ -98,7 +102,7 @@ pub fn chain_config(chain_id: u64, chain_owner: Address, use_eigen_da: bool) -> 
             "EnableArbOS": true,
             "AllowDebugPrecompiles": false,
             "DataAvailabilityCommittee": false,
-            "InitialArbOSVersion": 32,
+            "InitialArbOSVersion": 40,
             "InitialChainOwner": "{chain_owner}",
             "GenesisBlockNum": 0,
             "Syndicate": true,
@@ -115,6 +119,10 @@ pub const ARB_SYS_PRECOMPILE_ADDRESS: Address =
     address!("0x0000000000000000000000000000000000000064");
 pub const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
     address!("0x00000000000000000000000000000000000000c8");
+pub const ARB_OWNER_PUBLIC_PRECOMPILE_ADDRESS: Address =
+    address!("0x000000000000000000000000000000000000006b");
+pub const ARB_OWNER_PRECOMPILE_ADDRESS: Address =
+    address!("0x0000000000000000000000000000000000000070");
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -124,6 +132,19 @@ pub struct NitroBlock {
     pub number: U256,
     pub l1_block_number: U256,
     pub timestamp: U256,
+}
+
+const L1_TO_L2_ALIAS_OFFSET: Address = address!("0x1111000000000000000000000000000000001111");
+/// Computes the L2 alias of an L1 address.
+///
+/// When a contract on L1 sends a message to L2 via the Inbox, the sender address
+/// on L2 is aliased by adding this offset. This prevents address collisions and
+/// distinguishes L1-originated messages from native L2 messages.
+pub fn apply_l1_to_l2_alias(l1_address: Address) -> Address {
+    Address::from(
+        U160::from_be_slice(&l1_address[..])
+            .wrapping_add(U160::from_be_slice(&L1_TO_L2_ALIAS_OFFSET[..])),
+    )
 }
 
 pub async fn init_withdrawal_tx(
@@ -147,51 +168,68 @@ pub async fn init_withdrawal_tx(
     Ok(tx)
 }
 
-pub async fn execute_withdrawal(
-    to_address: Address,
-    withdrawal_value: U256,
-    bridge_address: Address,
-    settlement_provider: &FilledProvider,
-    appchain_provider: &FilledProvider,
-) -> eyre::Result<()> {
+pub struct ExecuteWithdrawalParams<'a> {
+    pub to_address: Address,
+    pub withdrawal_value: U256,
+    pub appchain_block_hash_to_prove: B256,
+    pub bridge_address: Address,
+    pub settlement_provider: &'a FilledProvider,
+    pub appchain_provider: &'a FilledProvider,
+    pub l2_sender: Address,
+    pub send_root_size: u64,
+    pub withdrawal_position: u64,
+}
+
+pub async fn execute_withdrawal(params: ExecuteWithdrawalParams<'_>) {
     // Generate proof
-    let node_interface = NodeInterface::new(NODE_INTERFACE_PRECOMPILE_ADDRESS, &appchain_provider);
-    let proof = node_interface.constructOutboxProof(1, 0).call().await?;
+    let node_interface =
+        NodeInterface::new(NODE_INTERFACE_PRECOMPILE_ADDRESS, &params.appchain_provider);
+    let proof = node_interface
+        .constructOutboxProof(params.send_root_size, params.withdrawal_position)
+        .call()
+        .await
+        .unwrap();
 
     // Execute withdrawal
-    let bridge = IBridge::new(bridge_address, &settlement_provider);
+    let bridge = IBridge::new(params.bridge_address, &params.settlement_provider);
     let outbox = IOutbox::new(
-        IRollupCore::new(bridge.rollup().call().await?, &settlement_provider)
+        IRollupCore::new(bridge.rollup().call().await.unwrap(), &params.settlement_provider)
             .outbox()
             .call()
-            .await?,
-        &settlement_provider,
+            .await
+            .unwrap(),
+        &params.settlement_provider,
     );
 
-    let block: NitroBlock =
-        appchain_provider.raw_request("eth_getBlockByNumber".into(), ("latest", false)).await?;
+    let block: NitroBlock = params
+        .appchain_provider
+        .raw_request("eth_getBlockByHash".into(), (params.appchain_block_hash_to_prove, false))
+        .await
+        .unwrap();
 
     let _ = outbox
         .executeTransaction(
-            proof.proof,                                  // proof
-            U256::from(0),                                // index
-            settlement_provider.default_signer_address(), // l2Sender
-            to_address,                                   // to
-            block.number,                                 // l2Block,
-            block.l1_block_number,                        // l1Block,
-            block.timestamp,                              // l2Timestamp,
-            withdrawal_value,                             // value
-            Bytes::new(),                                 // data (always empty)
+            proof.proof,                            // proof
+            U256::from(params.withdrawal_position), // index
+            params.l2_sender,                       // l2Sender
+            params.to_address,                      // to
+            block.number,                           // l2Block,
+            block.l1_block_number,                  // l1Block,
+            block.timestamp,                        // l2Timestamp,
+            params.withdrawal_value,                // value
+            Bytes::new(),                           // data (always empty)
         )
-        // NOTE: manually setting the nonce shouldn't be necessary, likey an artifact of: https://github.com/alloy-rs/alloy/issues/2668
+        // NOTE: manually setting the nonce shouldn't be necessary, likely an artifact of: https://github.com/alloy-rs/alloy/issues/2668
         .nonce(
-            settlement_provider
-                .get_transaction_count(settlement_provider.default_signer_address())
-                .await?,
+            params
+                .settlement_provider
+                .get_transaction_count(params.settlement_provider.default_signer_address())
+                .await
+                .unwrap(),
         )
         .send()
-        .await?;
-    Ok(())
+        .await
+        .unwrap();
 }
 
 #[allow(dead_code)]
@@ -237,33 +275,38 @@ pub async fn deploy_nitro_rollup(
     use_eigen_da: bool,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
-    let nitro_contracts_dir = Path::new(project_root)
-        .join("synd-contracts/lib/nitro-contracts")
-        .to_string_lossy()
-        .to_string();
-    info!("Nitro contracts dir: {nitro_contracts_dir}");
+
+    // Create a unique temp directory for this deployment to avoid race conditions
+    let tmp_dir = test_path("nitro-deploy");
+
+    // Copy nitro-contracts to temp directory
+    let source_nitro_contracts = Path::new(project_root).join("synd-contracts/lib/nitro-contracts");
+    let nitro_contracts_dir = PathBuf::from(&tmp_dir).join("nitro-contracts");
+
+    info!(
+        "Copying nitro-contracts from {} to {}",
+        source_nitro_contracts.display(),
+        nitro_contracts_dir.display()
+    );
+    copy_dir_all(&source_nitro_contracts, &nitro_contracts_dir).await?;
+
+    let nitro_contracts_dir = nitro_contracts_dir.to_string_lossy().to_string();
+    info!("Nitro contracts working dir: {nitro_contracts_dir}");
 
     // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
+    // Modify hardhat.config.ts to add custom network
     // apply patch to hardhat.config.ts to add custom network
     let patch_path = Path::new(project_root)
         .join("shared/test-utils/src/nitro-hardhat-config.patch")
         .to_string_lossy()
         .to_string();
     let status = E2EProcess::new(
-        Command::new("git")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("apply")
-            .arg("--recount")
-            .arg(patch_path),
+        Command::new("patch").current_dir(nitro_contracts_dir.clone()).arg("-i").arg(patch_path),
         "patch-nitro-contracts",
     )?
     .wait()
     .await?;
-    if !status.success() {
-        // log an error instead of failing the test as this exits with code 1 if the patch has
-        // already been applied
-        error!("Failed to apply patch to hardhat.config.ts");
-    }
+    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
 
     // install and build dependencies
     let status = E2EProcess::new(
@@ -367,27 +410,6 @@ pub async fn deploy_nitro_rollup(
     let deploy_json_path = format!("{nitro_contracts_dir}/deploy.json");
     let deploy_info: NitroDeployment =
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
-
-    // Cleanup -  reset the submodule repo - It's annoying to leave pending changes in the submodule
-    let status = E2EProcess::new(
-        Command::new("git")
-            .current_dir(nitro_contracts_dir.clone())
-            .arg("checkout")
-            .arg("--")
-            .arg("hardhat.config.ts"),
-        "cleanup-nitro-contracts-submodule-checkout",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to cleanup nitro contracts submodule");
-
-    let status = E2EProcess::new(
-        Command::new("git").current_dir(nitro_contracts_dir.clone()).arg("clean").arg("-fd"),
-        "cleanup-nitro-contracts-submodule",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "failed to cleanup nitro contracts submodule");
 
     Ok(deploy_info)
 }

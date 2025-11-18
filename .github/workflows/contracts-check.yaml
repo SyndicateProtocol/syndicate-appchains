@@ -83,7 +83,7 @@ jobs:
         working-directory: "."
         run: |
           make -C create-chain generate-contract-abis
-          git diff --exit-code create-chain/scripts/abi/synd/ || (
+          git diff --exit-code create-chain/src/abi/synd/ || (
             echo "❌ Error: TypeScript ABI files are out of date."
             echo ""
             echo "The committed ABI files don't match the ones generated from the contracts."
@@ -94,7 +94,7 @@ jobs:
             echo "Then commit the updated files."
             echo ""
             echo "Files that differ:"
-            git diff --name-only create-chain/scripts/abi/synd/
+            git diff --name-only create-chain/src/abi/synd/
             exit 1
           )
 

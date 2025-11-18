@@ -7696,6 +7696,7 @@ dependencies = [
  "alloy",
  "clap",
  "common",
+ "contract-bindings",
  "ctor",
  "derivative",
  "eyre",
@@ -7770,6 +7771,23 @@ dependencies = [
  "test-utils",
  "tokio",
  "tower 0.5.2",
+ "tracing",
+]
+
+[[package]]
+name = "synd-migration-cli"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-rlp",
+ "clap",
+ "eyre",
+ "rlp 0.6.1",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "shared",
+ "tokio",
  "tracing",
 ]
 
@@ -7984,6 +8002,7 @@ dependencies = [
  "synd-chain-ingestor",
  "synd-maestro",
  "synd-mchain",
+ "synd-migration-cli",
  "test-utils",
  "tokio",
  "tracing",

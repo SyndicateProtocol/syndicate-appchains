@@ -23,7 +23,7 @@ use std::{
     process::{ExitStatus, Stdio},
     time::Duration,
 };
-use synd_mchain::client::MProvider;
+use synd_mchain::{client::MProvider, db::MigrationParams};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -216,12 +216,15 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut E2E
 pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
+    migration_params: Option<MigrationParams>,
+    config_manager_rpc_url: Option<String>,
+    config_manager_address: Option<Address>,
 ) -> Result<(String, E2EProcess, MProvider)> {
-    let temp = test_path("synd-mchain");
+    let tmp_dir = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
-    let args = vec![
+    let mut args = vec![
         "--appchain-chain-id".to_string(),
         appchain_chain_id.to_string(),
         "--port".to_string(),
@@ -232,9 +235,36 @@ pub async fn start_mchain(
         finality_delay.to_string(),
     ];
 
-    let docker =
-        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), temp.to_string()])
-            .await?;
+    if let Some(migration) = migration_params {
+        args.extend(vec![
+            "--settlement-start-block".to_string(),
+            migration.settlement_start_block.to_string(),
+            "--migrated-batch-acc".to_string(),
+            migration.batch_acc.to_string(),
+            "--migrated-batch-count".to_string(),
+            migration.batch_count.to_string(),
+            "--migrated-delayed-msgs-acc".to_string(),
+            migration.delayed_msgs_acc.to_string(),
+            "--migrated-delayed-msgs-count".to_string(),
+            migration.delayed_msgs_count.to_string(),
+        ]);
+    }
+
+    if let Some(url) = config_manager_rpc_url {
+        args.extend(vec!["--config-manager-rpc-url".to_string(), url]);
+    }
+
+    if let Some(address) = config_manager_address {
+        args.extend(vec!["--config-manager-address".to_string(), address.to_string()]);
+    }
+
+    let docker = start_component(
+        "synd-mchain",
+        port,
+        args,
+        vec!["--datadir".to_string(), tmp_dir.to_string()],
+    )
+    .await?;
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))
@@ -263,6 +293,7 @@ pub struct NitroNodeArgs {
     pub sequencer_mode: NitroSequencerMode,
     pub deployment: NitroDeployment,
     pub sequencer_private_key: Option<String>,
+    pub data_dir: Option<String>,
 }
 
 /// Starts nitro instance
@@ -321,11 +352,21 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
         }
     };
 
+    let mut docker_cmd = Command::new("docker");
+    docker_cmd.arg("run").arg("--init").arg("--rm");
+
+    if let Some(data_dir) = &args.data_dir {
+        #[cfg(unix)]
+        // fix permissions on CI
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(Path::new(data_dir), std::fs::Permissions::from_mode(0o777))?;
+        }
+        docker_cmd.arg(format!("--volume={data_dir}:/home/user/.arbitrum"));
+    }
+
     let mut nitro = E2EProcess::new(
-        Command::new("docker")
-            .arg("run")
-            .arg("--init")
-            .arg("--rm")
+        docker_cmd
             .arg("--net=host")
             .arg(format!("ghcr.io/syndicateprotocol/nitro/nitro:{tag}"))
             .arg(format!("--parent-chain.connection.url={}", args.parent_chain_url))

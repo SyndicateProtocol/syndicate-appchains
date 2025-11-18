@@ -232,6 +232,7 @@ impl TestComponents {
                     chain_name: "sequencing".to_string(),
                     deployment: seq_deployment.clone(),
                     sequencer_private_key: Some(PRIVATE_KEY8.to_string()),
+                    data_dir: None,
                 })
                 .await?;
 
@@ -344,6 +345,7 @@ impl TestComponents {
                     chain_name: "settlement".to_string(),
                     deployment: set_deployment.clone(),
                     sequencer_private_key: Some(PRIVATE_KEY9.to_string()),
+                    data_dir: None,
                 })
                 .await?;
 
@@ -418,11 +420,6 @@ impl TestComponents {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
         }
 
-        info!("Starting components...");
-        info!("Starting synd-mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.finality_delay).await?;
-
         // Setup config manager and get chain config address
         let config_manager_address = setup_config_manager(
             &set_provider,
@@ -432,6 +429,18 @@ impl TestComponents {
             appchain_deployment.inbox,
             seq_rpc_ws_url.clone(),
             "https://example.com/explorer".to_string(),
+            None,
+        )
+        .await?;
+
+        info!("Starting components...");
+        info!("Starting synd-mchain...");
+        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
+            options.appchain_chain_id,
+            options.finality_delay,
+            None,
+            Some(set_rpc_ws_url.clone()),
+            Some(config_manager_address),
         )
         .await?;
 
@@ -517,6 +526,7 @@ impl TestComponents {
                 ..Default::default()
             },
             sequencer_private_key: None,
+            data_dir: None,
         })
         .await?;
 
