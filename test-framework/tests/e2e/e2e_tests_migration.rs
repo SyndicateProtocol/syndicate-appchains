@@ -309,18 +309,20 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
+    let arb_sequencer_inbox =
+        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
+    wait_until!(arb_sequencer_inbox.batchCount().call().await? == 1, Duration::from_secs(20));
+
     let storage_contract_pre_migration_instance =
         Storage::deploy(appchain.provider.clone(), U256::from(42)).await?;
     let storage_contract_address = *storage_contract_pre_migration_instance.address();
-
-    let arb_sequencer_inbox =
-        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
 
     wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
     let bridge = IBridge::new(appchain_deployment.bridge, &set_chain.provider);
     let batch_count = bridge.sequencerMessageCount().call().await?;
     let batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(1)).call().await?;
+    println!("onchain batch_acc:{batch_acc} batch_count:{batch_count}");
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
 
@@ -330,9 +332,9 @@ async fn e2e_migration() -> Result<()> {
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
 
-    #[cfg(unix)]
-    // fix permissions on CI
+    #[cfg(target_os = "linux")]
     {
+        // fix permissions on CI
         let status = E2EProcess::new(
             tokio::process::Command::new("sudo")
                 .current_dir(PathBuf::from(data_dir.clone()))
