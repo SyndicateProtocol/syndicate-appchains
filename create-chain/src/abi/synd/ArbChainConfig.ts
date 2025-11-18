@@ -84,6 +84,84 @@ export const arbChainConfigABI = [
   },
   {
     "type": "function",
+    "name": "MIGRATED_APPCHAIN_BLOCK_HASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIGRATED_BATCH_ACC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIGRATED_BATCH_COUNT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIGRATED_DELAYED_MSGS_ACC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIGRATED_DELAYED_MSGS_COUNT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIGRATED_GENESIS_CONFIG",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "SEQUENCING_CHAIN_ID",
     "inputs": [],
     "outputs": [
@@ -217,6 +295,54 @@ export const arbChainConfigABI = [
   },
   {
     "type": "function",
+    "name": "migration",
+    "inputs": [
+      {
+        "name": "_setStartBlock",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_seqStartBlock",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_batchAcc",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_batchCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_delayedMsgsAcc",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_delayedMsgsCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_appchainBlockHash",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_genesisConfig",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -302,6 +428,61 @@ export const arbChainConfigABI = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Migration",
+    "inputs": [
+      {
+        "name": "setStartBlock",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "seqStartBlock",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "batchAcc",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "batchCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "delayedMsgsAcc",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "delayedMsgsCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "appchainBlockHash",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "genesisConfig",
+        "type": "bytes",
+        "indexed": false,
+        "internalType": "bytes"
       }
     ],
     "anonymous": false

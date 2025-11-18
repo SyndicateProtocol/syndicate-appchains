@@ -1,4 +1,5 @@
-name: Rust CI - Withdrawals-only
+name: Rust CI - Withdrawals
+# TODO ENG-2223: Add migration tests
 
 on:
   pull_request:
@@ -43,7 +44,7 @@ jobs:
           fetch-depth: 0 # Required for full diff detection
           submodules: recursive
 
-      - name: Determine whether to run Withdrawals tests
+      - name: Determine whether to run Withdrawals & Migration tests
         id: diff
         run: |
           echo "Fetching base ref..."
@@ -58,6 +59,9 @@ jobs:
             "synd-withdrawals/"
             "synd-contracts/src/withdrawal/"
             "test-framework/tests/e2e/e2e_tests_withdrawals.rs"
+            "synd-migration-cli/"
+            "synd-mchain"
+            "test-framework/tests/e2e/e2e_tests_migration.rs"
             "shared/"
           )
 
@@ -74,7 +78,7 @@ jobs:
 
       - name: Skip notice
         if: steps.diff.outputs.run_tests == 'false'
-        run: echo "No relevant files changed — skipping E2E withdrawal tests."
+        run: echo "No relevant files changed — skipping E2E withdrawal & migration tests."
 
       # All remaining steps are conditional on whether the withdrawals related files were modified
 
@@ -98,11 +102,18 @@ jobs:
         with:
           version: v1.3.5
 
+      - name: Pre-download docker test docker images
+        if: steps.diff.outputs.run_tests == 'true'
+        run: |
+          docker pull ghcr.io/syndicateprotocol/generate_batch
+          docker pull valkey/valkey:latest
+
       - name: Install nextest
         if: steps.diff.outputs.run_tests == 'true'
         uses: taiki-e/install-action@nextest
 
-      - name: Run E2E withdrawal tests
+        # TODO ENG-2223: Enable CI migration tests
+      - name: Run E2E withdrawal & migration tests
         if: steps.diff.outputs.run_tests == 'true'
         run: |
           # sets debug logs for all syndicate services and info for everything else

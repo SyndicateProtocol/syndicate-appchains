@@ -161,7 +161,6 @@ pub async fn delayed_msgs_data_from_partial_block(
     inbox_addr: Option<Address>,
 ) -> eyre::Result<DelayedMsgsData> {
     let mut result = DelayedMsgsData::new();
-
     // if no inbox_addr is set, it's a seq chain block and there's no need to iterate the logs
     let Some(inbox_addr) = inbox_addr else {
         return Ok(result);

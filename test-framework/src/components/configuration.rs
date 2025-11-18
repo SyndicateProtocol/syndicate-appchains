@@ -2,15 +2,21 @@
 
 use crate::components::test_components::SEQUENCING_CHAIN_ID;
 use alloy::{
-    primitives::{Address, U256},
+    primitives::{Address, Bytes, U256},
     providers::WalletProvider,
 };
-use contract_bindings::synd::arb_config_manager::ArbConfigManager;
+use contract_bindings::synd::{
+    arb_chain_config::ArbChainConfig::{self, ArbChainConfigInstance},
+    arb_config_manager::ArbConfigManager,
+};
 use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
+use synd_migration_cli::migration::RollupState;
 use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
+use tracing::info;
 
+/// The base chains type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BaseChainsType {
     Anvil,
@@ -57,9 +63,16 @@ impl Default for ConfigurationOptions {
     }
 }
 
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct MigrationData {
+    pub rollup: RollupState,
+    pub genesis_config: Bytes,
+}
+
 /// Sets up the config manager and creates the chain configuration
-#[allow(clippy::unwrap_used)]
-pub(super) async fn setup_config_manager(
+#[allow(clippy::unwrap_used, clippy::too_many_arguments)]
+pub async fn setup_config_manager(
     set_provider: &FilledProvider,
     options: &ConfigurationOptions,
     sequencing_contract_address: Address,
@@ -67,6 +80,7 @@ pub(super) async fn setup_config_manager(
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: String,
     appchain_block_explorer_url: String,
+    migration_data: Option<MigrationData>,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -101,6 +115,16 @@ pub(super) async fn setup_config_manager(
         .send()
         .await?;
 
+    let config_address = config_manager
+        .getArbChainConfigAddress(options.appchain_chain_id.try_into().unwrap())
+        .call()
+        .await?;
+    let config = ArbChainConfig::new(config_address, set_provider.clone());
+
+    if let Some(migration_data) = migration_data {
+        chain_config_migration(&config, options, &migration_data).await?;
+    }
+
     match options.base_chains_type {
         BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => {
             mine_block(set_provider, 0).await?;
@@ -109,6 +133,31 @@ pub(super) async fn setup_config_manager(
     };
 
     assert!(create_chain_config_tx.get_receipt().await?.status());
-
     Ok(config_manager.address().to_owned())
+}
+
+async fn chain_config_migration(
+    config: &ArbChainConfigInstance<FilledProvider>,
+    options: &ConfigurationOptions,
+    migration_data: &MigrationData,
+) -> Result<()> {
+    info!("Migrating chain config with data: {:#?}", migration_data);
+    let receipt = config
+        .migration(
+            migration_data.rollup.parent_chain_block.try_into()?,
+            options.sequencing_start_block.try_into()?,
+            migration_data.rollup.batch_acc.into(),
+            migration_data.rollup.batch_count.try_into()?,
+            migration_data.rollup.delayed_msgs_acc.into(),
+            migration_data.rollup.delayed_msgs_count.try_into()?,
+            migration_data.rollup.last_block_hash.into(),
+            migration_data.genesis_config.clone(),
+        )
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+    assert!(receipt.status());
+    info!("Migration transaction receipt: {:#?}", receipt);
+    Ok(())
 }

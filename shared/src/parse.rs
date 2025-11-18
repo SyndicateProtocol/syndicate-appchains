@@ -1,47 +1,52 @@
 //! The `parse` module contains functions for parsing data into types.
 
-use alloy::primitives::Address;
+use alloy::primitives::{Address, B256};
 use serde::Deserialize;
 use std::{collections::HashMap, hash::Hash, str::FromStr};
 use thiserror::Error;
 use url::Url;
 
 /// Parse default string into a valid [`URL`].
-pub fn parse_url(value: &str) -> Result<Url, Error> {
+pub fn parse_url(value: &str) -> Result<Url, ParseError> {
     Url::parse(value).map_or_else(
-        |_err| Err(Error::URL(URLErrorType::InvalidURL(value.to_string()))),
+        |_err| Err(ParseError::URL(URLErrorType::InvalidURL(value.to_string()))),
         |url| {
             if !url.has_host() {
-                return Err(Error::URL(URLErrorType::InvalidHost));
+                return Err(ParseError::URL(URLErrorType::InvalidHost));
             }
             match url.scheme() {
                 "http" | "https" | "ws" | "wss" => Ok(url),
-                _ => Err(Error::URL(URLErrorType::InvalidScheme(url.scheme().to_string()))),
+                _ => Err(ParseError::URL(URLErrorType::InvalidScheme(url.scheme().to_string()))),
             }
         },
     )
 }
 
 /// Parse a string into an Ethereum `Address`.
-pub fn parse_address(value: &str) -> Result<Address, Error> {
-    Address::from_str(value.trim()).map_err(|_| Error::EthereumAddress(value.to_string()))
+pub fn parse_address(value: &str) -> Result<Address, ParseError> {
+    Address::from_str(value.trim()).map_err(|_| ParseError::EthereumAddress(value.to_string()))
 }
 
 /// Parse comma-separated addresses, e.g. "0x123,0x456"
-pub fn parse_addresses(value: &str) -> Result<Vec<Address>, Error> {
+pub fn parse_addresses(value: &str) -> Result<Vec<Address>, ParseError> {
     if value.trim().is_empty() {
         return Ok(Default::default());
     }
     value.split(',').map(|x| parse_address(x.trim())).collect()
 }
 
+/// Parse a string into a 32 bytes hash ([`B256`])
+pub fn parse_hash(value: &str) -> Result<B256, ParseError> {
+    B256::from_str(value).map_err(|_| ParseError::InvalidHash(value.to_string()))
+}
+
 /// Parse a JSON string into a map
-pub fn parse_map<K, V>(s: &str) -> Result<HashMap<K, V>, Error>
+pub fn parse_map<K, V>(s: &str) -> Result<HashMap<K, V>, ParseError>
 where
     K: Hash + Eq + for<'de> Deserialize<'de>,
     V: for<'de> Deserialize<'de>,
 {
-    serde_json::from_str(s).map_err(|e| Error::InvalidMap(e.to_string()))
+    serde_json::from_str(s).map_err(|e| ParseError::InvalidMap(e.to_string()))
 }
 
 /// Sanitize a URL for safe logging by redacting path and query components
@@ -92,13 +97,15 @@ pub fn fmt_sanitize_url_for_logging_hashmap(
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 /// Possible parsing errors
-pub enum Error {
+pub enum ParseError {
     #[error("URL error: {0}")]
     URL(URLErrorType),
     #[error("Invalid address: {0}")]
     EthereumAddress(String),
     #[error("Invalid map: {0}")]
     InvalidMap(String),
+    #[error("Invalid hash: {0}")]
+    InvalidHash(String),
 }
 
 #[allow(missing_docs)]
@@ -137,7 +144,7 @@ mod tests {
 
         for url in invalid_urls {
             match parse_url(url) {
-                Err(Error::URL(URLErrorType::InvalidURL(error_url))) => {
+                Err(ParseError::URL(URLErrorType::InvalidURL(error_url))) => {
                     assert_eq!(error_url, url, "Error should contain the invalid URL");
                 }
                 _ => panic!("Expected InvalidURL error for: {url}"),
@@ -151,7 +158,7 @@ mod tests {
 
         for url in invalid_host_schemes {
             match parse_url(url) {
-                Err(Error::URL(URLErrorType::InvalidScheme(_))) => {}
+                Err(ParseError::URL(URLErrorType::InvalidScheme(_))) => {}
                 Err(err) => panic!("Expected InvalidScheme error for: {url}, got: {err:?}"),
                 Ok(_) => panic!("Expected InvalidScheme error for: {url}"),
             }
@@ -164,7 +171,7 @@ mod tests {
 
         for url in urls_without_host {
             match parse_url(url) {
-                Err(Error::URL(URLErrorType::InvalidHost)) => {}
+                Err(ParseError::URL(URLErrorType::InvalidHost)) => {}
                 _ => panic!("Expected InvalidHost error for: {url}"),
             }
         }
@@ -210,7 +217,7 @@ mod tests {
         // An invalid Ethereum address (wrong length)
         let invalid_input = "0x123"; // Too short
         match parse_address(invalid_input) {
-            Err(Error::EthereumAddress(_)) => {}
+            Err(ParseError::EthereumAddress(_)) => {}
             _ => panic!("Expected EthereumAddress error for: {invalid_input}"),
         }
     }
@@ -219,7 +226,7 @@ mod tests {
     fn parse_address_empty() {
         let empty_input = "   ";
         match parse_address(empty_input) {
-            Err(Error::EthereumAddress(_)) => {}
+            Err(ParseError::EthereumAddress(_)) => {}
             _ => panic!("Expected EthereumAddress error for: {empty_input}"),
         }
     }
@@ -263,7 +270,7 @@ mod tests {
     fn test_parse_map_valid_u64_address() {
         // Test with valid JSON object
         let json = r#"{"1": "0x742d35cc6634c0532925a3b844bc454e4438f44e", "2": "0x742d35cc6634c0532925a3b844bc454e4438f44e"}"#;
-        let result: Result<HashMap<u64, Address>, Error> = parse_map(json);
+        let result: Result<HashMap<u64, Address>, ParseError> = parse_map(json);
         assert!(result.is_ok());
 
         let map: HashMap<u64, Address> = result.unwrap();

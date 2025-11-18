@@ -143,7 +143,7 @@ fn handle_subscription(
 
     if start_block <= db.start_block {
         return Err(eyre!(
-            "start block {} not after chain ingestor start block {}",
+            "subscription start block {} before or equal to ingestor start block {}",
             start_block,
             db.start_block
         )
