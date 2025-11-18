@@ -334,8 +334,9 @@ async fn e2e_migration() -> Result<()> {
     // fix permissions on CI
     {
         let status = E2EProcess::new(
-            tokio::process::Command::new("chmod")
+            tokio::process::Command::new("sudo")
                 .current_dir(PathBuf::from(data_dir.clone()))
+                .arg("chmod")
                 .arg("-R")
                 .arg("777")
                 .arg("."),

@@ -227,7 +227,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
 
     println!("\n------------------------------\n\n");
 
-    println!("last batch arb msg count: {}", rollup_state.batch_message_count);
+    println!("last batch \"arb msg count\": {}", rollup_state.batch_message_count);
 
     println!(
         "last rollup block: {:?} - {:?}",
@@ -239,7 +239,8 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     );
 
     if rollup_state.safe_block_hash.is_some() &&
-        rollup_state.safe_block_hash.unwrap() == rollup_state.last_block_hash
+        rollup_state.safe_block_hash.unwrap() == rollup_state.last_block_hash &&
+        rollup_state.last_block_number == rollup_state.batch_message_count - 1
     {
         println!("✅✅✅✅✅ Rollup is in safe state to be migrated");
     } else {

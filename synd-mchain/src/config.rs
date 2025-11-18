@@ -78,7 +78,14 @@ pub struct MchainConfig {
 impl MchainConfig {
     /// obtains the optional migration params in the format the db function expects
     pub fn migration_config(&self) -> Option<MigrationParams> {
-        self.migrated_batch_acc?;
+        if self.settlement_start_block.is_none() &&
+            self.migrated_batch_acc.is_none() &&
+            self.migrated_batch_count.is_none() &&
+            self.migrated_delayed_msgs_acc.is_none() &&
+            self.migrated_delayed_msgs_count.is_none()
+        {
+            return None
+        }
 
         let settlement_start_block = self
             .settlement_start_block
