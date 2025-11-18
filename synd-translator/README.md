@@ -201,7 +201,7 @@ The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3
       "EnableArbOS": true,
       "AllowDebugPrecompiles": false,
       "DataAvailabilityCommittee": false,
-      "InitialArbOSVersion": 32,
+      "InitialArbOSVersion": 40,
       "InitialChainOwner": "0x0000000000000000000000000000000000000000",
       "GenesisBlockNum": 0
    }

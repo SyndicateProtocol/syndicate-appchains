@@ -49,7 +49,7 @@ export async function createRollup({
   const chainConfig = prepareChainConfig({
     chainId,
     arbitrum: {
-      InitialArbOSVersion: 32,
+      InitialArbOSVersion: 40,
       DataAvailabilityCommittee: false,
       InitialChainOwner: owner,
       MaxCodeSize: 0,
