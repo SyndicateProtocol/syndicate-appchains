@@ -90,3 +90,4 @@ synd-cli/*.config.json
 !synd-cli/*.config.json.example
 synd-cli/node_modules
 synd-cli/*.tsbuildinfo
+synd-cli/src/dev
