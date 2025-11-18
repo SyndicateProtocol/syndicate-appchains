@@ -15,7 +15,6 @@ contract DeployerParent is UUPSUpgradeable {
     constructor(address owner_, address forwarder_) {
         owner = owner_;
         forwarder = SyndForwarder(forwarder_);
-        _disableInitializers();
     }
 
     modifier onlyOwner() {
