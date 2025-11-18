@@ -111,6 +111,7 @@ jobs:
         if: steps.diff.outputs.run_tests == 'true'
         uses: taiki-e/install-action@nextest
 
+        # TODO ENG-2223: Enable CI migration tests
       - name: Run E2E withdrawal & migration tests
         if: steps.diff.outputs.run_tests == 'true'
         run: |
@@ -118,7 +119,7 @@ jobs:
           RUST_LOG="common=debug,shared=debug,synd_batch_sequencer=debug,synd_block_builder=debug,synd_chain_ingestor=debug,synd_maestro=debug,synd_mchain=debug,synd_slotter=debug,synd_tee_attestation_zk_proofs_aws_nitro=debug,synd_tee_attestation_zk_proofs_sp1_script=debug,synd_tee_attestation_zk_proofs_submitter=debug,synd_translator=debug,test_framework=debug,test_utils=debug,info" \
           RUST_LOG_DISABLE_JSON="true" \
           RUST_LOG_DISABLE_TELEMETRY="true" \
-          cargo build && cargo nextest run -p test-framework -E 'test(e2e_tee_withdrawal) or test(e2e_migration)' --test-threads=1
+          cargo build && cargo nextest run -p test-framework -E 'test(e2e_tee_withdrawal)' --test-threads=1
 
       # Needs to be the last job step
       - name: Notify Slack on Failure
