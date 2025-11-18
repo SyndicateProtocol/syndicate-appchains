@@ -70,11 +70,11 @@ struct SyndicateStack {
     config_manager_address: Address,
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
+    valkey: E2EProcess, // drop valkey before maestro and batch_sequencer
     translator: E2EProcess,
     appchain: ChainInfo,
     maestro: E2EProcess,
     batch_sequencer: E2EProcess,
-    valkey: E2EProcess,
 }
 
 #[allow(clippy::too_many_arguments, clippy::cognitive_complexity)]
@@ -325,9 +325,17 @@ async fn e2e_migration() -> Result<()> {
     println!("onchain batch_acc:{batch_acc} batch_count:{batch_count}");
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
+
+    #[cfg(target_os = "linux")]
+    {
+        // give some time for nitro to catch up
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
+    // shutdown the nitro node
+    drop(appchain);
+
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
-
     #[cfg(target_os = "linux")]
     {
         // fix permissions on CI
@@ -362,9 +370,6 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(60),
         Duration::from_secs(1)
     );
-
-    // shutdown the nitro node
-    drop(appchain);
 
     let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
     assert_eq!(migration_data.rollup.batch_acc, batch_acc);
