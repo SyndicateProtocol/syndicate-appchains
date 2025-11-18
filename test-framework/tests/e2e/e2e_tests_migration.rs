@@ -352,7 +352,7 @@ async fn e2e_migration() -> Result<()> {
             {
                 Ok(data) => {
                     res = data;
-                    true
+                    res.0.batch_count == 2
                 }
                 Err(e) => {
                     eprintln!("error when trying to get migration data: {e}");
