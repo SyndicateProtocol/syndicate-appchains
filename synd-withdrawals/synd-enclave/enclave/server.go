@@ -413,6 +413,9 @@ func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
 	if _, ok := allowedMsgs[msg[0]]; !ok {
 		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
+	if ts >= HARDFORK_TS {
+		blockNum = binary.BigEndian.Uint64(msg[33:41])
+	}
 	if msg[0] == arbostypes.L1MessageType_BatchPostingReport {
 		requestId := msg[teetypes.DelayedMessageRequestIdOffset : teetypes.DelayedMessageRequestIdOffset+32]
 		msg = make([]byte, teetypes.DelayedMessageDataOffset)

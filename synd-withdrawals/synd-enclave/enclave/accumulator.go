@@ -98,6 +98,7 @@ func buildL2MessageSegment(txs [][]byte) ([]byte, error) {
 }
 
 const TX_PER_BLOCK = 100
+const HARDFORK_TS = 1764565200
 
 func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 	var data []byte
@@ -114,7 +115,7 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 		data = append(data, segment...)
 	}
 
-	if blockNum != 0 {
+	if blockNum != 0 && ts < HARDFORK_TS {
 		segment, err := rlp.EncodeToBytes(blockNum)
 		if err != nil {
 			return nil, err

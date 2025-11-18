@@ -31,6 +31,9 @@ use std::{
     time::UNIX_EPOCH,
 };
 
+/// hardfork timestamp
+pub const HARDFORK_TS: u64 = 1764565200;
+
 /// `eth_subscribe`
 #[allow(clippy::unwrap_used)]
 pub async fn eth_subscribe(
@@ -190,8 +193,13 @@ pub fn eth_get_block_by_hash(
     let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
     let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
     let block = db.get_block(number)?;
+    let l1_block_number = if block.timestamp < HARDFORK_TS {
+        block.slot.seq_block_number
+    } else {
+        block.slot.set_block_number
+    };
     Ok(alloy::rpc::types::Block {
-        header: create_header(number, block.slot.seq_block_number, block.timestamp),
+        header: create_header(number, l1_block_number, block.timestamp),
         ..Default::default()
     })
 }
