@@ -18,66 +18,7 @@ import {
 } from "./constants"
 import { getChainRpcUrl, getNativeCurrency } from "./helpers"
 import { print } from "./print"
-import { featuresConfig, foundationConfig, handoffConfig } from "./schema"
-
-export async function getFoundationConfig() {
-  const configFile = Bun.file("./foundation.config.json")
-  if (!(await configFile.exists())) {
-    print("🚫 foundation.config.json not found")
-    process.exit(1)
-  }
-
-  const contents = await configFile.json()
-  const { success, data: config, error } = foundationConfig.safeParse(contents)
-  if (!success) {
-    print("🚫 Invalid foundation.config.json")
-    console.error(error)
-    throw new Error("Invalid foundation.config.json")
-  }
-
-  const { chainName, ...rest } = config
-  const [
-    settlementPublicClient,
-    sequencingPublicClient,
-    ethereumPublicClient,
-    ownerSettlementWalletClient,
-    deployerSettlementWalletClient,
-    ownerSequencingWalletClient,
-    deployerSequencingWalletClient
-  ] = await Promise.all([
-    getSettlementClient(config.settlementChainRpcUrl),
-    getSequencingClient(config.sequencingChainRpcUrl),
-    getEthereumClient(config.ethereumChainRpcUrl),
-    getSettlementWalletClient(
-      config.settlementChainRpcUrl,
-      config.ownerPrivateKey
-    ),
-    getSettlementWalletClient(
-      config.settlementChainRpcUrl,
-      config.deployerPrivateKey
-    ),
-    getSequencingWalletClient(
-      config.sequencingChainRpcUrl,
-      config.ownerPrivateKey
-    ),
-    getSequencingWalletClient(
-      config.sequencingChainRpcUrl,
-      config.deployerPrivateKey
-    )
-  ])
-
-  return {
-    ...rest,
-    settlementPublicClient,
-    sequencingPublicClient,
-    ethereumPublicClient,
-    ownerSettlementWalletClient,
-    deployerSettlementWalletClient,
-    ownerSequencingWalletClient,
-    deployerSequencingWalletClient,
-    chainName: chainName.toLowerCase().replace(/\s+/g, "-") // Normalize chain name as it will appear in the nitro and maestro configs
-  }
-}
+import { featuresConfig, handoffConfig } from "./schema"
 
 export async function getFeaturesConfig() {
   const featuresConfigFile = Bun.file("./features.config.json")

@@ -1,22 +1,27 @@
-import { parseAbiItem } from "viem"
+import { type Hex, parseAbiItem } from "viem"
 
 import {
   assertionPosterABI,
   assertionPosterBytecode
 } from "@/src/abi/synd/AssertionPoster"
 import { sleep } from "bun"
-import { getFeaturesConfig } from "../utils/config"
+import type { PrivateKeyWalletAccount, PublicClientWithChain } from "../types"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"
 
-export async function createAssertionPoster() {
-  const {
-    coreContracts: { rollup, upgradeExecutor },
-    settlementPublicClient,
-    deployerSettlementWalletClient,
-    ownerSettlementWalletClient
-  } = await getFeaturesConfig()
-
+export async function createAssertionPoster({
+  rollup,
+  upgradeExecutor,
+  settlementPublicClient,
+  deployerSettlementWalletClient,
+  ownerSettlementWalletClient
+}: {
+  rollup: Hex
+  upgradeExecutor: Hex
+  settlementPublicClient: PublicClientWithChain
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+}) {
   // 1. Get the executor address
   const executorAddress = await settlementPublicClient.readContract({
     address: rollup,

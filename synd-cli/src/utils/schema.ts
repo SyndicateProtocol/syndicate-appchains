@@ -101,24 +101,6 @@ export const handoffConfig = z.object({
   synd
 })
 
-export const foundationConfig = z.object({
-  settlementChainRpcUrl: z.string().url(),
-  sequencingChainRpcUrl: z.string().url(),
-  ethereumChainRpcUrl: z.string().url(),
-  chainId: z.string().transform((val) => Number.parseInt(val)),
-  chainName: z.string(),
-  appChainRpcUrl: z.string().url(),
-  appChainExplorerUrl: z.string().url(),
-  nativeTokenAddress: z
-    .string()
-    .optional()
-    .transform((val) => (val ? getAddress(val) : undefined)),
-  deployerPrivateKey: z.string(),
-  ownerPrivateKey: z.string(),
-  // hash of the transaction that created the core contracts
-  coreContractsCreatedAtHash: z.string().optional()
-})
-
 export const featuresConfig = z.object({
   coreContracts,
   ownerPrivateKey: z.string(),

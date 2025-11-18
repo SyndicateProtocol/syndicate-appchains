@@ -1,12 +1,14 @@
+import type { ChainConfig, CoreContracts } from "@arbitrum/orbit-sdk"
 import { type Hex, parseEther, stringify } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-
+import { getBlockNumber } from "viem/actions"
+import type { Foundation } from "../types"
 import {
-  type ChainConfig,
-  type CoreContracts
-} from "@arbitrum/orbit-sdk"
-
-import { getFoundationConfig } from "../utils/config"
+  supportedSequencingChains,
+  supportedSettlementChains
+} from "../utils/constants"
+import { fundAccount } from "../utils/fundAccount"
+import { generateBridgeConfig } from "../utils/generateBridgeConfig"
 import {
   getDoesChainExist,
   getNativeCurrency,
@@ -15,37 +17,28 @@ import {
   upsertToSyndObject,
   writeToFile
 } from "../utils/helpers"
-import { deployNitroRollup } from "./deployNitroRollup"
-import { deploySyndSequencingChain } from "./deploySyndSequencingChain"
-
-import { getBlockNumber } from "viem/actions"
-import {
-  supportedSequencingChains,
-  supportedSettlementChains
-} from "../utils/constants"
-import { fundAccount } from "../utils/fundAccount"
-import { generateBridgeConfig } from "../utils/generateBridgeConfig"
 import { print } from "../utils/print"
 import { createArbChainConfig } from "./createArbChainConfig"
+import { deployNitroRollup } from "./deployNitroRollup"
+import { deploySequencingChain } from "./deploySequencingChain"
 import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts"
 
-async function main() {
-  const {
-    chainId,
-    chainName,
-    nativeTokenAddress,
-    deployerSettlementWalletClient,
-    ownerSettlementWalletClient,
-    settlementPublicClient,
-    sequencingPublicClient,
-    ethereumChainRpcUrl,
-    deployerSequencingWalletClient,
-    ownerPrivateKey,
-    coreContractsCreatedAtHash,
-    appChainRpcUrl,
-    appChainExplorerUrl
-  } = await getFoundationConfig()
-
+export async function foundation({
+  chainId,
+  chainName,
+  nativeTokenAddress,
+  deployerSettlementWalletClient,
+  ownerSettlementWalletClient,
+  ownerSequencingWalletClient,
+  settlementPublicClient,
+  sequencingPublicClient,
+  ethereumChainRpcUrl,
+  deployerSequencingWalletClient,
+  ownerPrivateKey,
+  coreContractsCreatedAtHash,
+  appChainRpcUrl,
+  appChainExplorerUrl
+}: Foundation) {
   const validators = [ownerSettlementWalletClient.account.address]
   const batchPosters = [ownerSettlementWalletClient.account.address]
   const batchPosterManager = ownerSettlementWalletClient.account.address
@@ -62,11 +55,16 @@ async function main() {
   let coreContracts: CoreContracts | undefined
   if (coreContractsCreatedAtHash) {
     try {
-      const result = await getConfigAndCoreContracts({ hash: coreContractsCreatedAtHash as `0x${string}` })
+      const result = await getConfigAndCoreContracts({
+        hash: coreContractsCreatedAtHash as `0x${string}`,
+        settlementPublicClient
+      })
       chainConfig = result.chainConfig
       coreContracts = result.coreContracts
-    } catch (error) {
-      throw new Error("Failed to fetch existing core contracts and chain config from coreContractsCreatedAtHash. Please make sure coreContractsCreatedAtHash is valid and the transaction has been confirmed on the settlement chain.")
+    } catch (_error) {
+      throw new Error(
+        "Failed to fetch existing core contracts and chain config from coreContractsCreatedAtHash. Please make sure coreContractsCreatedAtHash is valid and the transaction has been confirmed on the settlement chain."
+      )
     }
   }
 
@@ -129,7 +127,7 @@ async function main() {
     return
   }
 
-  if (!coreContractsCreatedAtHash && await getDoesChainExist(chainId)) {
+  if (!coreContractsCreatedAtHash && (await getDoesChainExist(chainId))) {
     print(`🚫 Chain ${chainId} already exists`)
     process.exit(1)
   }
@@ -160,9 +158,14 @@ async function main() {
   } else {
     print("🔍  Deploying Nitro core contracts")
     const nitroDeploymentResult = await deployNitroRollup({
-      validators,
-      batchPosters,
-      batchPosterManager
+      chainId,
+      chainName,
+      ownerSettlementWalletClient,
+      settlementPublicClient,
+      appChainRpcUrl,
+      appChainExplorerUrl,
+      nativeTokenAddress,
+      deployerSettlementWalletClient
     })
     chainConfig = nitroDeploymentResult.chainConfig
     coreContracts = nitroDeploymentResult.coreContracts
@@ -181,7 +184,13 @@ async function main() {
     allowlistSequencingModuleAddress,
     requireAndModuleAddress,
     deployedAtBlock
-  } = await deploySyndSequencingChain(sequencerAccount)
+  } = await deploySequencingChain({
+    sequencerAccount,
+    chainId,
+    sequencingPublicClient,
+    deployerSequencingWalletClient,
+    ownerSequencingWalletClient
+  })
   await upsertToSyndObject(chainName, environment, "sequencing", {
     syndicateSequencingChain: syndicateSequencingChainAddress,
     allowlistSequencingModule: allowlistSequencingModuleAddress,
@@ -194,12 +203,18 @@ async function main() {
   print("✅  Syndicate Sequencing Chain deployed")
   print("---------------------------------------------------------")
 
-  const arbChainConfigAddress = await createArbChainConfig(
+  const arbChainConfigAddress = await createArbChainConfig({
     coreContracts,
-    settlementBlockBeforeDeployment,
-    syndicateSequencingChainAddress,
-    deployedAtBlock
-  )
+    settlementStartBlock: settlementBlockBeforeDeployment,
+    sequencingContractAddress: syndicateSequencingChainAddress,
+    sequencingStartBlock: deployedAtBlock,
+    ownerSettlementWalletClient,
+    settlementPublicClient,
+    sequencingPublicClient,
+    appChainExplorerUrl,
+    chainId,
+    deployerSettlementWalletClient
+  })
 
   await upsertToSyndObject(chainName, environment, "config", {
     arbChainConfig: arbChainConfigAddress,
@@ -316,10 +331,3 @@ async function main() {
 
   print("🏁  Foundation setup complete")
 }
-
-await main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error("🚫", err)
-    process.exit(1)
-  })

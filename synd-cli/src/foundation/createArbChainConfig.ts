@@ -1,27 +1,22 @@
 import { arbConfigManagerABI } from "@/src/abi/synd/ArbConfigManager"
-import type { CoreContracts } from "@arbitrum/orbit-sdk"
-import { type Hex, parseEventLogs } from "viem"
-import { getFoundationConfig } from "../utils/config"
+import { parseEventLogs } from "viem"
+import type { CreateArbChainConfig } from "../types"
 import { supportedSettlementChains } from "../utils/constants"
 import { getChainExplorerUrl } from "../utils/helpers"
 import { print } from "../utils/print"
 
-export async function createArbChainConfig(
-  coreContracts: CoreContracts,
-  settlementStartBlock: bigint | string,
-  sequencingContractAddress: Hex,
-  sequencingStartBlock: bigint | string
-) {
-  const {
-    chainId,
-    chainName,
-    deployerSettlementWalletClient,
-    settlementPublicClient,
-    sequencingPublicClient,
-    ownerSettlementWalletClient,
-    appChainExplorerUrl
-  } = await getFoundationConfig()
-
+export async function createArbChainConfig({
+  coreContracts,
+  settlementStartBlock,
+  sequencingContractAddress,
+  sequencingStartBlock,
+  ownerSettlementWalletClient,
+  settlementPublicClient,
+  sequencingPublicClient,
+  appChainExplorerUrl,
+  chainId,
+  deployerSettlementWalletClient
+}: CreateArbChainConfig) {
   print("🔍 Creating ArbChainConfig...")
 
   const arbConfigManagerAddress =

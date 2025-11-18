@@ -114,10 +114,10 @@ export async function generateCallArbOwnerTx({
 			}
 
 			// Add 50% buffer to total submission cost to increase the chances of auto-redemption of the retryable ticket
-			estimatedMaxFeePerGas = scaleByPercentage(estimatedMaxFeePerGas, 150);
+			estimatedMaxFeePerGas = scaleByPercentage(estimatedMaxFeePerGas, 50);
 
 			// Add 20% buffer to gas limit for safety
-			estimatedGasLimit = scaleByPercentage(estimatedGasLimit, 120);
+			estimatedGasLimit = scaleByPercentage(estimatedGasLimit, 20);
 		} catch (error) {
 			console.warn(
 				"⚠️  Could not estimate gas from child chain, using defaults",
@@ -174,7 +174,7 @@ export async function generateCallArbOwnerTx({
 	}
 
 	// Add 50% buffer to total submission cost for safety
-	const maxSubmissionCost = scaleByPercentage(submissionCost, 150);
+	const maxSubmissionCost = scaleByPercentage(submissionCost, 50);
 	const totalValue =
 		maxSubmissionCost + estimatedGasLimit * estimatedMaxFeePerGas;
 

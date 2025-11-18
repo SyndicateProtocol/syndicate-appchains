@@ -1,43 +1,37 @@
 import {
-  type CreateRollupParams,
+  type CreateRollupParams as NitroCreateRollupParams,
   createRollupEnoughCustomFeeTokenAllowance,
   createRollupGetRetryablesFeesWithDefaults,
   createRollupPrepareCustomFeeTokenApprovalTransactionRequest,
   createRollupPrepareDeploymentParamsConfig,
   createRollupPrepareTransactionReceipt,
-  createRollupPrepareTransactionRequest,
   prepareChainConfig
 } from "@arbitrum/orbit-sdk"
+import { sleep } from "bun"
+import {
+  type TransactionSerializable,
+  erc20Abi,
+  formatEther,
+  parseUnits
+} from "viem"
 
+import { supportedSettlementChains } from "@/src/utils/constants"
 import {
   getChainExplorerUrl,
   getNativeCurrency,
   isNativeTokenEth
 } from "@/src/utils/helpers"
-import { getFoundationConfig } from "../utils/config"
-
-import {
-  ownerAdjustableExchangeRatePricerAbi,
-  ownerAdjustableExchangeRatePricerBytecode
-} from "@/src/abi/nitro/OwnerAdjustableExchangeRatePricer"
-import type { CreateSettlementRollupParams } from "@/src/types"
-import { supportedSettlementChains } from "@/src/utils/constants"
-import { sleep } from "bun"
-import { erc20Abi, formatEther, parseEther, parseUnits } from "viem"
+import type { CreateRollupParams } from "../types"
 import { print } from "../utils/print"
+import { createRollupPrepareTransactionRequest } from "./createRollupPrepareTransactionRequest"
 
 export async function createRollup({
-  validators,
-  batchPosters,
-  batchPosterManager
-}: CreateSettlementRollupParams) {
-  const {
-    chainId,
-    nativeTokenAddress,
-    deployerSettlementWalletClient,
-    ownerSettlementWalletClient,
-    settlementPublicClient
-  } = await getFoundationConfig()
+  chainId,
+  nativeTokenAddress,
+  deployerSettlementWalletClient,
+  ownerSettlementWalletClient,
+  settlementPublicClient
+}: CreateRollupParams) {
   const deployerAccount = deployerSettlementWalletClient.account
   const rollupOwnerAccount = ownerSettlementWalletClient.account
   const owner = rollupOwnerAccount.address
@@ -49,7 +43,7 @@ export async function createRollup({
   const chainConfig = prepareChainConfig({
     chainId,
     arbitrum: {
-      InitialArbOSVersion: 32,
+      InitialArbOSVersion: 40,
       DataAvailabilityCommittee: false,
       InitialChainOwner: owner,
       MaxCodeSize: 0,
@@ -57,16 +51,20 @@ export async function createRollup({
     }
   })
 
-  const params: CreateRollupParams = {
+  // syndicate appchains do not utilize batch posters or validators so we exclude them here
+  const params: Omit<
+    NitroCreateRollupParams,
+    "batchPosters" | "validators" | "batchPosterManager"
+  > = {
     config: createRollupPrepareDeploymentParamsConfig(settlementPublicClient, {
       chainId: BigInt(chainId),
       owner,
       chainConfig
     }),
-    batchPosterManager,
-    batchPosters,
-    validators,
     maxDataSize
+    // batchPosterManager,
+    // batchPosters,
+    // validators,
   }
 
   const costOfRetryables = await createRollupGetRetryablesFeesWithDefaults(
@@ -142,52 +140,6 @@ export async function createRollup({
       )
     }
 
-    print("🔍  Deploying exchange rate pricer...")
-    const createExchangeRatePricerHash =
-      await deployerSettlementWalletClient.deployContract({
-        abi: ownerAdjustableExchangeRatePricerAbi,
-        bytecode: ownerAdjustableExchangeRatePricerBytecode,
-        account: deployerAccount,
-        // Exchange rate set to 1:1
-        args: [parseEther("1")]
-      })
-    const exchangeRatePricerTx =
-      await settlementPublicClient.waitForTransactionReceipt({
-        hash: createExchangeRatePricerHash
-      })
-    const exchangeRatePricerAddress = exchangeRatePricerTx.contractAddress
-    if (!exchangeRatePricerAddress) {
-      throw new Error("❌ Exchange rate pricer deployment failed")
-    }
-    print(
-      `🔍  Exchange rate pricer deployed to ${exchangeRatePricerAddress} in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${
-        createExchangeRatePricerHash
-      }`
-    )
-
-    // Sleep before calling the contract
-    await sleep(2_000)
-
-    // Transfer ownership of the exchange rate pricer to the owner
-    const transferOwnershipHash =
-      await deployerSettlementWalletClient.writeContract({
-        address: exchangeRatePricerAddress,
-        abi: ownerAdjustableExchangeRatePricerAbi,
-        functionName: "transferOwnership",
-        args: [owner]
-      })
-
-    const transferOwnershipTxReceipt =
-      await settlementPublicClient.waitForTransactionReceipt({
-        hash: transferOwnershipHash
-      })
-    print(
-      `🔍  Exchange rate pricer ownership transferred to ${owner} in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${
-        transferOwnershipTxReceipt.transactionHash
-      }`
-    )
-
-    params.feeTokenPricer = exchangeRatePricerAddress
     params.nativeToken = nativeTokenAddress
     print("🫷  Waiting for 5 seconds before calling createRollup...")
     await sleep(5_000)
@@ -197,11 +149,13 @@ export async function createRollup({
     params,
     account: deployerAccount.address,
     publicClient: settlementPublicClient,
-    rollupCreatorAddressOverride: rollupCreatorAddress
+    rollupCreatorAddress
   })
 
   const txHash = await settlementPublicClient.sendRawTransaction({
-    serializedTransaction: await deployerAccount.signTransaction(request)
+    serializedTransaction: await deployerAccount.signTransaction(
+      request as TransactionSerializable
+    )
   })
 
   const { transactionHash } = createRollupPrepareTransactionReceipt(

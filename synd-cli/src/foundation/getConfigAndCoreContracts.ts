@@ -5,11 +5,12 @@ import {
 
 import type { ChainConfig } from "@arbitrum/orbit-sdk"
 
-import type { Hex, Transaction } from "viem"
-import { getFoundationConfig } from "../utils/config"
+import type { Chain, Hex, PublicClient, Transaction, Transport } from "viem"
 
-export async function getConfigAndCoreContracts({ hash }: { hash: Hex }) {
-  const { settlementPublicClient } = await getFoundationConfig()
+export async function getConfigAndCoreContracts({
+  hash,
+  settlementPublicClient
+}: { hash: Hex; settlementPublicClient: PublicClient<Transport, Chain> }) {
   // get the transaction
   const tx = createRollupPrepareTransaction(
     (await settlementPublicClient.getTransaction({
