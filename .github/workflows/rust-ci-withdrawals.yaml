@@ -1,4 +1,5 @@
-name: Rust CI - Withdrawals & Migration
+name: Rust CI - Withdrawals
+# TODO ENG-2223: Add migration tests
 
 on:
   pull_request:
@@ -33,7 +34,7 @@ env:
 jobs:
   e2e-withdrawals:
     if: github.event.pull_request.draft == false
-    name: E2E Withdrawal & Migration Tests
+    name: E2E Withdrawal Tests
     runs-on: shared-large-02
     timeout-minutes: 60
 
