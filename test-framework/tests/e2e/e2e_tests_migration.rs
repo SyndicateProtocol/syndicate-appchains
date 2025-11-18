@@ -325,10 +325,6 @@ async fn e2e_migration() -> Result<()> {
     println!("onchain batch_acc:{batch_acc} batch_count:{batch_count}");
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
-
-    // shutdown the nitro node
-    drop(appchain);
-
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
 
@@ -350,6 +346,7 @@ async fn e2e_migration() -> Result<()> {
     }
     wait_until!(
         {
+            mine_block(&set_chain.provider.clone(), 70).await?;
             match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await
             {
                 Ok(data) => {
@@ -362,9 +359,13 @@ async fn e2e_migration() -> Result<()> {
                 }
             }
         },
-        Duration::from_secs(20),
+        Duration::from_secs(60),
         Duration::from_secs(1)
     );
+
+    // shutdown the nitro node
+    drop(appchain);
+
     let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
     assert_eq!(migration_data.rollup.batch_acc, batch_acc);
 
