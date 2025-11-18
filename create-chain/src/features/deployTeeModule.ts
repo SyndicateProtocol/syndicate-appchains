@@ -82,6 +82,7 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
 
   const bridgeAddress =
     supportedSequencingChains[sequencingPublicClient.chain.id].bridgeAddress
+  console.log("bridgeAddress", bridgeAddress);
   const teeKeyManagerAddress =
     supportedSettlementChains[settlementPublicClient.chain.id]
       .teeKeyManagerAddress
@@ -89,6 +90,7 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
   const l1BlockOrBridge = isL1Chain
     ? bridgeAddress
     : "0x4200000000000000000000000000000000000015"
+  console.log("l1BlockOrBridge", l1BlockOrBridge);
 
   const settlementDelay = BigInt(60) // seconds
   const challengeWindowDuration = BigInt(10 * 60) // 10 minutes
@@ -99,18 +101,18 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
     abi: AbsBridgeAbi,
     functionName: "sequencerMessageCount"
   })
-
+  console.log("sequencerMessageCount", sequencerMessageCount.toString());
   // -2 because the l1Block from the TeeModule is 5 minutes behind the L1 chain
   // starting from a previous batch in case the last batch was posted in the last 5 minutes
   const batchNumber = sequencerMessageCount - BigInt(2)
-
+  console.log("batchNumber", batchNumber.toString());
   const l1StartBatchAcc = await ethereumPublicClient.readContract({
     address: bridgeAddress,
     abi: AbsBridgeAbi,
     functionName: "sequencerInboxAccs",
     args: [batchNumber]
   })
-
+  console.log("l1StartBatchAcc", l1StartBatchAcc.toString());
   const res = await fetch(
     syndForkSequencingChainRpcUrl,
     {
@@ -126,22 +128,25 @@ export async function createTeeModule(assertionPosterAddress: Hex) {
       })
     }
   )
+  console.log("res", JSON.stringify(res));
   if (!res.ok) {
     throw new Error("Failed to get sequencing batch metadata")
   }
   const data = await res.json()
+  console.log("data", JSON.stringify(data));
   const sequencingStartBlockNumber = data.result.MessageCount - 1
+  console.log("sequencingStartBlockNumber", sequencingStartBlockNumber.toString());
   const seqStartBlockHash = (
     await sequencingPublicClient.getBlock({
       blockNumber: BigInt(sequencingStartBlockNumber)
     })
   ).hash
-
+  console.log("seqStartBlockHash", seqStartBlockHash);
   const appStartBlockHash = await findAppStartBlockHash(
     appchainPublicClient,
     BigInt(sequencingStartBlockNumber)
   )
-
+  console.log("appStartBlockHash", appStartBlockHash);
   const args = [
     // 1. poster_: AssertionPoster contract address
     assertionPosterAddress,
@@ -293,13 +298,14 @@ async function findAppStartBlockHash(
   let start = BigInt(0)
   let end = await appchainPublicClient.getBlockNumber()
   end = end + BigInt(1)
-
+  console.log("start", start.toString());
+  console.log("end", end.toString());
   while (end - start > BigInt(1)) {
     const mid = (start + end) / BigInt(2)
     const header = await appchainPublicClient.getBlock({ blockNumber: mid })
     // @ts-ignore
     const l1NumberFromHeader = header.l1BlockNumber
-
+    console.log("l1NumberFromHeader", l1NumberFromHeader.toString());
     if (l1NumberFromHeader <= l1Number) {
       start = mid
     } else {
@@ -310,11 +316,12 @@ async function findAppStartBlockHash(
   const finalHeader = await appchainPublicClient.getBlock({
     blockNumber: start
   })
+  console.log("finalHeader", stringify(finalHeader));
   // @ts-ignore
   const finalL1Number = finalHeader.l1BlockNumber
   if (finalL1Number > l1Number) {
     throw new Error("Block not found")
   }
-
+  console.log("finalL1Number", finalL1Number.toString());
   return finalHeader.hash
 }
