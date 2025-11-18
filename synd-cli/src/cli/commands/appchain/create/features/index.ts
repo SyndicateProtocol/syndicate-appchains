@@ -1,14 +1,139 @@
 import type { Command } from "@/node_modules/@commander-js/extra-typings";
+import { getPublicClient, getWalletClient } from "@/src/cli/helpers";
 import {
-	appchainCreateFoundationOptionsSchema,
+	appchainCreateFeaturesOptionsSchema,
 	handleSchemaErrors,
 } from "@/src/cli/schema";
+import { features } from "@/src/features/features";
+import { getAppchainClient } from "@/src/utils/config";
+import {
+	supportedEthereumChains,
+	supportedSequencingChains,
+	supportedSettlementChains,
+} from "@/src/utils/constants";
+import { getChainRpcUrl } from "@/src/utils/helpers";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 export function createFeaturesCommand(program: Command) {
 	program
 		.command("features")
-		.description("Create features for a new appchain")
-		.action(async () => {
-			console.log("Creating features...");
+		.description(
+			"Deploy features for a new appchain. The foundation must be deployed first. Nitro token bridge, Syndicate withdrawals, multicall3",
+		)
+		.requiredOption(
+			"--owner-private-key <key>",
+			"Private key of the owner account",
+		)
+		.requiredOption(
+			"--deployer-private-key <key>",
+			"Private key of the deployer account",
+		)
+		.requiredOption("--chain-id <id>", "Chain ID of the appchain")
+		.requiredOption("--chain-name <name>", "Name of the appchain")
+		.requiredOption(
+			"--settlement-rpc <url>",
+			"RPC URL for the settlement chain",
+		)
+		.requiredOption(
+			"--sequencing-rpc <url>",
+			"RPC URL for the sequencing chain",
+		)
+		.requiredOption(
+			"--synd-fork-sequencing-rpc <url>",
+			"RPC URL for the synd fork sequencing chain",
+		)
+		.requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
+		.requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
+		.requiredOption(
+			"--appchain-explorer <url>",
+			"Explorer URL for the appchain",
+		)
+		.requiredOption(
+			"--sequencing-contract-address <address>",
+			"Address of the sequencing contract",
+		)
+		.requiredOption(
+			"--core-contracts <contracts>",
+			"Core contracts for the appchain",
+		)
+		.action(async (options: Record<string, unknown>) => {
+			const {
+				data: validatedOptions,
+				success,
+				error,
+			} = appchainCreateFeaturesOptionsSchema.safeParse(options);
+
+			if (!success) {
+				return handleSchemaErrors(error);
+			}
+
+			const {
+				settlementRpc,
+				sequencingRpc,
+				ethereumRpc,
+				deployerPrivateKey,
+				ownerPrivateKey,
+				coreContracts,
+				appchainRpc,
+				appchainExplorer,
+				chainId,
+				chainName,
+			} = validatedOptions;
+
+			const [
+				settlementPublicClient,
+				sequencingPublicClient,
+				ethereumPublicClient,
+				ownerSettlementWalletClient,
+				deployerSettlementWalletClient,
+				deployerSequencingWalletClient,
+			] = await Promise.all([
+				getPublicClient(settlementRpc, supportedSettlementChains),
+				getPublicClient(sequencingRpc, supportedSequencingChains),
+				getPublicClient(ethereumRpc, supportedEthereumChains),
+				getWalletClient(
+					settlementRpc,
+					supportedSettlementChains,
+					ownerPrivateKey as `0x${string}`,
+				),
+				getWalletClient(
+					settlementRpc,
+					supportedSettlementChains,
+					deployerPrivateKey as `0x${string}`,
+				),
+				getWalletClient(
+					sequencingRpc,
+					supportedSequencingChains,
+					deployerPrivateKey as `0x${string}`,
+				),
+			]);
+
+			const appchainPublicClient = await getAppchainClient({
+				chainId: chainId,
+				chainName: chainName,
+				nativeToken: coreContracts.nativeToken,
+				settlementPublicClient: settlementPublicClient,
+				rpcUrl: appchainRpc,
+				explorerUrl: appchainExplorer,
+			});
+
+			const deployerAppchainWalletClient = createWalletClient({
+				chain: appchainPublicClient.chain,
+				account: privateKeyToAccount(deployerPrivateKey as `0x${string}`),
+				transport: http(getChainRpcUrl(appchainPublicClient.chain)),
+			});
+
+			await features({
+				...validatedOptions,
+				appchainPublicClient,
+				deployerSequencingWalletClient,
+				ownerSettlementWalletClient,
+				deployerSettlementWalletClient,
+				settlementPublicClient,
+				deployerAppchainWalletClient,
+				sequencingPublicClient,
+				ethereumPublicClient,
+			});
 		});
 }

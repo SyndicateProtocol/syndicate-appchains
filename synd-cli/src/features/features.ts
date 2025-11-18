@@ -1,7 +1,7 @@
 import { sleep } from "bun";
 import { erc20Abi, formatEther, parseEther, parseUnits } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { getFeaturesConfig } from "../utils/config";
+import type { Features } from "../types";
 import { supportedSettlementChains } from "../utils/constants";
 import { fundAccount } from "../utils/fundAccount";
 import { generateBridgeConfig } from "../utils/generateBridgeConfig";
@@ -18,18 +18,21 @@ import { canDeployMulticall3, deployMulticall3 } from "./deployMulticall3";
 import { deployTeeModule } from "./deployTeeModule";
 import { pollEmptyTxs } from "./pollEmptyTxs";
 
-async function main() {
-	const {
-		coreContracts,
-		chainId,
-		chainName,
-		appchainPublicClient,
-		deployerSequencingWalletClient,
-		ownerSettlementWalletClient,
-		deployerSettlementWalletClient,
-		settlementPublicClient,
-	} = await getFeaturesConfig();
-
+export async function features({
+	coreContracts,
+	chainId,
+	chainName,
+	appchainPublicClient,
+	deployerSequencingWalletClient,
+	ownerSettlementWalletClient,
+	deployerSettlementWalletClient,
+	settlementPublicClient,
+	deployerAppchainWalletClient,
+	sequencingContractAddress,
+	sequencingPublicClient,
+	ethereumPublicClient,
+	syndForkSequencingRpc,
+}: Features) {
 	const nativeCurrency = await getNativeCurrency(
 		settlementPublicClient,
 		coreContracts.nativeToken,
@@ -173,7 +176,8 @@ async function main() {
 		environment,
 		"bridge",
 		generateBridgeConfig({
-			explorerUrl: appchainPublicClient.chain.blockExplorers?.default.url,
+			explorerUrl:
+				appchainPublicClient.chain?.blockExplorers?.default.url ?? "",
 			parentChainId: settlementPublicClient.chain.id,
 			rpcUrl: getChainRpcUrl(appchainPublicClient.chain),
 			tokenContracts: {
@@ -190,8 +194,16 @@ async function main() {
 		}),
 	);
 
-	if (await canDeployMulticall3()) {
-		const multicall3Address = await deployMulticall3();
+	if (
+		await canDeployMulticall3({
+			appchainPublicClient,
+			deployerAppchainWalletClient,
+		})
+	) {
+		const multicall3Address = await deployMulticall3({
+			appchainPublicClient,
+			deployerAppchainWalletClient,
+		});
 		print(`✅ Multicall3 successfully deployed to: ${multicall3Address}`);
 		await upsertToSyndObject(
 			chainName,
@@ -206,7 +218,17 @@ async function main() {
 		teeModuleAddress,
 		attestationDocVerifierAddress,
 		teeKeyManagerAddress,
-	} = await deployTeeModule();
+	} = await deployTeeModule({
+		settlementPublicClient,
+		deployerSettlementWalletClient,
+		ownerSettlementWalletClient,
+		sequencingContractAddress,
+		sequencingPublicClient,
+		appchainPublicClient,
+		ethereumPublicClient,
+		syndForkSequencingRpc,
+		coreContracts,
+	});
 
 	await upsertToSyndObject(chainName, environment, "withdrawals", {
 		teeKeyManager: teeKeyManagerAddress,
@@ -249,12 +271,3 @@ async function main() {
     - ./out/${chainName}/${environment}-eoaSecrets.${chainName}.json`,
 	);
 }
-
-await main()
-	.then(() => {
-		process.exit(0);
-	})
-	.catch((error) => {
-		console.error(error);
-		process.exit(1);
-	});

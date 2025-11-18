@@ -202,7 +202,7 @@ async function getEthereumClient(rpcUrl: string) {
   })
 }
 
-async function getAppchainClient({
+export async function getAppchainClient({
   chainId,
   chainName,
   nativeToken,

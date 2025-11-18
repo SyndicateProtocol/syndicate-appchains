@@ -12,7 +12,8 @@ import {
 import { holesky, mainnet, sepolia } from "viem/chains";
 import { AbsBridgeAbi } from "../abi/nitro/AbsBridge";
 import type {
-	DeployTeeModuleParams,
+	CreateTeeModule,
+	DeployTeeModule,
 	PrivateKeyWalletAccount,
 	PublicClientWithChain,
 } from "../types";
@@ -33,8 +34,8 @@ export async function deployTeeModule({
 	sequencingPublicClient,
 	appchainPublicClient,
 	ethereumPublicClient,
-	syndForkSequencingChainRpcUrl,
-}: DeployTeeModuleParams) {
+	syndForkSequencingRpc,
+}: DeployTeeModule) {
 	const assertionPosterAddress = await createAssertionPoster({
 		rollup,
 		upgradeExecutor,
@@ -51,7 +52,7 @@ export async function deployTeeModule({
 		sequencingPublicClient,
 		appchainPublicClient,
 		ethereumPublicClient,
-		syndForkSequencingChainRpcUrl,
+		syndForkSequencingRpc,
 	});
 
 	// Sleep a bit to ensure contracts are ready to have ownership transferred
@@ -108,18 +109,8 @@ export async function createTeeModule({
 	sequencingPublicClient,
 	appchainPublicClient,
 	ethereumPublicClient,
-	syndForkSequencingChainRpcUrl,
-}: {
-	assertionPosterAddress: Hex;
-	bridge: Hex;
-	deployerSettlementWalletClient: PrivateKeyWalletAccount;
-	settlementPublicClient: PublicClientWithChain;
-	sequencingContractAddress: Hex;
-	sequencingPublicClient: PublicClientWithChain;
-	appchainPublicClient: PublicClientWithChain;
-	ethereumPublicClient: PublicClientWithChain;
-	syndForkSequencingChainRpcUrl: string;
-}) {
+	syndForkSequencingRpc,
+}: CreateTeeModule) {
 	const isL1Chain = (
 		[mainnet.id, sepolia.id, holesky.id] as Array<number>
 	).includes(settlementPublicClient.chain.id);
@@ -155,7 +146,7 @@ export async function createTeeModule({
 		args: [batchNumber],
 	});
 
-	const res = await fetch(syndForkSequencingChainRpcUrl, {
+	const res = await fetch(syndForkSequencingRpc, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
