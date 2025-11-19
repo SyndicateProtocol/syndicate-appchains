@@ -70,7 +70,7 @@ struct SyndicateStack {
     config_manager_address: Address,
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
-    valkey: E2EProcess, // drop valkey before maestro and batch_sequencer
+    valkey: E2EProcess,
     translator: E2EProcess,
     appchain: ChainInfo,
     maestro: E2EProcess,
@@ -523,6 +523,8 @@ async fn e2e_migration() -> Result<()> {
             .unwrap(),
         appchain_block_before
     );
+
+    println!("test finished"); // TODO remove, just to debug in CI
 
     // TODO [ENG-2216] - assert l1_block_number is taken from the settlement chain
     // let block: NitroBlock = synd_stack
