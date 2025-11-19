@@ -22,6 +22,20 @@ use std::path::{Path, PathBuf};
 use tokio::{fs, process::Command};
 use tracing::info;
 
+#[derive(Copy, Debug, Clone, PartialEq, Eq)]
+pub enum ArbContractVersion {
+    V213,
+    V311,
+}
+
+impl ArbContractVersion {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ArbContractVersion::V213 => "v213",
+            ArbContractVersion::V311 => "v311",
+        }
+    }
+}
 pub struct NitroChainInfoArgs {
     pub chain_id: u64,
     pub parent_chain_id: u64,
@@ -253,7 +267,7 @@ pub struct NitroDeployment {
     #[serde(rename = "upgrade-executor", deserialize_with = "deserialize_address")]
     pub upgrade_executor: Address,
 
-    #[serde(rename = "validator-utils", deserialize_with = "deserialize_address")]
+    #[serde(rename = "validator-utils", deserialize_with = "deserialize_address", default)]
     pub validator_utils: Address,
 
     #[serde(rename = "validator-wallet-creator", deserialize_with = "deserialize_address")]
@@ -273,6 +287,7 @@ pub async fn deploy_nitro_rollup(
     rollup_owner: Address,
     batch_posters: Vec<Address>,
     use_eigen_da: bool,
+    version: Option<ArbContractVersion>,
 ) -> eyre::Result<NitroDeployment> {
     let project_root = env!("CARGO_WORKSPACE_DIR");
 
@@ -280,8 +295,15 @@ pub async fn deploy_nitro_rollup(
     let tmp_dir = test_path("nitro-deploy");
 
     // Copy nitro-contracts to temp directory
-    let source_nitro_contracts = Path::new(project_root).join("synd-contracts/lib/nitro-contracts");
-    let nitro_contracts_dir = PathBuf::from(&tmp_dir).join("nitro-contracts");
+
+    let repo_name = if let Some(version) = version {
+        format!("nitro-contracts-{}", version.as_str())
+    } else {
+        "nitro-contracts".to_string()
+    };
+    let source_nitro_contracts =
+        Path::new(project_root).join(format!("synd-contracts/lib/{}", repo_name));
+    let nitro_contracts_dir = PathBuf::from(&tmp_dir).join(repo_name);
 
     info!(
         "Copying nitro-contracts from {} to {}",
@@ -293,20 +315,26 @@ pub async fn deploy_nitro_rollup(
     let nitro_contracts_dir = nitro_contracts_dir.to_string_lossy().to_string();
     info!("Nitro contracts working dir: {nitro_contracts_dir}");
 
-    // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
-    // Modify hardhat.config.ts to add custom network
-    // apply patch to hardhat.config.ts to add custom network
-    let patch_path = Path::new(project_root)
-        .join("shared/test-utils/src/nitro-hardhat-config.patch")
-        .to_string_lossy()
-        .to_string();
-    let status = E2EProcess::new(
-        Command::new("patch").current_dir(nitro_contracts_dir.clone()).arg("-i").arg(patch_path),
-        "patch-nitro-contracts",
-    )?
-    .wait()
-    .await?;
-    assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
+    if version != Some(ArbContractVersion::V311) {
+        // TODO this can be removed once this change is in place: https://github.com/Layr-Labs/nitro-contracts/pull/59
+        // Modify hardhat.config.ts to add custom network
+        // apply patch to hardhat.config.ts to add custom network
+        let patch_path = Path::new(project_root)
+            .join("shared/test-utils/src/nitro-hardhat-config.patch")
+            .to_string_lossy()
+            .to_string();
+        let status = E2EProcess::new(
+            Command::new("patch")
+                .current_dir(nitro_contracts_dir.clone())
+                .arg("-i")
+                .arg(patch_path),
+            // .arg("-v"),
+            "patch-nitro-contracts",
+        )?
+        .wait()
+        .await?;
+        assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
+    }
 
     // install and build dependencies
     let status = E2EProcess::new(

@@ -161,7 +161,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.3.5
+          version: stable
 
       - name: Install SP1 toolchain
         run: |
