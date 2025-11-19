@@ -1,5 +1,6 @@
-import type { Command } from "@/node_modules/@commander-js/extra-typings";
+import type { Command } from "@commander-js/extra-typings";
 import { arbOwnerCommand } from "./arbOwner";
+import { checkTokenBridgeCommand } from "./checkTokenBridge/";
 import { createAppchainCommand } from "./create";
 
 export function appchainCommand(program: Command) {
@@ -11,4 +12,5 @@ export function appchainCommand(program: Command) {
 		});
 	arbOwnerCommand(appchainProgram);
 	createAppchainCommand(appchainProgram);
+	checkTokenBridgeCommand(appchainProgram);
 }

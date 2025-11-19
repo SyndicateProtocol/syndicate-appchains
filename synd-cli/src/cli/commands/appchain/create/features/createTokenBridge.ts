@@ -1,3 +1,4 @@
+import { getTokenBridgeContracts } from "@/utils/getTokenBridgeContracts";
 import { getChainExplorerUrl } from "@/utils/helpers";
 import { print } from "@/utils/print";
 import {
@@ -18,7 +19,6 @@ import {
 	type Transport,
 	zeroAddress,
 } from "viem";
-import { getTokenBridgeContracts } from "./getTokenBridgeContracts";
 
 // Source: https://github.com/OffchainLabs/arbitrum-orbit-sdk/blob/7143a874a94dc0d59d076a0407319f4927f5f49d/src/createTokenBridge.ts#L171-L172
 export async function createTokenBridge<

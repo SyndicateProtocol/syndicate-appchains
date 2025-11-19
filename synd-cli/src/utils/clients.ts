@@ -9,7 +9,7 @@ import {
 	http,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { getNativeCurrency } from "./helpers";
+import { getNativeCurrency, isNativeTokenEth } from "./helpers";
 
 export async function getPublicClient(
 	rpcUrl: string,
@@ -41,27 +41,27 @@ export async function getAppchainClient({
 	explorerUrl,
 	settlementPublicClient,
 }: {
-	nativeToken: Hex;
+	nativeToken?: Hex;
 	rpcUrl: string;
 	explorerUrl?: string;
 	settlementPublicClient: PublicClientWithChain;
 }) {
 	const chainId = await getRpcUrlChainId(rpcUrl);
-	const nativeCurrency = await getNativeCurrency(
-		settlementPublicClient,
-		nativeToken,
-	);
+	const nativeCurrency =
+		nativeToken && !isNativeTokenEth(nativeToken)
+			? await getNativeCurrency(settlementPublicClient, nativeToken)
+			: {
+					decimals: 18,
+					name: "Ether",
+					symbol: "ETH",
+				};
 	const chainName = `appchain: ${chainId}`;
 	return createPublicClient({
 		chain: defineChain({
 			id: chainId,
 			name: chainName,
 			network: chainName,
-			nativeCurrency: nativeCurrency ?? {
-				decimals: 18,
-				name: "Ether",
-				symbol: "ETH",
-			},
+			nativeCurrency,
 			rpcUrls: {
 				default: { http: [rpcUrl] },
 				public: { http: [rpcUrl] },
@@ -104,6 +104,9 @@ async function getRpcUrlChainId(rpcUrl: string) {
 			params: [],
 			id: 1,
 		}),
+		headers: {
+			"Content-Type": "application/json",
+		},
 	});
 	if (!res.ok) {
 		throw new Error(`Failed to get chainId for ${rpcUrl}`);

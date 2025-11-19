@@ -2,8 +2,11 @@ import {
 	appchainCreateFeaturesOptionsSchema,
 	handleSchemaErrors,
 } from "@/cli/schema";
-import { getPublicClient, getWalletClient } from "@/utils/clients";
-import { getAppchainClient } from "@/utils/config";
+import {
+	getAppchainClient,
+	getPublicClient,
+	getWalletClient,
+} from "@/utils/clients";
 import {
 	supportedEthereumChains,
 	supportedSequencingChains,
