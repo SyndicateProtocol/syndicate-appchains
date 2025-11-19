@@ -816,7 +816,7 @@ impl TestComponents {
             true => {
                 let mut receipt = None;
                 wait_until!(
-                receipt = self.appchain_provider.get_transaction_receipt(tx_hash).await?;
+                receipt = self.appchain_provider.get_transaction_receipt(tx_hash).await.unwrap_or(None);
                 receipt.is_some(),
                         Duration::from_secs(10)
                     );

@@ -647,8 +647,6 @@ sol! {
     }
 }
 
-// TODO(ENG-2205): fix this test
-#[ignore]
 #[tokio::test]
 async fn e2e_sequencing_reorg() -> Result<()> {
     TestComponents::run(
