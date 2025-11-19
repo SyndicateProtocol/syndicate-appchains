@@ -326,6 +326,8 @@ async fn e2e_migration() -> Result<()> {
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
 
+    println!("CI-CHECK - 1"); // TODO remove, just to debug in CI
+
     #[cfg(target_os = "linux")]
     {
         // give some time for nitro to catch up
@@ -352,6 +354,7 @@ async fn e2e_migration() -> Result<()> {
         .await?;
         assert!(status.success(), "failed to change permissions");
     }
+    println!("CI-CHECK - 2"); // TODO remove, just to debug in CI
     wait_until!(
         {
             mine_block(&set_chain.provider.clone(), 70).await?;
@@ -442,6 +445,7 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
+    println!("CI-CHECK - 3"); // TODO remove, just to debug in CI
     wait_until!(
         {
             mine_block(&seq_chain.provider.clone(), 60).await?;
@@ -451,7 +455,8 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
-    // deposit again, assert it works
+    println!("CI-CHECK - 4"); // TODO remove, just to debug in CI
+                              // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
     wait_until!(
@@ -501,6 +506,7 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
+    println!("CI-CHECK - 5"); // TODO remove, just to debug in CI
 
     wait_until!(
         {
@@ -524,7 +530,7 @@ async fn e2e_migration() -> Result<()> {
         appchain_block_before
     );
 
-    println!("test finished"); // TODO remove, just to debug in CI
+    println!("CI-CHECK - test finished"); // TODO remove, just to debug in CI
 
     // TODO [ENG-2216] - assert l1_block_number is taken from the settlement chain
     // let block: NitroBlock = synd_stack

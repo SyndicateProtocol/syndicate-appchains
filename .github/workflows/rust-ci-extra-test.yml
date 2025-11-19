@@ -1,4 +1,4 @@
-name: Rust CI - Long Test (Reusable)
+name: Rust CI - Extra Test
 
 on:
   workflow_call:

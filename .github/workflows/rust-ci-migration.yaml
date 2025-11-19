@@ -14,7 +14,7 @@ on:
 
 jobs:
   migration-tests:
-    uses: ./.github/workflows/rust-ci-long-test.yml
+    uses: ./.github/workflows/rust-ci-extra-test.yml
     with:
       test_name: "E2E Migration Tests"
       monitored_paths: '["synd-migration-cli/", "synd-mchain/", "test-framework/tests/e2e/e2e_tests_migration.rs"]'
