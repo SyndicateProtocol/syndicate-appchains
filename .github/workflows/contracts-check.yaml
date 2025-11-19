@@ -12,7 +12,6 @@ on:
   push:
     branches:
       - main
-      - staging
   # Only run on PRs that touch shared contracts
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`

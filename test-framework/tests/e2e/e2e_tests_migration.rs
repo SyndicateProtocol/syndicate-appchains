@@ -70,11 +70,11 @@ struct SyndicateStack {
     config_manager_address: Address,
     sequencing_chain_ingestor: E2EProcess,
     settlement_chain_ingestor: E2EProcess,
+    valkey: E2EProcess,
     translator: E2EProcess,
     appchain: ChainInfo,
     maestro: E2EProcess,
     batch_sequencer: E2EProcess,
-    valkey: E2EProcess,
 }
 
 #[allow(clippy::too_many_arguments, clippy::cognitive_complexity)]
@@ -309,30 +309,36 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
+    let arb_sequencer_inbox =
+        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
+    wait_until!(arb_sequencer_inbox.batchCount().call().await? == 1, Duration::from_secs(20));
+
     let storage_contract_pre_migration_instance =
         Storage::deploy(appchain.provider.clone(), U256::from(42)).await?;
     let storage_contract_address = *storage_contract_pre_migration_instance.address();
-
-    let arb_sequencer_inbox =
-        ISequencerInbox::new(appchain_deployment.sequencer_inbox, set_chain.provider.clone());
 
     wait_until!(arb_sequencer_inbox.batchCount().call().await? == 2, Duration::from_secs(20));
 
     let bridge = IBridge::new(appchain_deployment.bridge, &set_chain.provider);
     let batch_count = bridge.sequencerMessageCount().call().await?;
     let batch_acc = bridge.sequencerInboxAccs(batch_count - U256::from(1)).call().await?;
+    println!("onchain batch_acc:{batch_acc} batch_count:{batch_count}");
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
 
+    #[cfg(target_os = "linux")]
+    {
+        // give some time for nitro to catch up
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
     // shutdown the nitro node
     drop(appchain);
 
     // run the migration cli code to obtain migration data from the nitro node
     let mut res: (RollupState, Vec<u8>) = Default::default();
-
-    #[cfg(unix)]
-    // fix permissions on CI
+    #[cfg(target_os = "linux")]
     {
+        // fix permissions on CI
         let status = E2EProcess::new(
             tokio::process::Command::new("sudo")
                 .current_dir(PathBuf::from(data_dir.clone()))
@@ -348,11 +354,12 @@ async fn e2e_migration() -> Result<()> {
     }
     wait_until!(
         {
+            mine_block(&set_chain.provider.clone(), 70).await?;
             match get_migration_data(&PathBuf::from(data_dir.clone()).join("appchain/nitro")).await
             {
                 Ok(data) => {
                     res = data;
-                    true
+                    res.0.batch_count == 2
                 }
                 Err(e) => {
                     eprintln!("error when trying to get migration data: {e}");
@@ -360,9 +367,10 @@ async fn e2e_migration() -> Result<()> {
                 }
             }
         },
-        Duration::from_secs(20),
+        Duration::from_secs(60),
         Duration::from_secs(1)
     );
+
     let migration_data = MigrationData { rollup: res.0, genesis_config: res.1.into() };
     assert_eq!(migration_data.rollup.batch_acc, batch_acc);
 
@@ -453,23 +461,49 @@ async fn e2e_migration() -> Result<()> {
                                                                 // 10 + 10 - gas fees
             synd_stack.appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?
         },
-        Duration::from_secs(10)
+        Duration::from_secs(10),
+        Duration::from_millis(500)
     );
 
     // assert `arbOwner.setL1PricePerUnit(0)`
-    let arb_owner = ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &synd_stack.appchain.provider);
+    let arb_owner =
+        ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, synd_stack.appchain.provider.clone());
     let is_chain_owner = arb_owner
         .isChainOwner(synd_stack.appchain.provider.default_signer_address())
         .call()
         .await?;
     assert!(is_chain_owner);
 
-    assert!(arb_owner.setL1PricePerUnit(U256::ZERO).send().await?.get_receipt().await?.status());
+    // Send setL1PricePerUnit and wait with mining for it to be processed
+    let tx = arb_owner.setL1PricePerUnit(U256::ZERO).send().await?;
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
+            synd_stack
+                .appchain
+                .provider
+                .get_transaction_receipt(*tx.tx_hash())
+                .await
+                .unwrap()
+                .is_some_and(|r| r.status())
+        },
+        Duration::from_secs(10),
+        Duration::from_millis(500)
+    );
 
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
-    assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
-    assert!(storage_contract.get().call().await? == U256::from(44));
+    let _ = storage_contract.set(U256::from(44)).send().await?;
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
+            storage_contract.get().call().await? == U256::from(44)
+        },
+        Duration::from_secs(10),
+        Duration::from_millis(500)
+    );
 
     // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
     let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
@@ -500,7 +534,8 @@ async fn e2e_migration() -> Result<()> {
             mine_block(&set_chain.provider.clone(), 70).await?;
             storage_contract.get().call().await? == U256::from(45)
         },
-        Duration::from_secs(10)
+        Duration::from_secs(10),
+        Duration::from_millis(500)
     );
 
     //sanity check assert the latest block before the migration is still part of the canonical

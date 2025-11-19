@@ -1,4 +1,4 @@
-name: Rust CI - Withdrawals
+name: Rust CI - Migration
 
 on:
   pull_request:
@@ -13,10 +13,10 @@ on:
       - main
 
 jobs:
-  withdrawal-tests:
+  migration-tests:
     uses: ./.github/workflows/rust-ci-extra-test.yml
     with:
-      test_name: "E2E Withdrawal Tests"
-      monitored_paths: '["synd-withdrawals/", "synd-contracts/src/withdrawal/", "test-framework/tests/e2e/e2e_tests_withdrawals.rs", "shared/contract-bindings"]'
-      test_filter: "test(e2e_tee_withdrawal)"
+      test_name: "E2E Migration Tests"
+      monitored_paths: '["synd-migration-cli/", "synd-mchain/", "test-framework/tests/e2e/e2e_tests_migration.rs"]'
+      test_filter: "test(e2e_migration)"
     secrets: inherit
