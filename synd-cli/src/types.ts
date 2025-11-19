@@ -388,3 +388,19 @@ export interface HandoffSynd {
   ownerSequencingWalletClient: PrivateKeyWalletAccount
   sequencingPublicClient: PublicClientWithChain
 }
+
+export interface E2E {
+  settlementRpc: string
+  appchainRpc: string
+  inbox: Hex
+  privateKey: Hex
+}
+
+export interface Deposit {
+  settlementClient: PublicClient
+  settlementWalletClient: WalletClient
+  l3Client: PublicClient
+  inbox: Hex
+  account: Account
+  value: bigint
+}

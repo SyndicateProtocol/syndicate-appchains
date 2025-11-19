@@ -1,35 +1,19 @@
+import type { Deposit } from "@/types"
 import { sleep } from "bun"
-import {
-  type Account,
-  type Address,
-  type Hex,
-  type PublicClient,
-  type WalletClient,
-  formatEther,
-  parseAbiItem
-} from "viem"
-import { print } from "../utils/print"
-
-interface DepositConfig {
-  settlementClient: PublicClient
-  settlementWalletClient: WalletClient
-  l3Client: PublicClient
-  inboxAddress: Address
-  account: Account
-  value: bigint
-}
+import { type Hex, formatEther, parseAbiItem } from "viem"
+import { print } from "../../../../utils/print"
 
 export async function deposit({
   settlementClient,
   settlementWalletClient,
   l3Client,
-  inboxAddress,
+  inbox,
   account,
   value
-}: DepositConfig) {
+}: Deposit) {
   // 1: Check if the native token is ETH or and ERC20
   const bridgeAddress = await settlementClient.readContract({
-    address: inboxAddress,
+    address: inbox,
     abi: [parseAbiItem("function bridge() public view returns (address)")],
     functionName: "bridge"
   })
@@ -63,7 +47,7 @@ export async function deposit({
           )
         ],
         functionName: "approve",
-        args: [inboxAddress, value]
+        args: [inbox, value]
       }
     )
     const approvalHash =
@@ -74,7 +58,7 @@ export async function deposit({
     // 2.2: Deposit ERC20
     const { request } = await settlementClient.simulateContract({
       account,
-      address: inboxAddress,
+      address: inbox,
       abi: [
         parseAbiItem("function depositERC20(uint256) public returns (uint256)")
       ],
@@ -86,7 +70,7 @@ export async function deposit({
     // 2.3: Deposit ETH
     const { request } = await settlementClient.simulateContract({
       account,
-      address: inboxAddress,
+      address: inbox,
       abi: [
         parseAbiItem("function depositEth() public payable returns (uint256)")
       ],
@@ -112,7 +96,9 @@ export async function deposit({
     l3BalanceAfter = await l3Client.getBalance({
       address: account.address
     })
-    print("Waiting for deposit to arrive on L3...")
+    print(
+      "Waiting for deposit to arrive on appchain, you may need to send a tx on the sequencing chain..."
+    )
   }
   print(
     `Deposit confirmed, balance before: ${formatEther(l3BalanceBefore)}, balance now: ${formatEther(l3BalanceAfter)}`
