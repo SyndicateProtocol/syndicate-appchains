@@ -326,8 +326,6 @@ async fn e2e_migration() -> Result<()> {
     let appchain_block_before =
         appchain.provider.get_block(alloy::eips::BlockId::latest()).await?.unwrap();
 
-    println!("CI-CHECK - 1"); // TODO remove, just to debug in CI
-
     #[cfg(target_os = "linux")]
     {
         // give some time for nitro to catch up
@@ -354,7 +352,6 @@ async fn e2e_migration() -> Result<()> {
         .await?;
         assert!(status.success(), "failed to change permissions");
     }
-    println!("CI-CHECK - 2"); // TODO remove, just to debug in CI
     wait_until!(
         {
             mine_block(&set_chain.provider.clone(), 70).await?;
@@ -445,7 +442,6 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
-    println!("CI-CHECK - 3"); // TODO remove, just to debug in CI
     wait_until!(
         {
             mine_block(&seq_chain.provider.clone(), 60).await?;
@@ -455,8 +451,9 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
-    println!("CI-CHECK - 4"); // TODO remove, just to debug in CI
-                              // deposit again, assert it works
+    println!("CI-CHECK - 1"); // TODO remove, just to debug in CI
+
+    // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
     wait_until!(
@@ -469,6 +466,8 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
+    println!("CI-CHECK - 2"); // TODO remove, just to debug in CI
+
     // assert `arbOwner.setL1PricePerUnit(0)`
     let arb_owner = ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &synd_stack.appchain.provider);
     let is_chain_owner = arb_owner
@@ -477,12 +476,19 @@ async fn e2e_migration() -> Result<()> {
         .await?;
     assert!(is_chain_owner);
 
+    println!("CI-CHECK - 3"); // TODO remove, just to debug in CI
+
     assert!(arb_owner.setL1PricePerUnit(U256::ZERO).send().await?.get_receipt().await?.status());
+
+    println!("CI-CHECK - 4"); // TODO remove, just to debug in CI
 
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
     assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
+    println!("CI-CHECK - 5"); // TODO remove, just to debug in CI
     assert!(storage_contract.get().call().await? == U256::from(44));
+
+    println!("CI-CHECK - 6"); // TODO remove, just to debug in CI
 
     // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
     let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
@@ -499,6 +505,7 @@ async fn e2e_migration() -> Result<()> {
     let mut raw_tx_with_prefix = vec![L2MessageKind::SignedTx as u8];
     raw_tx_with_prefix.extend_from_slice(&update_val_raw_tx);
 
+    println!("CI-CHECK - 7"); // TODO remove, just to debug in CI
     assert!(inbox
         .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
         .send()
