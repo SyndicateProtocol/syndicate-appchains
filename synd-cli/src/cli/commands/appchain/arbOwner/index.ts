@@ -4,7 +4,7 @@ import { listArbOwnerCommand } from "./list";
 
 export function arbOwnerCommand(program: Command) {
 	const arbOwner = program
-		.command("arbOwner")
+		.command("arb-owner")
 		.description("Call ArbOwner functions through the UpgradeExecutor");
 
 	listArbOwnerCommand(arbOwner);

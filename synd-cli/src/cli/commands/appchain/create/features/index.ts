@@ -113,7 +113,6 @@ export function createFeaturesCommand(program: Command) {
 			]);
 
 			const appchainPublicClient = await getAppchainClient({
-				chainId: chainId,
 				chainName: chainName,
 				nativeToken: coreContracts.nativeToken,
 				settlementPublicClient: settlementPublicClient,

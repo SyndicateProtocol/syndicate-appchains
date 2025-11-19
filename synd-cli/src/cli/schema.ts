@@ -226,6 +226,20 @@ export const appchainCheckTokenBridgeOptionsSchema = z
 	})
 	.strict();
 
+export const appchainDeployTeeModuleOptionsSchema = z
+	.object({
+		deployerPrivateKey: privateKeySchema("deployer"),
+		settlementRpc: z.url("Invalid settlement chain RPC URL"),
+		sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
+		syndForkSequencingRpc: z.url("Invalid synd fork sequencing chain RPC URL"),
+		ethereumRpc: z.url("Invalid ethereum chain RPC URL"),
+		appchainRpc: z.url("Invalid appchain RPC URL"),
+		sequencingContract: ethAddressSchema,
+		assertionPoster: ethAddressSchema,
+		bridge: ethAddressSchema,
+	})
+	.strict();
+
 export function handleSchemaErrors(errors: z.ZodError) {
 	const err = errors.issues
 		.map((err) => `  - ${err.path.join(".")}: ${err.message}`)

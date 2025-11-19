@@ -9,7 +9,7 @@ import { checkTokenBridge } from "./checkTokenBridge";
 
 export function checkTokenBridgeCommand(program: Command) {
 	program
-		.command("checkTokenBridge")
+		.command("check-token-bridge")
 		.description("Check token bridge deployment and retryable ticket execution")
 		.requiredOption(
 			"--settlement-rpc <url>",

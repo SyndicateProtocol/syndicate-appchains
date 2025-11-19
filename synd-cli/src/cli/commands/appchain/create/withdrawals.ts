@@ -1,5 +1,5 @@
 import {
-	appchainDeployTeeModuleOptionsSchema,
+	appchainCreateTeeModuleOptionsSchema,
 	handleSchemaErrors,
 } from "@/cli/schema";
 import {
@@ -13,14 +13,18 @@ import {
 	supportedSettlementChains,
 } from "@/utils/constants";
 import type { Command } from "@commander-js/extra-typings";
-import { type Hex, zeroAddress } from "viem";
+import { zeroAddress } from "viem";
 import { getNativeTokenFromBridge } from "../arbOwner/helpers";
-import { deployTeeModule } from "./features/deployTeeModule";
+import { deployWithdrawalsContracts } from "./features/deployWithdrawalsContracts";
 
-export function createTeeModuleCommand(program: Command) {
+export function createWithdrawalsContractsCommand(program: Command) {
 	program
-		.command("tee-module")
-		.description("Deploy a new TeeModule contract")
+		.command("withdrawals")
+		.description("Deploy withdrawals contracts. AssertionPoster & TeeModule")
+		.requiredOption(
+			"--owner-private-key <key>",
+			"Private key of the owner account",
+		)
 		.requiredOption(
 			"--deployer-private-key <key>",
 			"Private key of the deployer account",
@@ -40,12 +44,13 @@ export function createTeeModuleCommand(program: Command) {
 		.requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
 		.requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
 		.requiredOption(
-			"--sequencing-contract <address>",
+			"--sequencing-contract-address <address>",
 			"Address of the sequencing contract",
 		)
+		.requiredOption("--rollup <address>", "Address of the rollup contract")
 		.requiredOption(
-			"--assertion-poster <address>",
-			"Address of the AssertionPoster contract",
+			"--upgrade-executor <address>",
+			"Address of the upgrade executor contract",
 		)
 		.requiredOption("--bridge <address>", "Address of the bridge contract")
 		.action(async (options: Record<string, unknown>) => {
@@ -53,7 +58,7 @@ export function createTeeModuleCommand(program: Command) {
 				data: validatedOptions,
 				success,
 				error,
-			} = appchainDeployTeeModuleOptionsSchema.safeParse(options);
+			} = appchainCreateTeeModuleOptionsSchema.safeParse(options);
 
 			if (!success) {
 				return handleSchemaErrors(error);
@@ -64,22 +69,28 @@ export function createTeeModuleCommand(program: Command) {
 				sequencingRpc,
 				ethereumRpc,
 				deployerPrivateKey,
+				ownerPrivateKey,
+				rollup,
+				upgradeExecutor,
 				bridge,
 				appchainRpc,
-				assertionPoster,
-				sequencingContract,
-				syndForkSequencingRpc,
 			} = validatedOptions;
 
 			const [
 				settlementPublicClient,
 				sequencingPublicClient,
 				ethereumPublicClient,
+				ownerSettlementWalletClient,
 				deployerSettlementWalletClient,
 			] = await Promise.all([
 				getPublicClient(settlementRpc, supportedSettlementChains),
 				getPublicClient(sequencingRpc, supportedSequencingChains),
 				getPublicClient(ethereumRpc, supportedEthereumChains),
+				getWalletClient(
+					settlementRpc,
+					supportedSettlementChains,
+					ownerPrivateKey as `0x${string}`,
+				),
 				getWalletClient(
 					settlementRpc,
 					supportedSettlementChains,
@@ -98,24 +109,19 @@ export function createTeeModuleCommand(program: Command) {
 				rpcUrl: appchainRpc,
 			});
 
-			const teeModuleAddress = await deployTeeModule({
-				assertionPosterAddress: assertionPoster,
-				bridge,
-				deployerSettlementWalletClient,
+			await deployWithdrawalsContracts({
+				...validatedOptions,
+				coreContracts: {
+					rollup,
+					upgradeExecutor,
+					bridge,
+				},
 				settlementPublicClient,
-				sequencingContractAddress: sequencingContract as Hex,
+				deployerSettlementWalletClient,
+				ownerSettlementWalletClient,
 				sequencingPublicClient,
 				appchainPublicClient,
 				ethereumPublicClient,
-				syndForkSequencingRpc,
 			});
-
-			console.log(`\nTeeModule deployed at: ${teeModuleAddress}`);
-			console.log(
-				"\nNext steps:",
-				"\n1. Transfer AssertionPoster ownership to TeeModule",
-				"\n2. Set TeeModule DEFAULT_ADMIN_ROLE to the desired owner",
-				"\n3. Revoke DEFAULT_ADMIN_ROLE from deployer",
-			);
 		});
 }

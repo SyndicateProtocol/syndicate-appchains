@@ -36,11 +36,13 @@ export async function getWalletClient(
 }
 
 export async function getAppchainClient({
+	chainName,
 	nativeToken,
 	rpcUrl,
 	explorerUrl,
 	settlementPublicClient,
 }: {
+	chainName?: string;
 	nativeToken?: Hex;
 	rpcUrl: string;
 	explorerUrl?: string;
@@ -55,12 +57,12 @@ export async function getAppchainClient({
 					name: "Ether",
 					symbol: "ETH",
 				};
-	const chainName = `appchain: ${chainId}`;
+	const name = chainName || `appchain: ${chainId}`;
 	return createPublicClient({
 		chain: defineChain({
 			id: chainId,
-			name: chainName,
-			network: chainName,
+			name: name,
+			network: name,
 			nativeCurrency,
 			rpcUrls: {
 				default: { http: [rpcUrl] },
@@ -69,7 +71,7 @@ export async function getAppchainClient({
 			blockExplorers: explorerUrl
 				? {
 						default: {
-							name: `${chainName} Explorer`,
+							name: `${name} Explorer`,
 							url: explorerUrl,
 						},
 					}
