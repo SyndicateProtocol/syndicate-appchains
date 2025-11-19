@@ -2,7 +2,6 @@
 create-contract-bindings-rust:
 	git submodule sync --recursive
 	git submodule update --init --recursive
-	git submodule update --remote ../synd-contracts/lib/nitro-contracts # needs specific branch
 	git submodule status --recursive
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
 	# Generate bindings only for contracts actually used in the codebase
