@@ -771,6 +771,7 @@ function addChainOwner(address newOwner) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -802,6 +803,7 @@ function addChainOwner(address newOwner) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -913,6 +915,7 @@ function addWasmCacheManager(address manager) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -946,6 +949,7 @@ function addWasmCacheManager(address manager) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1061,6 +1065,7 @@ function getAllChainOwners() external view returns (address[] memory);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1094,6 +1099,7 @@ function getAllChainOwners() external view returns (address[] memory);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Address>,
             );
@@ -1216,6 +1222,7 @@ function getInfraFeeAccount() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1249,6 +1256,7 @@ function getInfraFeeAccount() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1363,6 +1371,7 @@ function getNetworkFeeAccount() external view returns (address);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1396,6 +1405,7 @@ function getNetworkFeeAccount() external view returns (address);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1513,6 +1523,7 @@ function isChainOwner(address addr) external view returns (bool);
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1544,6 +1555,7 @@ function isChainOwner(address addr) external view returns (bool);
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (bool,);
@@ -1663,6 +1675,7 @@ function releaseL1PricerSurplusFunds(uint256 maxWeiToRelease) external returns (
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1698,6 +1711,7 @@ function releaseL1PricerSurplusFunds(uint256 maxWeiToRelease) external returns (
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -1816,6 +1830,7 @@ function removeChainOwner(address ownerToRemove) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1849,6 +1864,7 @@ function removeChainOwner(address ownerToRemove) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -1962,6 +1978,7 @@ function removeWasmCacheManager(address manager) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -1995,6 +2012,7 @@ function removeWasmCacheManager(address manager) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2112,6 +2130,7 @@ function scheduleArbOSUpgrade(uint64 newVersion, uint64 timestamp) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<64>,
                 alloy::sol_types::sol_data::Uint<64>,
@@ -2151,6 +2170,7 @@ function scheduleArbOSUpgrade(uint64 newVersion, uint64 timestamp) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2272,6 +2292,7 @@ function setAmortizedCostCapBips(uint64 cap) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2305,6 +2326,7 @@ function setAmortizedCostCapBips(uint64 cap) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2420,6 +2442,7 @@ function setBrotliCompressionLevel(uint64 level) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -2453,6 +2476,7 @@ function setBrotliCompressionLevel(uint64 level) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2568,6 +2592,7 @@ function setChainConfig(string memory chainConfig) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
@@ -2599,6 +2624,7 @@ function setChainConfig(string memory chainConfig) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2712,6 +2738,7 @@ function setInfraFeeAccount(address newInfraFeeAccount) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -2747,6 +2774,7 @@ function setInfraFeeAccount(address newInfraFeeAccount) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -2860,6 +2888,7 @@ function setInkPrice(uint32 price) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u32,);
@@ -2891,6 +2920,7 @@ function setInkPrice(uint32 price) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3002,6 +3032,7 @@ function setL1BaseFeeEstimateInertia(uint64 inertia) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3035,6 +3066,7 @@ function setL1BaseFeeEstimateInertia(uint64 inertia) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3150,6 +3182,7 @@ function setL1PricePerUnit(uint256 pricePerUnit) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3185,6 +3218,7 @@ function setL1PricePerUnit(uint256 pricePerUnit) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3298,6 +3332,7 @@ function setL1PricingEquilibrationUnits(uint256 equilibrationUnits) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3335,6 +3370,7 @@ function setL1PricingEquilibrationUnits(uint256 equilibrationUnits) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3450,6 +3486,7 @@ function setL1PricingInertia(uint64 inertia) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3483,6 +3520,7 @@ function setL1PricingInertia(uint64 inertia) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3596,6 +3634,7 @@ function setL1PricingRewardRate(uint64 weiPerUnit) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -3629,6 +3668,7 @@ function setL1PricingRewardRate(uint64 weiPerUnit) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3744,6 +3784,7 @@ function setL1PricingRewardRecipient(address recipient) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -3777,6 +3818,7 @@ function setL1PricingRewardRecipient(address recipient) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -3892,6 +3934,7 @@ function setL2BaseFee(uint256 priceInWei) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -3925,6 +3968,7 @@ function setL2BaseFee(uint256 priceInWei) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4036,6 +4080,7 @@ function setL2GasBacklogTolerance(uint64 sec) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4069,6 +4114,7 @@ function setL2GasBacklogTolerance(uint64 sec) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4184,6 +4230,7 @@ function setL2GasPricingInertia(uint64 sec) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4217,6 +4264,7 @@ function setL2GasPricingInertia(uint64 sec) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4332,6 +4380,7 @@ function setMaxTxGasLimit(uint64 limit) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4365,6 +4414,7 @@ function setMaxTxGasLimit(uint64 limit) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4478,6 +4528,7 @@ function setMinimumL2BaseFee(uint256 priceInWei) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
@@ -4513,6 +4564,7 @@ function setMinimumL2BaseFee(uint256 priceInWei) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4626,6 +4678,7 @@ function setNetworkFeeAccount(address newNetworkFeeAccount) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
@@ -4661,6 +4714,7 @@ function setNetworkFeeAccount(address newNetworkFeeAccount) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4776,6 +4830,7 @@ function setPerBatchGasCharge(int64 cost) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Int<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (i64,);
@@ -4809,6 +4864,7 @@ function setPerBatchGasCharge(int64 cost) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -4924,6 +4980,7 @@ function setSpeedLimit(uint64 limit) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -4955,6 +5012,7 @@ function setSpeedLimit(uint64 limit) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5066,6 +5124,7 @@ function setWasmBlockCacheSize(uint16 count) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -5099,6 +5158,7 @@ function setWasmBlockCacheSize(uint16 count) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5214,6 +5274,7 @@ function setWasmExpiryDays(uint16 _days) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -5247,6 +5308,7 @@ function setWasmExpiryDays(uint16 _days) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5360,6 +5422,7 @@ function setWasmFreePages(uint16 pages) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -5393,6 +5456,7 @@ function setWasmFreePages(uint16 pages) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5506,6 +5570,7 @@ function setWasmInitCostScalar(uint64 percent) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<64>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u64,);
@@ -5539,6 +5604,7 @@ function setWasmInitCostScalar(uint64 percent) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5654,6 +5720,7 @@ function setWasmKeepaliveDays(uint16 _days) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -5687,6 +5754,7 @@ function setWasmKeepaliveDays(uint16 _days) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5802,6 +5870,7 @@ function setWasmMaxStackDepth(uint32 depth) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<32>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u32,);
@@ -5835,6 +5904,7 @@ function setWasmMaxStackDepth(uint32 depth) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -5952,6 +6022,7 @@ function setWasmMinInitGas(uint8 gas, uint16 cached) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
                 alloy::sol_types::sol_data::Uint<8>,
                 alloy::sol_types::sol_data::Uint<16>,
@@ -5991,6 +6062,7 @@ function setWasmMinInitGas(uint8 gas, uint16 cached) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6110,6 +6182,7 @@ function setWasmPageGas(uint16 gas) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -6141,6 +6214,7 @@ function setWasmPageGas(uint16 gas) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6254,6 +6328,7 @@ function setWasmPageLimit(uint16 limit) external;
         use alloy::sol_types as alloy_sol_types;
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<16>,);
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (u16,);
@@ -6287,6 +6362,7 @@ function setWasmPageLimit(uint16 limit) external;
         }
         {
             #[doc(hidden)]
+            #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = ();
@@ -6375,6 +6451,7 @@ function setWasmPageLimit(uint16 limit) external;
         }
     };
     ///Container for all the [`ArbOwner`](self) function calls.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive()]
     pub enum ArbOwnerCalls {
@@ -6455,7 +6532,6 @@ function setWasmPageLimit(uint16 limit) external;
         #[allow(missing_docs)]
         setWasmPageLimit(setWasmPageLimitCall),
     }
-    #[automatically_derived]
     impl ArbOwnerCalls {
         /// All the selectors of this enum.
         ///
@@ -6503,6 +6579,108 @@ function setWasmPageLimit(uint16 limit) external;
             [252u8, 221u8, 226u8, 180u8],
             [255u8, 220u8, 165u8, 21u8],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(setL1PricingEquilibrationUnits),
+            ::core::stringify!(setL2GasBacklogTolerance),
+            ::core::stringify!(isChainOwner),
+            ::core::stringify!(setWasmKeepaliveDays),
+            ::core::stringify!(setL1PricePerUnit),
+            ::core::stringify!(getNetworkFeeAccount),
+            ::core::stringify!(releaseL1PricerSurplusFunds),
+            ::core::stringify!(setWasmBlockCacheSize),
+            ::core::stringify!(setMaxTxGasLimit),
+            ::core::stringify!(setWasmFreePages),
+            ::core::stringify!(setL2GasPricingInertia),
+            ::core::stringify!(setWasmMaxStackDepth),
+            ::core::stringify!(addChainOwner),
+            ::core::stringify!(setSpeedLimit),
+            ::core::stringify!(getAllChainOwners),
+            ::core::stringify!(setBrotliCompressionLevel),
+            ::core::stringify!(setAmortizedCostCapBips),
+            ::core::stringify!(setInfraFeeAccount),
+            ::core::stringify!(setWasmPageLimit),
+            ::core::stringify!(setWasmInitCostScalar),
+            ::core::stringify!(setL1BaseFeeEstimateInertia),
+            ::core::stringify!(setL1PricingInertia),
+            ::core::stringify!(setWasmMinInitGas),
+            ::core::stringify!(removeChainOwner),
+            ::core::stringify!(setInkPrice),
+            ::core::stringify!(setL1PricingRewardRecipient),
+            ::core::stringify!(setMinimumL2BaseFee),
+            ::core::stringify!(setWasmPageGas),
+            ::core::stringify!(setWasmExpiryDays),
+            ::core::stringify!(removeWasmCacheManager),
+            ::core::stringify!(setL2BaseFee),
+            ::core::stringify!(scheduleArbOSUpgrade),
+            ::core::stringify!(setChainConfig),
+            ::core::stringify!(getInfraFeeAccount),
+            ::core::stringify!(setL1PricingRewardRate),
+            ::core::stringify!(setPerBatchGasCharge),
+            ::core::stringify!(setNetworkFeeAccount),
+            ::core::stringify!(addWasmCacheManager),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <setL1PricingEquilibrationUnitsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL2GasBacklogToleranceCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <isChainOwnerCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmKeepaliveDaysCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL1PricePerUnitCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <getNetworkFeeAccountCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <releaseL1PricerSurplusFundsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmBlockCacheSizeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setMaxTxGasLimitCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmFreePagesCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL2GasPricingInertiaCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmMaxStackDepthCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <addChainOwnerCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setSpeedLimitCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <getAllChainOwnersCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setBrotliCompressionLevelCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setAmortizedCostCapBipsCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setInfraFeeAccountCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmPageLimitCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmInitCostScalarCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL1BaseFeeEstimateInertiaCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL1PricingInertiaCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmMinInitGasCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <removeChainOwnerCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setInkPriceCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL1PricingRewardRecipientCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setMinimumL2BaseFeeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmPageGasCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setWasmExpiryDaysCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <removeWasmCacheManagerCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL2BaseFeeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <scheduleArbOSUpgradeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setChainConfigCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <getInfraFeeAccountCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setL1PricingRewardRateCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setPerBatchGasChargeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <setNetworkFeeAccountCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <addWasmCacheManagerCall as alloy_sol_types::SolCall>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 4usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolInterface for ArbOwnerCalls {
@@ -7942,13 +8120,13 @@ function setWasmPageLimit(uint16 limit) external;
         }
     }
     ///Container for all the [`ArbOwner`](self) events.
+    #[derive(Clone)]
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ArbOwnerEvents {
         #[allow(missing_docs)]
         OwnerActs(OwnerActs),
     }
-    #[automatically_derived]
     impl ArbOwnerEvents {
         /// All the selectors of this enum.
         ///
@@ -7963,6 +8141,34 @@ function setWasmPageLimit(uint16 limit) external;
                 179u8, 166u8, 88u8, 238u8, 233u8, 224u8, 138u8, 103u8, 235u8, 218u8,
             ],
         ];
+        /// The names of the variants in the same order as `SELECTORS`.
+        pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(OwnerActs),
+        ];
+        /// The signatures in the same order as `SELECTORS`.
+        pub const SIGNATURES: &'static [&'static str] = &[
+            <OwnerActs as alloy_sol_types::SolEvent>::SIGNATURE,
+        ];
+        /// Returns the signature for the given selector, if known.
+        #[inline]
+        pub fn signature_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            match Self::SELECTORS.binary_search(&selector) {
+                ::core::result::Result::Ok(idx) => {
+                    ::core::option::Option::Some(Self::SIGNATURES[idx])
+                }
+                ::core::result::Result::Err(_) => ::core::option::Option::None,
+            }
+        }
+        /// Returns the enum variant name for the given selector, if known.
+        #[inline]
+        pub fn name_by_selector(
+            selector: [u8; 32usize],
+        ) -> ::core::option::Option<&'static str> {
+            let sig = Self::signature_by_selector(selector)?;
+            sig.split_once('(').map(|(name, _)| name)
+        }
     }
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for ArbOwnerEvents {
@@ -8021,9 +8227,9 @@ See the [wrapper's documentation](`ArbOwnerInstance`) for more details.*/
         N: alloy_contract::private::Network,
     >(
         address: alloy_sol_types::private::Address,
-        provider: P,
+        __provider: P,
     ) -> ArbOwnerInstance<P, N> {
-        ArbOwnerInstance::<P, N>::new(address, provider)
+        ArbOwnerInstance::<P, N>::new(address, __provider)
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
@@ -8035,11 +8241,11 @@ For more fine-grained control over the deployment process, use [`deploy_builder`
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
     >(
-        provider: P,
+        __provider: P,
     ) -> impl ::core::future::Future<
         Output = alloy_contract::Result<ArbOwnerInstance<P, N>>,
     > {
-        ArbOwnerInstance::<P, N>::deploy(provider)
+        ArbOwnerInstance::<P, N>::deploy(__provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
 and constructor arguments, if any.
@@ -8050,8 +8256,8 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     pub fn deploy_builder<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
-    >(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
-        ArbOwnerInstance::<P, N>::deploy_builder(provider)
+    >(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        ArbOwnerInstance::<P, N>::deploy_builder(__provider)
     }
     /**A [`ArbOwner`](self) instance.
 
@@ -8078,7 +8284,6 @@ See the [module-level documentation](self) for all the available methods.*/
         }
     }
     /// Instantiation and getters/setters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -8089,11 +8294,11 @@ See the [wrapper's documentation](`ArbOwnerInstance`) for more details.*/
         #[inline]
         pub const fn new(
             address: alloy_sol_types::private::Address,
-            provider: P,
+            __provider: P,
         ) -> Self {
             Self {
                 address,
-                provider,
+                provider: __provider,
                 _network: ::core::marker::PhantomData,
             }
         }
@@ -8104,9 +8309,9 @@ Returns a new instance of the contract, if the deployment was successful.
 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
         pub async fn deploy(
-            provider: P,
+            __provider: P,
         ) -> alloy_contract::Result<ArbOwnerInstance<P, N>> {
-            let call_builder = Self::deploy_builder(provider);
+            let call_builder = Self::deploy_builder(__provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
@@ -8116,9 +8321,9 @@ and constructor arguments, if any.
 This is a simple wrapper around creating a `RawCallBuilder` with the data set to
 the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
-        pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<P, N> {
+        pub fn deploy_builder(__provider: P) -> alloy_contract::RawCallBuilder<P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
-                provider,
+                __provider,
                 ::core::clone::Clone::clone(&BYTECODE),
             )
         }
@@ -8155,7 +8360,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Function calls.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
@@ -8503,7 +8707,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         }
     }
     /// Event filters.
-    #[automatically_derived]
     impl<
         P: alloy_contract::private::Provider<N>,
         N: alloy_contract::private::Network,
