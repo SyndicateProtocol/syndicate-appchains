@@ -336,12 +336,17 @@ pub async fn deploy_nitro_rollup(
         assert!(status.success(), "Failed to apply patch to hardhat.config.ts");
     }
 
+    let temp_cache = PathBuf::from(&tmp_dir).join("yarn-cache");
+    std::fs::create_dir_all(&temp_cache).unwrap();
+
     // install and build dependencies
     let status = E2EProcess::new(
         Command::new("yarn")
             .current_dir(nitro_contracts_dir.clone())
             .arg("install")
-            .arg("--no-cache"),
+            .arg("--cache-folder")
+            .arg(&temp_cache)
+            .arg("--frozen-lockfile"),
         "nitro-contracts-install",
     )?
     .wait()
