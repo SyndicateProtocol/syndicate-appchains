@@ -1,240 +1,240 @@
 export const requireAndModuleABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    type: "constructor",
+    inputs: [
       {
-        "name": "admin",
-        "type": "address",
-        "internalType": "address"
+        name: "admin",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "nonpayable"
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "MAX_PERMISSION_CHECKS",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "MAX_PERMISSION_CHECKS",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "addPermissionCheck",
-    "inputs": [
+    type: "function",
+    name: "addPermissionCheck",
+    inputs: [
       {
-        "name": "_address",
-        "type": "address",
-        "internalType": "address"
+        name: "_address",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "addToHead",
-        "type": "bool",
-        "internalType": "bool"
+        name: "addToHead",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "getAllPermissionChecks",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "getAllPermissionChecks",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
+        name: "",
+        type: "address[]",
+        internalType: "address[]"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "isAllowed",
-    "inputs": [
+    type: "function",
+    name: "isAllowed",
+    inputs: [
       {
-        "name": "msgSender",
-        "type": "address",
-        "internalType": "address"
+        name: "msgSender",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "txOrigin",
-        "type": "address",
-        "internalType": "address"
+        name: "txOrigin",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "owner",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "removePermissionCheck",
-    "inputs": [
+    type: "function",
+    name: "removePermissionCheck",
+    inputs: [
       {
-        "name": "_address",
-        "type": "address",
-        "internalType": "address"
+        name: "_address",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "renounceOwnership",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
+    type: "function",
+    name: "transferOwnership",
+    inputs: [
       {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "event",
-    "name": "OwnershipTransferred",
-    "inputs": [
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
       {
-        "name": "previousOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "previousOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "newOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "PermissionCheckAdded",
-    "inputs": [
+    type: "event",
+    name: "PermissionCheckAdded",
+    inputs: [
       {
-        "name": "check",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "check",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "PermissionCheckRemoved",
-    "inputs": [
+    type: "event",
+    name: "PermissionCheckRemoved",
+    inputs: [
       {
-        "name": "check",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "check",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "error",
-    "name": "AddressAlreadyExists",
-    "inputs": []
+    type: "error",
+    name: "AddressAlreadyExists",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "AddressDoesNotExist",
-    "inputs": []
+    type: "error",
+    name: "AddressDoesNotExist",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "AndPermissionCheckFailed",
-    "inputs": [
+    type: "error",
+    name: "AndPermissionCheckFailed",
+    inputs: [
       {
-        "name": "requireAddress",
-        "type": "address",
-        "internalType": "address"
+        name: "requireAddress",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "msgSender",
-        "type": "address",
-        "internalType": "address"
+        name: "msgSender",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "InvalidAddress",
-    "inputs": []
+    type: "error",
+    name: "InvalidAddress",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
+    type: "error",
+    name: "OwnableInvalidOwner",
+    inputs: [
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
+        name: "owner",
+        type: "address",
+        internalType: "address"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
+    type: "error",
+    name: "OwnableUnauthorizedAccount",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "TooManyPermissionChecks",
-    "inputs": []
+    type: "error",
+    name: "TooManyPermissionChecks",
+    inputs: []
   }
 ] as const

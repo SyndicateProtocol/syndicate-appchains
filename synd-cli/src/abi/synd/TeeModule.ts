@@ -1,929 +1,929 @@
 export const teeModuleABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    type: "constructor",
+    inputs: [
       {
-        "name": "poster_",
-        "type": "address",
-        "internalType": "contract IAssertionPoster"
+        name: "poster_",
+        type: "address",
+        internalType: "contract IAssertionPoster"
       },
       {
-        "name": "bridge_",
-        "type": "address",
-        "internalType": "contract IBridge"
+        name: "bridge_",
+        type: "address",
+        internalType: "contract IBridge"
       },
       {
-        "name": "configHash_",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "configHash_",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "appStartBlockHash_",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "appStartBlockHash_",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "seqStartBlockHash_",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "seqStartBlockHash_",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "l1StartBatchAcc_",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "l1StartBatchAcc_",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "l1BlockOrBridge_",
-        "type": "address",
-        "internalType": "address"
+        name: "l1BlockOrBridge_",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "isL1Chain_",
-        "type": "bool",
-        "internalType": "bool"
+        name: "isL1Chain_",
+        type: "bool",
+        internalType: "bool"
       },
       {
-        "name": "challengeWindowDuration_",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "challengeWindowDuration_",
+        type: "uint64",
+        internalType: "uint64"
       },
       {
-        "name": "slowDuration_",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "slowDuration_",
+        type: "uint64",
+        internalType: "uint64"
       },
       {
-        "name": "teeKeyManager_",
-        "type": "address",
-        "internalType": "contract ITeeKeyManager"
+        name: "teeKeyManager_",
+        type: "address",
+        internalType: "contract ITeeKeyManager"
       }
     ],
-    "stateMutability": "nonpayable"
+    stateMutability: "nonpayable"
   },
   {
-    "type": "receive",
-    "stateMutability": "payable"
+    type: "receive",
+    stateMutability: "payable"
   },
   {
-    "type": "function",
-    "name": "DEFAULT_ADMIN_ROLE",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "DEFAULT_ADMIN_ROLE",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "SLOW_ROLE",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "SLOW_ROLE",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "bridge",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "bridge",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IBridge"
+        name: "",
+        type: "address",
+        internalType: "contract IBridge"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "challengeWindowDuration",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "challengeWindowDuration",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "challengeWindowEnd",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "challengeWindowEnd",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "challengeWindowStart",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "challengeWindowStart",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "closeChallengeWindow",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "closeChallengeWindow",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "enterSlowMode",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "enterSlowMode",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "getRoleAdmin",
-    "inputs": [
+    type: "function",
+    name: "getRoleAdmin",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getRoleMember",
-    "inputs": [
+    type: "function",
+    name: "getRoleMember",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "index",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "index",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getRoleMemberCount",
-    "inputs": [
+    type: "function",
+    name: "getRoleMemberCount",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getRoleMembers",
-    "inputs": [
+    type: "function",
+    name: "getRoleMembers",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
+        name: "",
+        type: "address[]",
+        internalType: "address[]"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "grantRole",
-    "inputs": [
+    type: "function",
+    name: "grantRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "hasRole",
-    "inputs": [
+    type: "function",
+    name: "hasRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "isL1Chain",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "isL1Chain",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "l1BlockOrBridge",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "l1BlockOrBridge",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "pendingAssertions",
-    "inputs": [
+    type: "function",
+    name: "pendingAssertions",
+    inputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "appBlockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "appBlockHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "appSendRoot",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "appSendRoot",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "seqBlockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "seqBlockHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "l1BatchAcc",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "l1BatchAcc",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "pendingAssertionsCount",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "pendingAssertionsCount",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "poster",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "poster",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IAssertionPoster"
+        name: "",
+        type: "address",
+        internalType: "contract IAssertionPoster"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "renounceRole",
-    "inputs": [
+    type: "function",
+    name: "renounceRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "callerConfirmation",
-        "type": "address",
-        "internalType": "address"
+        name: "callerConfirmation",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "resolveChallenge",
-    "inputs": [
+    type: "function",
+    name: "resolveChallenge",
+    inputs: [
       {
-        "name": "assertion",
-        "type": "tuple",
-        "internalType": "struct PendingAssertion",
-        "components": [
+        name: "assertion",
+        type: "tuple",
+        internalType: "struct PendingAssertion",
+        components: [
           {
-            "name": "appBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "appSendRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appSendRoot",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "seqBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "seqBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "l1BatchAcc",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "l1BatchAcc",
+            type: "bytes32",
+            internalType: "bytes32"
           }
         ]
       },
       {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "signature",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "revokeRole",
-    "inputs": [
+    type: "function",
+    name: "revokeRole",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "setSlowDuration",
-    "inputs": [
+    type: "function",
+    name: "setSlowDuration",
+    inputs: [
       {
-        "name": "slowDuration_",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "slowDuration_",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "slowDuration",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "slowDuration",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "submitAssertion",
-    "inputs": [
+    type: "function",
+    name: "submitAssertion",
+    inputs: [
       {
-        "name": "assertion",
-        "type": "tuple",
-        "internalType": "struct PendingAssertion",
-        "components": [
+        name: "assertion",
+        type: "tuple",
+        internalType: "struct PendingAssertion",
+        components: [
           {
-            "name": "appBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "appSendRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appSendRoot",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "seqBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "seqBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "l1BatchAcc",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "l1BatchAcc",
+            type: "bytes32",
+            internalType: "bytes32"
           }
         ]
       },
       {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "signature",
+        type: "bytes",
+        internalType: "bytes"
       },
       {
-        "name": "rewardAddr",
-        "type": "address",
-        "internalType": "address"
+        name: "rewardAddr",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "supportsInterface",
-    "inputs": [
+    type: "function",
+    name: "supportsInterface",
+    inputs: [
       {
-        "name": "interfaceId",
-        "type": "bytes4",
-        "internalType": "bytes4"
+        name: "interfaceId",
+        type: "bytes4",
+        internalType: "bytes4"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "teeHackCount",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "teeHackCount",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "teeKeyManager",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "teeKeyManager",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract ITeeKeyManager"
+        name: "",
+        type: "address",
+        internalType: "contract ITeeKeyManager"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "teeTrustedInput",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "teeTrustedInput",
+    inputs: [],
+    outputs: [
       {
-        "name": "configHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "configHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "appStartBlockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "appStartBlockHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "seqStartBlockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "seqStartBlockHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "setDelayedMessageAcc",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "setDelayedMessageAcc",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "l1StartBatchAcc",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "l1StartBatchAcc",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "l1EndHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "l1EndHash",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "transferAssertionPosterOwner",
-    "inputs": [
+    type: "function",
+    name: "transferAssertionPosterOwner",
+    inputs: [
       {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "transferFunds",
-    "inputs": [
+    type: "function",
+    name: "transferFunds",
+    inputs: [
       {
-        "name": "dest",
-        "type": "address",
-        "internalType": "address"
+        name: "dest",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "updateChallengeWindowDuration",
-    "inputs": [
+    type: "function",
+    name: "updateChallengeWindowDuration",
+    inputs: [
       {
-        "name": "challengeWindowDuration_",
-        "type": "uint64",
-        "internalType": "uint64"
+        name: "challengeWindowDuration_",
+        type: "uint64",
+        internalType: "uint64"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "updateKeyManager",
-    "inputs": [
+    type: "function",
+    name: "updateKeyManager",
+    inputs: [
       {
-        "name": "newTeeKeyManager",
-        "type": "address",
-        "internalType": "contract ITeeKeyManager"
+        name: "newTeeKeyManager",
+        type: "address",
+        internalType: "contract ITeeKeyManager"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "event",
-    "name": "AssertionPosterTransferred",
-    "inputs": [
+    type: "event",
+    name: "AssertionPosterTransferred",
+    inputs: [
       {
-        "name": "dest",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
+        name: "dest",
+        type: "address",
+        indexed: false,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "ChallengeResolved",
-    "inputs": [
+    type: "event",
+    name: "ChallengeResolved",
+    inputs: [
       {
-        "name": "",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct PendingAssertion",
-        "components": [
+        name: "",
+        type: "tuple",
+        indexed: false,
+        internalType: "struct PendingAssertion",
+        components: [
           {
-            "name": "appBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "appSendRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appSendRoot",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "seqBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "seqBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "l1BatchAcc",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "l1BatchAcc",
+            type: "bytes32",
+            internalType: "bytes32"
           }
         ]
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "ChallengeWindowDurationUpdate",
-    "inputs": [
+    type: "event",
+    name: "ChallengeWindowDurationUpdate",
+    inputs: [
       {
-        "name": "newChallengeWindowDuration",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
+        name: "newChallengeWindowDuration",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64"
       },
       {
-        "name": "oldChallengeWindowDuration",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
+        name: "oldChallengeWindowDuration",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "FundsTransferred",
-    "inputs": [
+    type: "event",
+    name: "FundsTransferred",
+    inputs: [
       {
-        "name": "dest",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
+        name: "dest",
+        type: "address",
+        indexed: false,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "KeyManagerUpdate",
-    "inputs": [
+    type: "event",
+    name: "KeyManagerUpdate",
+    inputs: [
       {
-        "name": "newTeeKeyManager",
-        "type": "address",
-        "indexed": false,
-        "internalType": "contract ITeeKeyManager"
+        name: "newTeeKeyManager",
+        type: "address",
+        indexed: false,
+        internalType: "contract ITeeKeyManager"
       },
       {
-        "name": "oldTeeKeyManager",
-        "type": "address",
-        "indexed": false,
-        "internalType": "contract ITeeKeyManager"
+        name: "oldTeeKeyManager",
+        type: "address",
+        indexed: false,
+        internalType: "contract ITeeKeyManager"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "RoleAdminChanged",
-    "inputs": [
+    type: "event",
+    name: "RoleAdminChanged",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32"
       },
       {
-        "name": "previousAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "previousAdminRole",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32"
       },
       {
-        "name": "newAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "newAdminRole",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "RoleGranted",
-    "inputs": [
+    type: "event",
+    name: "RoleGranted",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32"
       },
       {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "sender",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "RoleRevoked",
-    "inputs": [
+    type: "event",
+    name: "RoleRevoked",
+    inputs: [
       {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
+        name: "role",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32"
       },
       {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "sender",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "TeeHacked",
-    "inputs": [
+    type: "event",
+    name: "TeeHacked",
+    inputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "TeeInput",
-    "inputs": [
+    type: "event",
+    name: "TeeInput",
+    inputs: [
       {
-        "name": "input",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct TeeTrustedInput",
-        "components": [
+        name: "input",
+        type: "tuple",
+        indexed: false,
+        internalType: "struct TeeTrustedInput",
+        components: [
           {
-            "name": "configHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "configHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "appStartBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "appStartBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "seqStartBlockHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "seqStartBlockHash",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "setDelayedMessageAcc",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "setDelayedMessageAcc",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "l1StartBatchAcc",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "l1StartBatchAcc",
+            type: "bytes32",
+            internalType: "bytes32"
           },
           {
-            "name": "l1EndHash",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            name: "l1EndHash",
+            type: "bytes32",
+            internalType: "bytes32"
           }
         ]
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "error",
-    "name": "AccessControlBadConfirmation",
-    "inputs": []
+    type: "error",
+    name: "AccessControlBadConfirmation",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "AccessControlUnauthorizedAccount",
-    "inputs": [
+    type: "error",
+    name: "AccessControlUnauthorizedAccount",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "neededRole",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "neededRole",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "ECDSAInvalidSignature",
-    "inputs": []
+    type: "error",
+    name: "ECDSAInvalidSignature",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "ECDSAInvalidSignatureLength",
-    "inputs": [
+    type: "error",
+    name: "ECDSAInvalidSignatureLength",
+    inputs: [
       {
-        "name": "length",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "length",
+        type: "uint256",
+        internalType: "uint256"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "ECDSAInvalidSignatureS",
-    "inputs": [
+    type: "error",
+    name: "ECDSAInvalidSignatureS",
+    inputs: [
       {
-        "name": "s",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "s",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ]
   }

@@ -1,486 +1,486 @@
 export const syndicateSequencingChainABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    type: "constructor",
+    inputs: [
       {
-        "name": "_appchainId",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "_appchainId",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "nonpayable"
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "EPOCH_DURATION",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "EPOCH_DURATION",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "START_TIMESTAMP",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "START_TIMESTAMP",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "appchainId",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "appchainId",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "disableGasTracking",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "disableGasTracking",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "emissionsReceiver",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "emissionsReceiver",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "enableGasTracking",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "enableGasTracking",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "encodeTransaction",
-    "inputs": [
+    type: "function",
+    name: "encodeTransaction",
+    inputs: [
       {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "stateMutability": "pure"
+    stateMutability: "pure"
   },
   {
-    "type": "function",
-    "name": "gasTrackingDisabled",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "gasTrackingDisabled",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getCurrentEpoch",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "getCurrentEpoch",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getEmissionsReceiver",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "getEmissionsReceiver",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "getEpochEnd",
-    "inputs": [
+    type: "function",
+    name: "getEpochEnd",
+    inputs: [
       {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "epochIndex",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "pure"
+    stateMutability: "pure"
   },
   {
-    "type": "function",
-    "name": "getEpochStart",
-    "inputs": [
+    type: "function",
+    name: "getEpochStart",
+    inputs: [
       {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "epochIndex",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "pure"
+    stateMutability: "pure"
   },
   {
-    "type": "function",
-    "name": "getTokensForEpoch",
-    "inputs": [
+    type: "function",
+    name: "getTokensForEpoch",
+    inputs: [
       {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "epochIndex",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "isAllowed",
-    "inputs": [
+    type: "function",
+    name: "isAllowed",
+    inputs: [
       {
-        "name": "proposer",
-        "type": "address",
-        "internalType": "address"
+        name: "proposer",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "originator",
-        "type": "address",
-        "internalType": "address"
+        name: "originator",
+        type: "address",
+        internalType: "address"
       },
       {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        name: "",
+        type: "bool",
+        internalType: "bool"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "maxDataSize",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "maxDataSize",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "owner",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "permissionRequirementModule",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "permissionRequirementModule",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IPermissionModule"
+        name: "",
+        type: "address",
+        internalType: "contract IPermissionModule"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "processTransaction",
-    "inputs": [
+    type: "function",
+    name: "processTransaction",
+    inputs: [
       {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        internalType: "bytes"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "processTransactionsBulk",
-    "inputs": [
+    type: "function",
+    name: "processTransactionsBulk",
+    inputs: [
       {
-        "name": "data",
-        "type": "bytes[]",
-        "internalType": "bytes[]"
+        name: "data",
+        type: "bytes[]",
+        internalType: "bytes[]"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "renounceOwnership",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "setEmissionsReceiver",
-    "inputs": [
+    type: "function",
+    name: "setEmissionsReceiver",
+    inputs: [
       {
-        "name": "_emissionsReceiver",
-        "type": "address",
-        "internalType": "address"
+        name: "_emissionsReceiver",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "tokensUsedPerEpoch",
-    "inputs": [
+    type: "function",
+    name: "tokensUsedPerEpoch",
+    inputs: [
       {
-        "name": "epochIndex",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "epochIndex",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "outputs": [
+    outputs: [
       {
-        "name": "tokensUsed",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "tokensUsed",
+        type: "uint256",
+        internalType: "uint256"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
+    type: "function",
+    name: "transferOwnership",
+    inputs: [
       {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "updateRequirementModule",
-    "inputs": [
+    type: "function",
+    name: "updateRequirementModule",
+    inputs: [
       {
-        "name": "_newModule",
-        "type": "address",
-        "internalType": "address"
+        name: "_newModule",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "event",
-    "name": "EmissionsReceiverUpdated",
-    "inputs": [
+    type: "event",
+    name: "EmissionsReceiverUpdated",
+    inputs: [
       {
-        "name": "oldReceiver",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "oldReceiver",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "newReceiver",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "newReceiver",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "OwnershipTransferred",
-    "inputs": [
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
       {
-        "name": "previousOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "previousOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "newOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "RequirementModuleUpdated",
-    "inputs": [
+    type: "event",
+    name: "RequirementModuleUpdated",
+    inputs: [
       {
-        "name": "newModule",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "newModule",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "event",
-    "name": "TransactionProcessed",
-    "inputs": [
+    type: "event",
+    name: "TransactionProcessed",
+    inputs: [
       {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "sender",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "data",
-        "type": "bytes",
-        "indexed": false,
-        "internalType": "bytes"
+        name: "data",
+        type: "bytes",
+        indexed: false,
+        internalType: "bytes"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "error",
-    "name": "DataTooLarge",
-    "inputs": [
+    type: "error",
+    name: "DataTooLarge",
+    inputs: [
       {
-        "name": "dataLength",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "dataLength",
+        type: "uint256",
+        internalType: "uint256"
       },
       {
-        "name": "maxDataLength",
-        "type": "uint256",
-        "internalType": "uint256"
+        name: "maxDataLength",
+        type: "uint256",
+        internalType: "uint256"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "GasTrackingAlreadyDisabled",
-    "inputs": []
+    type: "error",
+    name: "GasTrackingAlreadyDisabled",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "GasTrackingAlreadyEnabled",
-    "inputs": []
+    type: "error",
+    name: "GasTrackingAlreadyEnabled",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "NoTxData",
-    "inputs": []
+    type: "error",
+    name: "NoTxData",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
+    type: "error",
+    name: "OwnableInvalidOwner",
+    inputs: [
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
+        name: "owner",
+        type: "address",
+        internalType: "address"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
+    type: "error",
+    name: "OwnableUnauthorizedAccount",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "TransactionOrSenderNotAllowed",
-    "inputs": []
+    type: "error",
+    name: "TransactionOrSenderNotAllowed",
+    inputs: []
   },
   {
-    "type": "error",
-    "name": "ZeroEpochIndex",
-    "inputs": []
+    type: "error",
+    name: "ZeroEpochIndex",
+    inputs: []
   }
 ] as const

@@ -1,111 +1,111 @@
 export const assertionPosterABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    type: "constructor",
+    inputs: [
       {
-        "name": "rollup_",
-        "type": "address",
-        "internalType": "contract IRollup"
+        name: "rollup_",
+        type: "address",
+        internalType: "contract IRollup"
       }
     ],
-    "stateMutability": "nonpayable"
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "configure",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "configure",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "owner",
-    "inputs": [],
-    "outputs": [
+    type: "function",
+    name: "owner",
+    inputs: [],
+    outputs: [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        name: "",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "stateMutability": "view"
+    stateMutability: "view"
   },
   {
-    "type": "function",
-    "name": "postAssertion",
-    "inputs": [
+    type: "function",
+    name: "postAssertion",
+    inputs: [
       {
-        "name": "blockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "blockHash",
+        type: "bytes32",
+        internalType: "bytes32"
       },
       {
-        "name": "sendRoot",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        name: "sendRoot",
+        type: "bytes32",
+        internalType: "bytes32"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "renounceOwnership",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    type: "function",
+    name: "renounceOwnership",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
+    type: "function",
+    name: "transferOwnership",
+    inputs: [
       {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        internalType: "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   {
-    "type": "event",
-    "name": "OwnershipTransferred",
-    "inputs": [
+    type: "event",
+    name: "OwnershipTransferred",
+    inputs: [
       {
-        "name": "previousOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "previousOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       },
       {
-        "name": "newOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        name: "newOwner",
+        type: "address",
+        indexed: true,
+        internalType: "address"
       }
     ],
-    "anonymous": false
+    anonymous: false
   },
   {
-    "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
+    type: "error",
+    name: "OwnableInvalidOwner",
+    inputs: [
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
+        name: "owner",
+        type: "address",
+        internalType: "address"
       }
     ]
   },
   {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
+    type: "error",
+    name: "OwnableUnauthorizedAccount",
+    inputs: [
       {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        name: "account",
+        type: "address",
+        internalType: "address"
       }
     ]
   }
