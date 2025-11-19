@@ -1,16 +1,17 @@
-import { ArbOwnerABI } from "../abi/nitro/ArbOwner"
-import { getHandoffConfig } from "../utils/config"
+import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
+import type { SetAppchainConfig } from "@/types"
 import {
   ARB_OWNER_PRECOMPILE_ADDRESS,
   DEFAULT_APPCHAIN_MIN_BASE_FEE
-} from "../utils/constants"
-import { getChainExplorerUrl } from "../utils/helpers"
-import { print } from "../utils/print"
+} from "@/utils/constants"
+import { getChainExplorerUrl } from "@/utils/helpers"
+import { print } from "@/utils/print"
 
-export default async function setAppchainConfig() {
-  const { appchainPublicClient, ownerAppchainWalletClient, newOwnerAddress } =
-    await getHandoffConfig()
-
+export default async function setAppchainConfig({
+  appchainPublicClient,
+  ownerAppchainWalletClient,
+  newOwnerAddress
+}: SetAppchainConfig) {
   // The chain owner is the only one who can set the config
   const isSignerChainOwner = await appchainPublicClient.readContract({
     address: ARB_OWNER_PRECOMPILE_ADDRESS,

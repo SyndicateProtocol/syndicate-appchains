@@ -1,22 +1,20 @@
-import { allowlistSequencingModuleABI } from "@/src/abi/synd/AllowlistSequencingModule"
-import { arbChainConfigABI } from "@/src/abi/synd/ArbChainConfig"
-import { requireAndModuleABI } from "@/src/abi/synd/RequireAndModule"
-import { syndicateSequencingChainABI } from "@/src/abi/synd/SyndicateSequencingChain"
-import { teeModuleABI } from "@/src/abi/synd/TeeModule"
-import { getHandoffConfig } from "../utils/config"
-import { getChainExplorerUrl } from "../utils/helpers"
-import { print } from "../utils/print"
+import { allowlistSequencingModuleABI } from "@/abi/synd/AllowlistSequencingModule"
+import { arbChainConfigABI } from "@/abi/synd/ArbChainConfig"
+import { requireAndModuleABI } from "@/abi/synd/RequireAndModule"
+import { syndicateSequencingChainABI } from "@/abi/synd/SyndicateSequencingChain"
+import { teeModuleABI } from "@/abi/synd/TeeModule"
+import type { HandoffSynd } from "@/types"
+import { getChainExplorerUrl } from "@/utils/helpers"
+import { print } from "@/utils/print"
 
-export default async function handoffSynd() {
-  const {
-    ownerSettlementWalletClient,
-    settlementPublicClient,
-    synd,
-    newOwnerAddress,
-    ownerSequencingWalletClient,
-    sequencingPublicClient
-  } = await getHandoffConfig()
-
+export default async function handoffSynd({
+  ownerSettlementWalletClient,
+  settlementPublicClient,
+  synd,
+  newOwnerAddress,
+  ownerSequencingWalletClient,
+  sequencingPublicClient
+}: HandoffSynd) {
   // 1. Transfer ownership of the ArbChainConfig
   const transferArbChainConfigTx =
     await ownerSettlementWalletClient.writeContract({
@@ -39,12 +37,13 @@ export default async function handoffSynd() {
     abi: teeModuleABI,
     functionName: "DEFAULT_ADMIN_ROLE"
   })
-  const teeModuleDefaultAdminRoleTransferHash = await ownerSettlementWalletClient.writeContract({
-    address: synd.withdrawals.teeModule,
-    abi: teeModuleABI,
-    functionName: "grantRole",
-    args: [teeModuleDefaultAdminRole, newOwnerAddress]
-  })
+  const teeModuleDefaultAdminRoleTransferHash =
+    await ownerSettlementWalletClient.writeContract({
+      address: synd.withdrawals.teeModule,
+      abi: teeModuleABI,
+      functionName: "grantRole",
+      args: [teeModuleDefaultAdminRole, newOwnerAddress]
+    })
   await settlementPublicClient.waitForTransactionReceipt({
     hash: teeModuleDefaultAdminRoleTransferHash
   })
@@ -53,12 +52,16 @@ export default async function handoffSynd() {
   )
 
   // Revoke the DEFAULT_ADMIN_ROLE from the owner
-  const teeModuleDefaultAdminRoleRevokeHash = await ownerSettlementWalletClient.writeContract({
-    address: synd.withdrawals.teeModule,
-    abi: teeModuleABI,
-    functionName: "revokeRole",
-    args: [teeModuleDefaultAdminRole, ownerSettlementWalletClient.account.address]
-  })
+  const teeModuleDefaultAdminRoleRevokeHash =
+    await ownerSettlementWalletClient.writeContract({
+      address: synd.withdrawals.teeModule,
+      abi: teeModuleABI,
+      functionName: "revokeRole",
+      args: [
+        teeModuleDefaultAdminRole,
+        ownerSettlementWalletClient.account.address
+      ]
+    })
   await settlementPublicClient.waitForTransactionReceipt({
     hash: teeModuleDefaultAdminRoleRevokeHash
   })

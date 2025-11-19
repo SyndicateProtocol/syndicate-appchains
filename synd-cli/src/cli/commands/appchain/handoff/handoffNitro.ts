@@ -1,24 +1,22 @@
-import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner"
+import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
+import type { HandoffNitro } from "@/types"
+import { ARB_OWNER_PRECOMPILE_ADDRESS } from "@/utils/constants"
+import { getChainExplorerUrl } from "@/utils/helpers"
+import { print } from "@/utils/print"
 import {
   upgradeExecutorPrepareAddExecutorTransactionRequest,
   upgradeExecutorPrepareRemoveExecutorTransactionRequest
 } from "@arbitrum/orbit-sdk"
-import { getHandoffConfig } from "../utils/config"
-import { ARB_OWNER_PRECOMPILE_ADDRESS } from "../utils/constants"
-import { getChainExplorerUrl } from "../utils/helpers"
-import { print } from "../utils/print"
 import { checkSequencerInboxConfig } from "./checkSequencerInboxConfig"
 
-export default async function handoffNitro() {
-  const {
-    newOwnerAddress,
-    ownerSettlementWalletClient,
-    settlementPublicClient,
-    synd,
-    ownerAppchainWalletClient,
-    appchainPublicClient
-  } = await getHandoffConfig()
-
+export default async function handoffNitro({
+  newOwnerAddress,
+  ownerSettlementWalletClient,
+  settlementPublicClient,
+  synd,
+  ownerAppchainWalletClient,
+  appchainPublicClient
+}: HandoffNitro) {
   await checkSequencerInboxConfig()
 
   // 1. Add new owner as EXECUTOR_ROLE on settlement chain
