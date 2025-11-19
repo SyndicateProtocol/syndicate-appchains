@@ -8,20 +8,19 @@ import { parseEventLogs } from "viem"
 export async function createArbChainConfig({
   coreContracts,
   settlementStartBlock,
-  sequencingContractAddress,
+  sequencingContract,
   sequencingStartBlock,
   ownerSettlementWalletClient,
   settlementPublicClient,
   sequencingPublicClient,
-  appChainExplorer: appChainExplorerUrl,
+  appChainExplorer,
   chainId,
   deployerSettlementWalletClient
 }: CreateArbChainConfig) {
   print("🔍 Creating ArbChainConfig...")
 
   const arbConfigManagerAddress =
-    supportedSettlementChains[settlementPublicClient.chain.id]
-      .arbConfigManagerAddress
+    supportedSettlementChains[settlementPublicClient.chain.id].arbConfigManager
   const { request } = await settlementPublicClient.simulateContract({
     account: deployerSettlementWalletClient.account,
     address: arbConfigManagerAddress,
@@ -43,7 +42,7 @@ export async function createArbChainConfig({
       // settlementStartBlock
       BigInt(settlementStartBlock),
       // sequencingContractAddress
-      sequencingContractAddress,
+      sequencingContract,
       // sequencingStartBlock
       BigInt(sequencingStartBlock),
       // initialAppchainOwner
@@ -52,7 +51,7 @@ export async function createArbChainConfig({
       // @note we are leaving blank for now as we require node operators to get their own private RPC URL
       "",
       // appChainBlockExplorerUrl
-      appChainExplorerUrl
+      appChainExplorer
     ]
   })
   const txHash = await deployerSettlementWalletClient.writeContract(request)

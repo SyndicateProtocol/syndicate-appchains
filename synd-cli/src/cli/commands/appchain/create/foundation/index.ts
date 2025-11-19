@@ -2,12 +2,7 @@ import {
   appchainCreateFoundationOptionsSchema,
   handleSchemaErrors
 } from "@/cli/schema"
-import { getPublicClient, getWalletClient } from "@/utils/clients"
-import {
-  supportedEthereumChains,
-  supportedSequencingChains,
-  supportedSettlementChains
-} from "@/utils/constants"
+import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import type { Hex } from "viem"
 import { foundation } from "./foundation"
@@ -46,60 +41,21 @@ export function createFoundationCommand(program: Command) {
         return handleSchemaErrors(error)
       }
 
-      const {
-        settlementRpc,
-        sequencingRpc,
-        ethereumRpc,
-        deployerPrivateKey,
-        ownerPrivateKey
-      } = validatedOptions
-
-      const [
-        settlementPublicClient,
-        sequencingPublicClient,
-        ethereumPublicClient,
-        ownerSettlementWalletClient,
-        deployerSettlementWalletClient,
-        ownerSequencingWalletClient,
-        deployerSequencingWalletClient
-      ] = await Promise.all([
-        getPublicClient(settlementRpc, supportedSettlementChains),
-        getPublicClient(sequencingRpc, supportedSequencingChains),
-        getPublicClient(ethereumRpc, supportedEthereumChains),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          ownerPrivateKey as `0x${string}`
-        ),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          deployerPrivateKey as `0x${string}`
-        ),
-        getWalletClient(
-          sequencingRpc,
-          supportedSequencingChains,
-          ownerPrivateKey as `0x${string}`
-        ),
-        getWalletClient(
-          sequencingRpc,
-          supportedSequencingChains,
-          deployerPrivateKey as `0x${string}`
-        )
-      ])
+      const clients = await createClients(validatedOptions)
 
       await foundation({
-        deployerSettlementWalletClient,
-        deployerSequencingWalletClient,
-        ownerSettlementWalletClient,
-        ownerSequencingWalletClient,
-        settlementPublicClient,
-        sequencingPublicClient,
+        deployerSettlementWalletClient: clients.deployerSettlementWalletClient,
+        deployerSequencingWalletClient: clients.deployerSequencingWalletClient,
+        ownerSettlementWalletClient: clients.ownerSettlementWalletClient,
+        ownerSequencingWalletClient: clients.ownerSequencingWalletClient,
+        settlementPublicClient: clients.settlementPublicClient,
+        sequencingPublicClient: clients.sequencingPublicClient,
 
         chainId: validatedOptions.id,
         chainName: validatedOptions.name.toLowerCase().replace(/\s+/g, "-"),
-        nativeTokenAddress: validatedOptions.nativeTokenAddress,
-        ethereumChainRpcUrl: ethereumPublicClient.chain.rpcUrls.default.http[0],
+        nativeToken: validatedOptions.nativeTokenAddress,
+        ethereumChainRpcUrl:
+          clients.ethereumPublicClient.chain.rpcUrls.default.http[0],
         ownerPrivateKey: validatedOptions.ownerPrivateKey as Hex,
         coreContractsCreatedAtHash:
           validatedOptions.coreContractsCreatedAtHash as Hex,

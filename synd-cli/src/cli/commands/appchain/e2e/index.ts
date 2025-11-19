@@ -29,7 +29,7 @@ export function e2eCommand(program: Command) {
         return handleSchemaErrors(error)
       }
 
-      const { settlementRpc, appchainRpc, inbox, privateKey } = validatedOptions
+      const { settlementRpc, appchainRpc, privateKey } = validatedOptions
 
       const [settlementPublicClient, settlementWalletClient] =
         await Promise.all([
@@ -38,10 +38,8 @@ export function e2eCommand(program: Command) {
         ])
 
       const appchainPublicClient = await getAppchainClient({
-        // nativeToken: coreContracts.nativeToken,
-        settlementPublicClient: settlementPublicClient,
+        settlementPublicClient,
         rpcUrl: appchainRpc
-        // explorerUrl: appchainExplorer
       })
 
       const appchainWalletClient = createWalletClient({

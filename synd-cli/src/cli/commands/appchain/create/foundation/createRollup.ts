@@ -7,26 +7,26 @@ import {
 } from "@/utils/helpers"
 import { print } from "@/utils/print"
 import {
+  type CreateRollupParams as NitroCreateRollupParams,
   createRollupEnoughCustomFeeTokenAllowance,
   createRollupGetRetryablesFeesWithDefaults,
   createRollupPrepareCustomFeeTokenApprovalTransactionRequest,
   createRollupPrepareDeploymentParamsConfig,
   createRollupPrepareTransactionReceipt,
-  type CreateRollupParams as NitroCreateRollupParams,
   prepareChainConfig
 } from "@arbitrum/orbit-sdk"
 import { sleep } from "bun"
 import {
+  type TransactionSerializable,
   erc20Abi,
   formatEther,
-  parseUnits,
-  type TransactionSerializable
+  parseUnits
 } from "viem"
 import { createRollupPrepareTransactionRequest } from "./createRollupPrepareTransactionRequest"
 
 export async function createRollup({
   chainId,
-  nativeTokenAddress,
+  nativeToken,
   deployerSettlementWalletClient,
   ownerSettlementWalletClient,
   settlementPublicClient
@@ -35,8 +35,7 @@ export async function createRollup({
   const rollupOwnerAccount = ownerSettlementWalletClient.account
   const owner = rollupOwnerAccount.address
   const rollupCreatorAddress =
-    supportedSettlementChains[settlementPublicClient.chain.id]
-      .rollupCreatorAddress
+    supportedSettlementChains[settlementPublicClient.chain.id].rollupCreator
 
   const maxDataSize = 117964
   const chainConfig = prepareChainConfig({
@@ -70,11 +69,11 @@ export async function createRollup({
     settlementPublicClient,
     {
       account: deployerAccount.address,
-      nativeToken: nativeTokenAddress
+      nativeToken
     }
   )
 
-  if (isNativeTokenEth(nativeTokenAddress)) {
+  if (isNativeTokenEth(nativeToken)) {
     // Owner must have a balance of native token to pay for retryables
     const balance = await settlementPublicClient.getBalance({
       address: deployerAccount.address
@@ -85,7 +84,7 @@ export async function createRollup({
   } else {
     // Deployer must have a balance of the native token to deploy the rollup
     const deployerBalance = await settlementPublicClient.readContract({
-      address: nativeTokenAddress,
+      address: nativeToken,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [deployerAccount.address]
@@ -96,16 +95,22 @@ export async function createRollup({
       parseUnits(deployerBalance.toString(), tokenDecimals) *
       BigInt(10 ** (18 - tokenDecimals))
     if (convertedBalance < costOfRetryables) {
-      const nativeCurrency = nativeTokenAddress
-        ? await getNativeCurrency(settlementPublicClient, nativeTokenAddress)
+      const nativeCurrency = nativeToken
+        ? await getNativeCurrency(settlementPublicClient, nativeToken)
         : undefined
       throw new Error(
-        `Insufficient balance for deployer account ${deployerAccount.address} to deploy rollup. Deployer balance: ${formatEther(convertedBalance)}. Please fund the deployer with at least ${formatEther(costOfRetryables)} ${nativeCurrency?.symbol}`
+        `Insufficient balance for deployer account ${
+          deployerAccount.address
+        } to deploy rollup. Deployer balance: ${formatEther(
+          convertedBalance
+        )}. Please fund the deployer with at least ${formatEther(
+          costOfRetryables
+        )} ${nativeCurrency?.symbol}`
       )
     }
 
     const allowanceParams = {
-      nativeToken: nativeTokenAddress,
+      nativeToken: nativeToken,
       account: deployerAccount.address,
       publicClient: settlementPublicClient,
       rollupCreatorAddressOverride: rollupCreatorAddress
@@ -133,13 +138,13 @@ export async function createRollup({
       )
 
       print(
-        `🔍  Native gas token approved in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${
-          approvalTxReceipt.transactionHash
-        }`
+        `🔍  Native gas token approved in ${getChainExplorerUrl(
+          settlementPublicClient.chain
+        )}/tx/${approvalTxReceipt.transactionHash}`
       )
     }
 
-    params.nativeToken = nativeTokenAddress
+    params.nativeToken = nativeToken
     print("🫷  Waiting for 5 seconds before calling createRollup...")
     await sleep(5_000)
   }
@@ -161,7 +166,9 @@ export async function createRollup({
     await settlementPublicClient.waitForTransactionReceipt({ hash: txHash })
   )
   print(
-    `🔍  Rollup deployed in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${transactionHash}`
+    `🔍  Rollup deployed in ${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${transactionHash}`
   )
   return transactionHash
 }

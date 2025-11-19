@@ -60,15 +60,15 @@ export const syndicate = defineChain({
 
 export const supportedSequencingChains: SupportedSequencingChains = {
   [risa.id]: {
-    bridgeAddress: "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA",
-    requireAndFactoryAddress: "0x60e6Ac9FF8ff09175329EfB3daDa27abDA812aA4",
-    syndicateFactoryAddress: "0x2e44cd104A6b67037b5e6DB662C0E917d1828D9E",
+    bridge: "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA",
+    requireAndFactory: "0x60e6Ac9FF8ff09175329EfB3daDa27abDA812aA4",
+    syndicateFactory: "0x2e44cd104A6b67037b5e6DB662C0E917d1828D9E",
     chain: risa
   },
   [syndicate.id]: {
-    bridgeAddress: "0x3C8cF0ae6E89AC0796f29B3a58e7dEa1cD072277",
-    requireAndFactoryAddress: "0x3eEb8b1500cbaCbc4A3718D39414C8D191AC906B",
-    syndicateFactoryAddress: "0x0620625c3662CbD6a8ca8Eef196ee3b10A8Bd157",
+    bridge: "0x3C8cF0ae6E89AC0796f29B3a58e7dEa1cD072277",
+    requireAndFactory: "0x3eEb8b1500cbaCbc4A3718D39414C8D191AC906B",
+    syndicateFactory: "0x0620625c3662CbD6a8ca8Eef196ee3b10A8Bd157",
     chain: syndicate
   }
 }
@@ -78,25 +78,25 @@ export const supportedSequencingChains: SupportedSequencingChains = {
 export const supportedSettlementChains: SupportedSettlementChains = {
   [baseSepolia.id]: {
     chain: baseSepolia,
-    rollupCreatorAddress: "0x234ea0E2aB220f1c7e15B5e62Ec53e01e526e241",
-    tokenBridgeCreatorAddress: "0x0369039c392E82AA8e4dB19B1149C486aB0c4698",
-    arbConfigManagerAddress: "0xbb53E8736Cc018bb46D0F67A9d2Dbe3C3b306E92",
-    teeKeyManagerAddress: "0x0831F5F32E424554E5742713B1AB3d5b9740eE19"
+    rollupCreator: "0x234ea0E2aB220f1c7e15B5e62Ec53e01e526e241",
+    tokenBridgeCreator: "0x0369039c392E82AA8e4dB19B1149C486aB0c4698",
+    arbConfigManager: "0xbb53E8736Cc018bb46D0F67A9d2Dbe3C3b306E92",
+    teeKeyManager: "0x0831F5F32E424554E5742713B1AB3d5b9740eE19"
   },
   [sepolia.id]: {
     chain: sepolia,
-    rollupCreatorAddress: "0x06d499101874a6260990AfcB5b41866Cc8BE6e08",
-    tokenBridgeCreatorAddress: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
-    arbConfigManagerAddress: "0xc18feFb2E79Ec35Ca9f3c3e7F1920EC1cad06e8F",
-    teeKeyManagerAddress: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187"
+    rollupCreator: "0x06d499101874a6260990AfcB5b41866Cc8BE6e08",
+    tokenBridgeCreator: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
+    arbConfigManager: "0xc18feFb2E79Ec35Ca9f3c3e7F1920EC1cad06e8F",
+    teeKeyManager: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187"
   },
   [base.id]: {
     chain: base,
     // @note TODO: update
-    rollupCreatorAddress: "0x",
-    tokenBridgeCreatorAddress: "0x882bCF9413885EFDAD307FD9fa369CC670304740",
-    arbConfigManagerAddress: "0x65e6D336E311C92D1F19C66CfE68Ec6bE5b4f50B",
-    teeKeyManagerAddress: "0x9CF9FF139C09Df70BD94b31ff935DFD648e0fa54"
+    rollupCreator: "0x",
+    tokenBridgeCreator: "0x882bCF9413885EFDAD307FD9fa369CC670304740",
+    arbConfigManager: "0x65e6D336E311C92D1F19C66CfE68Ec6bE5b4f50B",
+    teeKeyManager: "0x9CF9FF139C09Df70BD94b31ff935DFD648e0fa54"
   }
   // [mainnet.id]: {
   // chain: mainnet,

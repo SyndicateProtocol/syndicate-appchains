@@ -57,7 +57,7 @@ export async function checkTokenBridge({
     parentChainPublicClient: settlementPublicClient,
     tokenBridgeCreatorAddressOverride:
       supportedSettlementChains[settlementPublicClient.chain.id]
-        .tokenBridgeCreatorAddress
+        .tokenBridgeCreator
   })
   console.log("TokenBridge contracts fetched")
   console.log(tokenBridgeContracts)

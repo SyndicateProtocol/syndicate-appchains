@@ -27,7 +27,7 @@ export async function features({
   deployerSettlementWalletClient,
   settlementPublicClient,
   deployerAppchainWalletClient,
-  sequencingContractAddress,
+  sequencingContract,
   sequencingPublicClient,
   ethereumPublicClient,
   syndForkSequencingRpc
@@ -143,7 +143,7 @@ export async function features({
   const { tokenBridgeContracts } = await createTokenBridge({
     tokenBridgeCreatorAddressOverride:
       supportedSettlementChains[settlementPublicClient.chain.id]
-        .tokenBridgeCreatorAddress,
+        .tokenBridgeCreator,
     rollupOwner: ownerSettlementWalletClient.account.address,
     rollupAddress: coreContracts.rollup,
     rollupDeploymentBlockNumber: BigInt(coreContracts.deployedAtBlockNumber),
@@ -209,28 +209,24 @@ export async function features({
     )
   }
 
-  const {
-    assertionPosterAddress,
-    teeModuleAddress,
-    attestationDocVerifierAddress,
-    teeKeyManagerAddress
-  } = await deployWithdrawals({
-    settlementPublicClient,
-    deployerSettlementWalletClient,
-    ownerSettlementWalletClient,
-    sequencingContractAddress,
-    sequencingPublicClient,
-    appchainPublicClient,
-    ethereumPublicClient,
-    syndForkSequencingRpc,
-    coreContracts
-  })
+  const { assertionPoster, teeModule, attestationDocVerifier, teeKeyManager } =
+    await deployWithdrawals({
+      settlementPublicClient,
+      deployerSettlementWalletClient,
+      ownerSettlementWalletClient,
+      sequencingContract,
+      sequencingPublicClient,
+      appchainPublicClient,
+      ethereumPublicClient,
+      syndForkSequencingRpc,
+      coreContracts
+    })
 
   await upsertToSyndObject(chainName, environment, "withdrawals", {
-    teeKeyManager: teeKeyManagerAddress,
-    assertionPoster: assertionPosterAddress,
-    teeModule: teeModuleAddress,
-    attestationDocVerifier: attestationDocVerifierAddress
+    teeKeyManager,
+    assertionPoster,
+    teeModule,
+    attestationDocVerifier
   })
 
   const proposerPrivateKey = generatePrivateKey()

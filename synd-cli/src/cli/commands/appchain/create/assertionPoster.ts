@@ -2,8 +2,7 @@ import {
   appchainDeployAssertionPosterOptionsSchema,
   handleSchemaErrors
 } from "@/cli/schema"
-import { getPublicClient, getWalletClient } from "@/utils/clients"
-import { supportedSettlementChains } from "@/utils/constants"
+import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { deployAssertionPoster } from "./features/deployAssertionPoster"
 
@@ -39,32 +38,12 @@ export function createAssertionPosterCommand(program: Command) {
         return handleSchemaErrors(error)
       }
 
+      const { rollup, upgradeExecutor } = validatedOptions
       const {
-        settlementRpc,
-        deployerPrivateKey,
-        ownerPrivateKey,
-        rollup,
-        upgradeExecutor
-      } = validatedOptions
-
-      const [
         settlementPublicClient,
-        ownerSettlementWalletClient,
-        deployerSettlementWalletClient
-      ] = await Promise.all([
-        getPublicClient(settlementRpc, supportedSettlementChains),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          ownerPrivateKey as `0x${string}`
-        ),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          deployerPrivateKey as `0x${string}`
-        )
-      ])
-
+        deployerSettlementWalletClient,
+        ownerSettlementWalletClient
+      } = await createClients(validatedOptions)
       const assertionPosterAddress = await deployAssertionPoster({
         rollup,
         upgradeExecutor,

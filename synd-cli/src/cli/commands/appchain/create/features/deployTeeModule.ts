@@ -7,15 +7,15 @@ import {
 } from "@/utils/constants"
 import { getChainExplorerUrl } from "@/utils/helpers"
 import { print } from "@/utils/print"
-import { encodePacked, keccak256, type PublicClient, stringify } from "viem"
+import { type PublicClient, encodePacked, keccak256, stringify } from "viem"
 import { holesky, mainnet, sepolia } from "viem/chains"
 
 export async function deployTeeModule({
-  assertionPosterAddress,
+  assertionPoster,
   bridge,
   deployerSettlementWalletClient,
   settlementPublicClient,
-  sequencingContractAddress,
+  sequencingContract,
   sequencingPublicClient,
   appchainPublicClient,
   ethereumPublicClient,
@@ -26,10 +26,9 @@ export async function deployTeeModule({
   ).includes(settlementPublicClient.chain.id)
 
   const sequencingChainBridge =
-    supportedSequencingChains[sequencingPublicClient.chain.id].bridgeAddress
+    supportedSequencingChains[sequencingPublicClient.chain.id].bridge
   const teeKeyManagerAddress =
-    supportedSettlementChains[settlementPublicClient.chain.id]
-      .teeKeyManagerAddress
+    supportedSettlementChains[settlementPublicClient.chain.id].teeKeyManager
 
   const l1BlockOrBridge = isL1Chain
     ? sequencingChainBridge
@@ -86,7 +85,7 @@ export async function deployTeeModule({
 
   const args = [
     // 1. poster_: AssertionPoster contract address
-    assertionPosterAddress,
+    assertionPoster,
     // 2. bridge_: Nitro Bridge contract address
     bridge,
     // 3. configHash_: Hash of the configuration data passed to the TEE
@@ -95,7 +94,7 @@ export async function deployTeeModule({
       encodePacked(
         ["address", "address", "uint64"],
         [
-          sequencingContractAddress, // SyndicateSequencingChain contract address
+          sequencingContract, // SyndicateSequencingChain contract address
           sequencingChainBridge, // Arb Bridge contract address for sequencing chain
           settlementDelay
         ]

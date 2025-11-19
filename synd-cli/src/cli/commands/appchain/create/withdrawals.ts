@@ -117,7 +117,7 @@ export function createWithdrawalsContractsCommand(program: Command) {
           upgradeExecutor,
           bridge
         },
-        sequencingContractAddress: sequencingContract as Hex,
+        sequencingContract: sequencingContract as Hex,
         settlementPublicClient,
         deployerSettlementWalletClient,
         ownerSettlementWalletClient,

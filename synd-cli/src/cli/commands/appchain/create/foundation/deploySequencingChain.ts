@@ -28,23 +28,23 @@ export async function deploySequencingChain({
   ownerSequencingWalletClient
 }: DeploySequencingChainParams) {
   // 1. Create RequireAndModule
-  const requireAndModuleAddress = await createRequireAndModule({
+  const requireAndModule = await createRequireAndModule({
     chainId,
     sequencingPublicClient,
     deployerSequencingWalletClient
   })
 
   // 2. Create SyndicateSequencingChain
-  const { syndicateSequencingChainAddress, deployedAtBlock } =
+  const { sequencingContract, deployedAtBlock } =
     await createSyndicateSequencingChain({
-      requireAndModuleAddress,
+      requireAndModule,
       sequencingPublicClient,
       deployerSequencingWalletClient,
       chainId
     })
 
   // 3. Deploy and setup AllowlistSequencingModule
-  const allowlistSequencingModuleAddress =
+  const allowlistSequencingModule =
     await deployAndSetupAllowlistSequencingModule({
       sequencerAccount,
       sequencingPublicClient,
@@ -53,26 +53,26 @@ export async function deploySequencingChain({
 
   // 4. Register AllowlistSequencingModule on RequireAllModule
   await registerAllowlistSequencingModuleOnRequireAllModule({
-    requireAndModuleAddress,
-    allowlistSequencingModuleAddress,
+    requireAndModule,
+    allowlistSequencingModule,
     deployerSequencingWalletClient,
     sequencingPublicClient
   })
 
   // 5. Transfer ownership of all contracts to owner account
   await transferAllContractsOwnership({
-    syndicateSequencingChainAddress,
-    allowlistSequencingModuleAddress,
-    requireAndModuleAddress,
+    sequencingContract,
+    allowlistSequencingModule,
+    requireAndModule,
     deployerSequencingWalletClient,
     sequencingPublicClient,
     ownerSequencingWalletClient
   })
 
   return {
-    syndicateSequencingChainAddress,
-    allowlistSequencingModuleAddress,
-    requireAndModuleAddress,
+    sequencingContract,
+    allowlistSequencingModule,
+    requireAndModule,
     deployedAtBlock
   }
 }
@@ -83,8 +83,7 @@ async function createRequireAndModule({
   deployerSequencingWalletClient
 }: CreateRequireAndModuleParams) {
   const requireAndFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id]
-      .requireAndFactoryAddress
+    supportedSequencingChains[sequencingPublicClient.chain.id].requireAndFactory
 
   const { request: requireAndModuleRequest } =
     await sequencingPublicClient.simulateContract({
@@ -107,29 +106,28 @@ async function createRequireAndModule({
     abi: requireAndModuleFactoryABI,
     logs: requireAndModuleTx.logs
   })
-  const requireAndModuleAddress = requireAndFactoryLogs.find(
+  const requireAndModule = requireAndFactoryLogs.find(
     (l) => l.eventName === "RequireAndModuleCreated"
   )?.args.module
-  if (!requireAndModuleAddress) {
+  if (!requireAndModule) {
     throw new Error("RequireAndModule deployment failed")
   }
   print(
-    `🔍  RequireAndModule deployed to ${requireAndModuleAddress}\n${getChainExplorerUrl(
+    `🔍  RequireAndModule deployed to ${requireAndModule}\n${getChainExplorerUrl(
       sequencingPublicClient.chain
     )}/tx/${requireAndModuleHash}`
   )
-  return requireAndModuleAddress
+  return requireAndModule
 }
 
 async function createSyndicateSequencingChain({
-  requireAndModuleAddress,
+  requireAndModule,
   sequencingPublicClient,
   deployerSequencingWalletClient,
   chainId
 }: CreateSyndicateSequencingChainParams) {
   const syndicateFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id]
-      .syndicateFactoryAddress
+    supportedSequencingChains[sequencingPublicClient.chain.id].syndicateFactory
   const { request: syndicateSequencingChainRequest } =
     await sequencingPublicClient.simulateContract({
       account: deployerSequencingWalletClient.account,
@@ -139,7 +137,7 @@ async function createSyndicateSequencingChain({
       args: [
         BigInt(chainId),
         deployerSequencingWalletClient.account.address,
-        requireAndModuleAddress,
+        requireAndModule,
         toHex(toBytes(chainId, { size: 32 }))
       ]
     })
@@ -155,19 +153,19 @@ async function createSyndicateSequencingChain({
     abi: syndicateFactoryABI,
     logs: syndicateSequencingChainTx.logs
   })
-  const syndicateSequencingChainAddress = syndicateFactoryLogs.find(
+  const sequencingContract = syndicateFactoryLogs.find(
     (l) => l.eventName === "SyndicateSequencingChainCreated"
   )?.args.sequencingChainAddress
-  if (!syndicateSequencingChainAddress) {
+  if (!sequencingContract) {
     throw new Error("SyndicateSequencingChain deployment failed")
   }
   print(
-    `🔍  SyndicateSequencingChain deployed to ${syndicateSequencingChainAddress}\n${getChainExplorerUrl(
+    `🔍  SyndicateSequencingChain deployed to ${sequencingContract}\n${getChainExplorerUrl(
       sequencingPublicClient.chain
     )}/tx/${syndicateSequencingChainHash}`
   )
   return {
-    syndicateSequencingChainAddress,
+    sequencingContract,
     deployedAtBlock: syndicateSequencingChainTx.blockNumber
   }
 }
@@ -188,12 +186,12 @@ async function deployAndSetupAllowlistSequencingModule({
     await sequencingPublicClient.waitForTransactionReceipt({
       hash: allowlistSequencingModuleHash
     })
-  const allowlistSequencingModuleAddress = sequencingModuleTx.contractAddress
-  if (!allowlistSequencingModuleAddress) {
+  const allowlistSequencingModule = sequencingModuleTx.contractAddress
+  if (!allowlistSequencingModule) {
     throw new Error("AllowlistSequencingModule deployment failed")
   }
   print(
-    `🔍  AllowlistSequencingModule deployed to ${allowlistSequencingModuleAddress}\n${getChainExplorerUrl(
+    `🔍  AllowlistSequencingModule deployed to ${allowlistSequencingModule}\n${getChainExplorerUrl(
       sequencingPublicClient.chain
     )}/tx/${allowlistSequencingModuleHash}`
   )
@@ -201,7 +199,7 @@ async function deployAndSetupAllowlistSequencingModule({
   // 2: Allowlist wallet pool by calling 'addToAllowlist' on AllowlistSequencingModule
   const addAllowlistTxHash = await deployerSequencingWalletClient.writeContract(
     {
-      address: allowlistSequencingModuleAddress,
+      address: allowlistSequencingModule,
       abi: allowlistSequencingModuleABI,
       functionName: "addToAllowlist",
       args: [sequencerAccount.address],
@@ -217,21 +215,21 @@ async function deployAndSetupAllowlistSequencingModule({
       sequencingPublicClient.chain
     )}/tx/${allowlistSequencerTx.transactionHash}`
   )
-  return allowlistSequencingModuleAddress
+  return allowlistSequencingModule
 }
 
 async function registerAllowlistSequencingModuleOnRequireAllModule({
-  requireAndModuleAddress,
-  allowlistSequencingModuleAddress,
+  requireAndModule,
+  allowlistSequencingModule,
   deployerSequencingWalletClient,
   sequencingPublicClient
 }: RegisterAllowlistSequencingModuleOnRequireAllModuleParams) {
   const registerSequencerAllowlistTxHash =
     await deployerSequencingWalletClient.writeContract({
-      address: requireAndModuleAddress,
+      address: requireAndModule,
       abi: requireAndModuleABI,
       functionName: "addPermissionCheck",
-      args: [allowlistSequencingModuleAddress, true],
+      args: [allowlistSequencingModule, true],
       account: deployerSequencingWalletClient.account
     })
   const registerSequencerAllowlistTx =
@@ -246,16 +244,16 @@ async function registerAllowlistSequencingModuleOnRequireAllModule({
 }
 
 async function transferAllContractsOwnership({
-  syndicateSequencingChainAddress,
-  allowlistSequencingModuleAddress,
-  requireAndModuleAddress,
+  sequencingContract,
+  allowlistSequencingModule,
+  requireAndModule,
   deployerSequencingWalletClient,
   sequencingPublicClient,
   ownerSequencingWalletClient
 }: TransferAllContractsOwnershipParams) {
   const transferOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
-      address: syndicateSequencingChainAddress,
+      address: sequencingContract,
       abi: syndicateSequencingChainABI,
       functionName: "transferOwnership",
       args: [ownerSequencingWalletClient.account.address],
@@ -274,7 +272,7 @@ async function transferAllContractsOwnership({
   // AllowlistSequencingModule
   const transferAllowlistSequencingModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
-      address: allowlistSequencingModuleAddress,
+      address: allowlistSequencingModule,
       abi: allowlistSequencingModuleABI,
       functionName: "transferAdmin",
       args: [ownerSequencingWalletClient.account.address],
@@ -293,7 +291,7 @@ async function transferAllContractsOwnership({
   // RequireAllModule
   const transferRequireAllModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
-      address: requireAndModuleAddress,
+      address: requireAndModule,
       abi: requireAndModuleABI,
       functionName: "transferOwnership",
       args: [ownerSequencingWalletClient.account.address],

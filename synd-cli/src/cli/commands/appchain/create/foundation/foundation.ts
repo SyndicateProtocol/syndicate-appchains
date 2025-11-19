@@ -24,7 +24,7 @@ import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts"
 export async function foundation({
   chainId,
   chainName,
-  nativeTokenAddress,
+  nativeToken,
   deployerSettlementWalletClient,
   ownerSettlementWalletClient,
   ownerSequencingWalletClient,
@@ -34,7 +34,7 @@ export async function foundation({
   deployerSequencingWalletClient,
   ownerPrivateKey,
   coreContractsCreatedAtHash,
-  appChainRpc: appChainRpcUrl,
+  appChainRpc,
   appChainExplorer
 }: Foundation) {
   const validators = [ownerSettlementWalletClient.account.address]
@@ -42,8 +42,8 @@ export async function foundation({
   const batchPosterManager = ownerSettlementWalletClient.account.address
   const sequencerPrivateKey = generatePrivateKey()
   const sequencerAccount = privateKeyToAccount(sequencerPrivateKey)
-  const nativeCurrency = nativeTokenAddress
-    ? await getNativeCurrency(settlementPublicClient, nativeTokenAddress)
+  const nativeCurrency = nativeToken
+    ? await getNativeCurrency(settlementPublicClient, nativeToken)
     : undefined
   const isTestnet = ownerSettlementWalletClient.chain.testnet
   const environment = isTestnet ? "testnet" : "mainnet"
@@ -83,9 +83,9 @@ export async function foundation({
   print("Batch Poster Manager", batchPosterManager)
   print(
     "Native Token",
-    isNativeTokenEth(nativeTokenAddress)
+    isNativeTokenEth(nativeToken)
       ? "ETH"
-      : `${nativeTokenAddress} (${nativeCurrency?.symbol})`
+      : `${nativeToken} (${nativeCurrency?.symbol})`
   )
   print("Settlement Chain", settlementPublicClient.chain.name)
   print("Sequencing Chain", sequencingPublicClient.chain.name)
@@ -150,7 +150,7 @@ export async function foundation({
       chainId,
       parentChainId: settlementPublicClient.chain.id,
       rollupOwnerAddress: ownerSettlementWalletClient.account.address,
-      rpcUrl: appChainRpcUrl,
+      rpcUrl: appChainRpc,
       explorerUrl: appChainExplorer
     })
   } else {
@@ -160,9 +160,9 @@ export async function foundation({
       chainName,
       ownerSettlementWalletClient,
       settlementPublicClient,
-      appChainRpc: appChainRpcUrl,
+      appChainRpc: appChainRpc,
       appChainExplorer,
-      nativeTokenAddress,
+      nativeToken,
       deployerSettlementWalletClient
     })
     chainConfig = nitroDeploymentResult.chainConfig
@@ -204,7 +204,7 @@ export async function foundation({
   const arbChainConfigAddress = await createArbChainConfig({
     coreContracts,
     settlementStartBlock: settlementBlockBeforeDeployment,
-    sequencingContractAddress: syndicateSequencingChainAddress,
+    sequencingContract: syndicateSequencingChainAddress,
     sequencingStartBlock: deployedAtBlock,
     ownerSettlementWalletClient,
     settlementPublicClient,
@@ -218,7 +218,7 @@ export async function foundation({
     arbChainConfig: arbChainConfigAddress,
     arbConfigManager:
       supportedSettlementChains[settlementPublicClient.chain.id]
-        .arbConfigManagerAddress
+        .arbConfigManager
   })
   print("✅  Arb Chain Config deployed")
   print("---------------------------------------------------------")
@@ -261,11 +261,10 @@ export async function foundation({
           "REPLACEMELATER - private key with no 0x prefix",
         "config-manager-address":
           supportedSettlementChains[settlementPublicClient.chain.id]
-            .arbConfigManagerAddress,
+            .arbConfigManager,
         "appchain-bridge-address": bridgeConfig.coreContracts.bridge,
         "sequencing-bridge-address":
-          supportedSequencingChains[sequencingPublicClient.chain.id]
-            .bridgeAddress,
+          supportedSequencingChains[sequencingPublicClient.chain.id].bridge,
         "memorystore-read-endpoint": isTestnet
           ? "redis://10.40.0.17:6379"
           : "redis://10.60.0.2:6379",
@@ -287,7 +286,7 @@ export async function foundation({
               "sequencer-inbox": "0x0000000000000000000000000000000000511000",
               "deployed-at": 1,
               rollup: "0x0000000000000000000000000000000000000000",
-              "native-token": nativeTokenAddress,
+              "native-token": nativeToken,
               "upgrade-executor": "0x0000000000000000000000000000000000000000",
               "validator-wallet-creator":
                 "0x0000000000000000000000000000000000000000"

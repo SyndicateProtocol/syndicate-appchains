@@ -13,12 +13,12 @@ export async function deployNitroRollup({
   settlementPublicClient,
   appChainRpc,
   appChainExplorer,
-  nativeTokenAddress,
+  nativeToken,
   deployerSettlementWalletClient
 }: DeployNitroRollupParams) {
   const hash = await createRollup({
     chainId,
-    nativeTokenAddress,
+    nativeToken,
     deployerSettlementWalletClient,
     ownerSettlementWalletClient,
     settlementPublicClient

@@ -2,16 +2,7 @@ import {
   appchainDeployTeeModuleOptionsSchema,
   handleSchemaErrors
 } from "@/cli/schema"
-import {
-  getAppchainClient,
-  getPublicClient,
-  getWalletClient
-} from "@/utils/clients"
-import {
-  supportedEthereumChains,
-  supportedSequencingChains,
-  supportedSettlementChains
-} from "@/utils/constants"
+import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { type Hex, zeroAddress } from "viem"
 import { getNativeTokenFromBridge } from "../arbOwner/helpers"
@@ -60,52 +51,46 @@ export function createTeeModuleCommand(program: Command) {
       }
 
       const {
-        settlementRpc,
-        sequencingRpc,
-        ethereumRpc,
-        deployerPrivateKey,
         bridge,
-        appchainRpc,
         assertionPoster,
         sequencingContract,
         syndForkSequencingRpc
       } = validatedOptions
 
-      const [
+      // Create basic clients first (without appchain)
+      const {
         settlementPublicClient,
+        deployerSettlementWalletClient,
         sequencingPublicClient,
-        ethereumPublicClient,
-        deployerSettlementWalletClient
-      ] = await Promise.all([
-        getPublicClient(settlementRpc, supportedSettlementChains),
-        getPublicClient(sequencingRpc, supportedSequencingChains),
-        getPublicClient(ethereumRpc, supportedEthereumChains),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          deployerPrivateKey as `0x${string}`
-        )
-      ])
+        ethereumPublicClient
+      } = await createClients({
+        settlementRpc: validatedOptions.settlementRpc,
+        sequencingRpc: validatedOptions.sequencingRpc,
+        ethereumRpc: validatedOptions.ethereumRpc,
+        deployerPrivateKey: validatedOptions.deployerPrivateKey
+      })
 
+      // Get native token to determine appchain setup
       const customNativeToken = await getNativeTokenFromBridge(
         settlementPublicClient,
         bridge
       )
 
-      const appchainPublicClient = await getAppchainClient({
+      // Now create appchain client with the native token info
+      const appchainClients = await createClients({
+        appchainRpc: validatedOptions.appchainRpc,
         nativeToken: customNativeToken?.address ?? zeroAddress,
-        settlementPublicClient: settlementPublicClient,
-        rpcUrl: appchainRpc
+        settlementPublicClient
       })
 
       const teeModuleAddress = await deployTeeModule({
-        assertionPosterAddress: assertionPoster,
+        assertionPoster,
         bridge,
         deployerSettlementWalletClient,
         settlementPublicClient,
-        sequencingContractAddress: sequencingContract as Hex,
+        sequencingContract: sequencingContract as Hex,
         sequencingPublicClient,
-        appchainPublicClient,
+        appchainPublicClient: appchainClients.appchainPublicClient,
         ethereumPublicClient,
         syndForkSequencingRpc
       })

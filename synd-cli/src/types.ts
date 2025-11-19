@@ -90,10 +90,10 @@ export type ChainNativeCurrency = {
 export type SupportedSettlementChains = Record<
   number,
   {
-    rollupCreatorAddress: Hex
-    tokenBridgeCreatorAddress: Hex
-    arbConfigManagerAddress: Hex
-    teeKeyManagerAddress: Hex
+    rollupCreator: Hex
+    tokenBridgeCreator: Hex
+    arbConfigManager: Hex
+    teeKeyManager: Hex
     chain: Chain
   }
 >
@@ -101,9 +101,9 @@ export type SupportedSettlementChains = Record<
 export type SupportedSequencingChains = Record<
   number,
   {
-    bridgeAddress: Hex
-    requireAndFactoryAddress: Hex
-    syndicateFactoryAddress: Hex
+    bridge: Hex
+    requireAndFactory: Hex
+    syndicateFactory: Hex
     chain: Chain
   }
 >
@@ -124,7 +124,7 @@ export type PrivateKeyWalletAccount = WalletClient<
 export interface Foundation {
   chainId: number
   chainName: string
-  nativeTokenAddress: Hex
+  nativeToken: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   ownerSequencingWalletClient: PrivateKeyWalletAccount
@@ -149,13 +149,13 @@ export interface DeployNitroRollupParams {
   settlementPublicClient: PublicClientWithChain
   appChainRpc: string
   appChainExplorer: string
-  nativeTokenAddress: Hex
+  nativeToken: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateRollupParams {
   chainId: number
-  nativeTokenAddress: Hex
+  nativeToken: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
@@ -164,7 +164,7 @@ export interface CreateRollupParams {
 export interface CreateArbChainConfig {
   coreContracts: CoreContracts
   settlementStartBlock: bigint | string
-  sequencingContractAddress: Hex
+  sequencingContract: Hex
   sequencingStartBlock: bigint | string
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
@@ -189,7 +189,7 @@ export interface CreateRequireAndModuleParams {
 }
 
 export interface CreateSyndicateSequencingChainParams {
-  requireAndModuleAddress: Hex
+  requireAndModule: Hex
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   chainId: number
@@ -202,16 +202,16 @@ export interface DeployAndSetupAllowlistSequencingModuleParams {
 }
 
 export interface RegisterAllowlistSequencingModuleOnRequireAllModuleParams {
-  requireAndModuleAddress: Hex
-  allowlistSequencingModuleAddress: Hex
+  requireAndModule: Hex
+  allowlistSequencingModule: Hex
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   sequencingPublicClient: PublicClientWithChain
 }
 
 export interface TransferAllContractsOwnershipParams {
-  syndicateSequencingChainAddress: Hex
-  allowlistSequencingModuleAddress: Hex
-  requireAndModuleAddress: Hex
+  sequencingContract: Hex
+  allowlistSequencingModule: Hex
+  requireAndModule: Hex
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   sequencingPublicClient: PublicClientWithChain
   ownerSequencingWalletClient: PrivateKeyWalletAccount
@@ -221,7 +221,7 @@ export interface DeployTeeModule {
   settlementPublicClient: PublicClientWithChain
   deployerSettlementWalletClient: PrivateKeyWalletAccount
   ownerSettlementWalletClient: PrivateKeyWalletAccount
-  sequencingContractAddress: Hex
+  sequencingContract: Hex
   sequencingPublicClient: PublicClientWithChain
   appchainPublicClient: PublicClientWithChain
   ethereumPublicClient: PublicClientWithChain
@@ -239,7 +239,7 @@ export interface Features {
   deployerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   deployerAppchainWalletClient: PrivateKeyWalletAccount
-  sequencingContractAddress: Hex
+  sequencingContract: Hex
   sequencingPublicClient: PublicClientWithChain
   ethereumPublicClient: PublicClientWithChain
   syndForkSequencingRpc: string
@@ -256,11 +256,11 @@ export interface CanDeployMulticall3 {
 }
 
 export interface CreateTeeModule {
-  assertionPosterAddress: Hex
+  assertionPoster: Hex
   bridge: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
-  sequencingContractAddress: Hex
+  sequencingContract: Hex
   sequencingPublicClient: PublicClientWithChain
   appchainPublicClient: PublicClientWithChain
   ethereumPublicClient: PublicClientWithChain
