@@ -474,8 +474,6 @@ async fn e2e_migration() -> Result<()> {
         .await?;
     assert!(is_chain_owner);
 
-    println!("CI-CHECK - 3"); // TODO remove, just to debug in CI
-
     // Send setL1PricePerUnit and wait with mining for it to be processed
     let tx = arb_owner.setL1PricePerUnit(U256::ZERO).send().await?;
     wait_until!(
@@ -494,8 +492,6 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_millis(500)
     );
 
-    println!("CI-CHECK - 4"); // TODO remove, just to debug in CI
-
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
     let _ = storage_contract.set(U256::from(44)).send().await?;
@@ -508,9 +504,6 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10),
         Duration::from_millis(500)
     );
-    println!("CI-CHECK - 5"); // TODO remove, just to debug in CI
-
-    println!("CI-CHECK - 6"); // TODO remove, just to debug in CI
 
     // assert sendL2MessageFromOrigin (WITHOUT THE custom event fork) works
     let nonce = synd_stack.appchain.provider.get_transaction_count(test_user.address).await?;
@@ -527,7 +520,6 @@ async fn e2e_migration() -> Result<()> {
     let mut raw_tx_with_prefix = vec![L2MessageKind::SignedTx as u8];
     raw_tx_with_prefix.extend_from_slice(&update_val_raw_tx);
 
-    println!("CI-CHECK - 7"); // TODO remove, just to debug in CI
     assert!(inbox
         .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
         .send()
@@ -535,7 +527,6 @@ async fn e2e_migration() -> Result<()> {
         .get_receipt()
         .await?
         .status());
-    println!("CI-CHECK - 5"); // TODO remove, just to debug in CI
 
     wait_until!(
         {
@@ -559,8 +550,6 @@ async fn e2e_migration() -> Result<()> {
             .unwrap(),
         appchain_block_before
     );
-
-    println!("CI-CHECK - test finished"); // TODO remove, just to debug in CI
 
     // TODO [ENG-2216] - assert l1_block_number is taken from the settlement chain
     // let block: NitroBlock = synd_stack
