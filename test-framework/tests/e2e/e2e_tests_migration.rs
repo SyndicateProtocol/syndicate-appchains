@@ -451,8 +451,6 @@ async fn e2e_migration() -> Result<()> {
         Duration::from_secs(10)
     );
 
-    println!("CI-CHECK - 1"); // TODO remove, just to debug in CI
-
     // deposit again, assert it works
     let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
@@ -463,13 +461,13 @@ async fn e2e_migration() -> Result<()> {
                                                                 // 10 + 10 - gas fees
             synd_stack.appchain.provider.get_balance(test_user.address).await? > parse_ether("19")?
         },
-        Duration::from_secs(10)
+        Duration::from_secs(10),
+        Duration::from_millis(500)
     );
 
-    println!("CI-CHECK - 2"); // TODO remove, just to debug in CI
-
     // assert `arbOwner.setL1PricePerUnit(0)`
-    let arb_owner = ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, &synd_stack.appchain.provider);
+    let arb_owner =
+        ArbOwner::new(ARB_OWNER_PRECOMPILE_ADDRESS, synd_stack.appchain.provider.clone());
     let is_chain_owner = arb_owner
         .isChainOwner(synd_stack.appchain.provider.default_signer_address())
         .call()
@@ -478,15 +476,39 @@ async fn e2e_migration() -> Result<()> {
 
     println!("CI-CHECK - 3"); // TODO remove, just to debug in CI
 
-    assert!(arb_owner.setL1PricePerUnit(U256::ZERO).send().await?.get_receipt().await?.status());
+    // Send setL1PricePerUnit and wait with mining for it to be processed
+    let tx = arb_owner.setL1PricePerUnit(U256::ZERO).send().await?;
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
+            synd_stack
+                .appchain
+                .provider
+                .get_transaction_receipt(*tx.tx_hash())
+                .await
+                .unwrap()
+                .is_some_and(|r| r.status())
+        },
+        Duration::from_secs(10),
+        Duration::from_millis(500)
+    );
 
     println!("CI-CHECK - 4"); // TODO remove, just to debug in CI
 
     // assert new txs work after setPricePerUnit is called
     // (also assert the standard nitro -> sequencer flow works)
-    assert!(storage_contract.set(U256::from(44)).send().await?.get_receipt().await?.status());
+    let _ = storage_contract.set(U256::from(44)).send().await?;
+    wait_until!(
+        {
+            mine_block(&seq_chain.provider.clone(), 70).await?;
+            mine_block(&set_chain.provider.clone(), 70).await?;
+            storage_contract.get().call().await? == U256::from(44)
+        },
+        Duration::from_secs(10),
+        Duration::from_millis(500)
+    );
     println!("CI-CHECK - 5"); // TODO remove, just to debug in CI
-    assert!(storage_contract.get().call().await? == U256::from(44));
 
     println!("CI-CHECK - 6"); // TODO remove, just to debug in CI
 
@@ -521,7 +543,8 @@ async fn e2e_migration() -> Result<()> {
             mine_block(&set_chain.provider.clone(), 70).await?;
             storage_contract.get().call().await? == U256::from(45)
         },
-        Duration::from_secs(10)
+        Duration::from_secs(10),
+        Duration::from_millis(500)
     );
 
     //sanity check assert the latest block before the migration is still part of the canonical
