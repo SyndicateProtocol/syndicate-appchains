@@ -338,7 +338,10 @@ pub async fn deploy_nitro_rollup(
 
     // install and build dependencies
     let status = E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("install"),
+        Command::new("yarn")
+            .current_dir(nitro_contracts_dir.clone())
+            .arg("install")
+            .arg("--no-cache"),
         "nitro-contracts-install",
     )?
     .wait()
