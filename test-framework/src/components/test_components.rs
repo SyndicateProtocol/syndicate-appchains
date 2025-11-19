@@ -536,10 +536,15 @@ impl TestComponents {
             BaseChainsType::Anvil => Address::ZERO,
             BaseChainsType::PreLoaded(version) => get_assertion_poster_address(&version),
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
-                let deploy_tx =
-                    AssertionPoster::deploy_builder(&set_provider, appchain_deployment.rollup)
-                        .gas(100_000_000)
-                        .max_priority_fee_per_gas(0);
+                let deploy_tx = AssertionPoster::deploy_builder(
+                    &set_provider,
+                    appchain_deployment.rollup,
+                    U256::ZERO.into(),
+                    0,
+                    1,
+                )
+                .gas(100_000_000)
+                .max_priority_fee_per_gas(0);
 
                 let tx_hash = deploy_tx.send().await?.watch().await?;
                 let receipt = set_provider.get_transaction_receipt(tx_hash).await?.unwrap();
