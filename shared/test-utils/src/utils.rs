@@ -4,12 +4,9 @@
 
 use alloy::primitives::keccak256;
 use std::{
-    fs, panic,
-    path::Path,
-    thread,
+    fs, panic, thread,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::fs as async_fs;
 
 /// Returns a unique temporary path for tests.
 ///
@@ -91,36 +88,4 @@ macro_rules! wait_until {
     ($condition:expr, $timeout:expr) => {
         $crate::wait_until!($condition, $timeout, std::time::Duration::from_millis(50))
     };
-}
-
-/// Recursively copies a directory and its contents
-/// Skips .git directories to avoid copying broken git metadata
-pub fn copy_dir_all<'a>(
-    src: &'a Path,
-    dst: &'a Path,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = eyre::Result<()>> + 'a>> {
-    Box::pin(async move {
-        async_fs::create_dir_all(dst).await?;
-
-        let mut entries = async_fs::read_dir(src).await?;
-        while let Some(entry) = entries.next_entry().await? {
-            let file_name = entry.file_name();
-            let file_type = entry.file_type().await?;
-            let src_path = entry.path();
-            let dst_path = dst.join(&file_name);
-
-            // Skip .git directories
-            if file_type.is_dir() && file_name == ".git" {
-                continue;
-            }
-
-            if file_type.is_dir() {
-                copy_dir_all(&src_path, &dst_path).await?;
-            } else {
-                async_fs::copy(&src_path, &dst_path).await?;
-            }
-        }
-
-        Ok(())
-    })
 }

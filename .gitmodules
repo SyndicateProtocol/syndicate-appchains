@@ -12,7 +12,7 @@
     url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "synd-contracts/lib/nitro-contracts"]
     path = synd-contracts/lib/nitro-contracts
-    url = https://github.com/Layr-Labs/nitro-contracts
+    url = https://github.com/SyndicateProtocol/nitro-contracts.git
     branch = eigenda-v2.1.3
 [submodule "synd-contracts/lib/upgrade-executor"]
     path = synd-contracts/lib/upgrade-executor
