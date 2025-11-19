@@ -9,10 +9,7 @@ import type {
   WalletClient
 } from "viem"
 
-export type GetChainsResponse = Array<ChainIdNetworkChain>
-export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>
-
-export interface ChainIdNetworkChain {
+export type GetChainsResponse = Array<{
   name: string
   chain: string
   icon?: string
@@ -38,19 +35,8 @@ export interface ChainIdNetworkChain {
     icon?: string
     standard: string
   }>
-}
-
-export interface CreateSettlementRollupParams {
-  validators: Hex[]
-  batchPosters: Hex[]
-  batchPosterManager: Hex
-  chainId: number
-  chainName: string
-  ownerSettlementWalletClient: WalletClient<Transport, Chain>
-  settlementPublicClient: PublicClientWithChain
-  appChainRpcUrl: string
-  appChainExplorerUrl: string
-}
+}>
+export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>
 
 export interface TokenContracts {
   l2Contracts: {
@@ -390,17 +376,36 @@ export interface HandoffSynd {
 }
 
 export interface E2E {
-  settlementRpc: string
-  appchainRpc: string
   inbox: Hex
   privateKey: Hex
+  appchainPublicClient: PublicClientWithChain
+  appchainWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  settlementWalletClient: PrivateKeyWalletAccount
 }
 
 export interface Deposit {
-  settlementClient: PublicClient
-  settlementWalletClient: WalletClient
-  l3Client: PublicClient
+  settlementPublicClient: PublicClientWithChain
+  settlementWalletClient: PrivateKeyWalletAccount
+  appchainPublicClient: PublicClientWithChain
   inbox: Hex
   account: Account
   value: bigint
+}
+
+export interface DeployCounter {
+  appchainPublicClient: PublicClientWithChain
+  appchainWalletClient: PrivateKeyWalletAccount
+}
+
+export interface TransferToSelf {
+  appchainWalletClient: PrivateKeyWalletAccount
+  appchainPublicClient: PublicClientWithChain
+  value: bigint
+}
+
+export interface CheckSequencerInbox {
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  synd: Synd
 }

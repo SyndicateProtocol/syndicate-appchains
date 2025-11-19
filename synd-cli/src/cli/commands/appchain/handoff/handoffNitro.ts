@@ -17,7 +17,11 @@ export default async function handoffNitro({
   ownerAppchainWalletClient,
   appchainPublicClient
 }: HandoffNitro) {
-  await checkSequencerInboxConfig()
+  await checkSequencerInboxConfig({
+    ownerSettlementWalletClient,
+    settlementPublicClient,
+    synd
+  })
 
   // 1. Add new owner as EXECUTOR_ROLE on settlement chain
   const addSettlementExecutorTx =

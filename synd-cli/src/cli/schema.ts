@@ -187,7 +187,6 @@ export const appchainCreateFeaturesOptionsSchema = z
   .object({
     ownerPrivateKey: privateKeySchema("owner"),
     deployerPrivateKey: privateKeySchema("deployer"),
-    chainId: chainIdSchema,
     chainName: chainNameSchema,
     settlementRpc: z.url("Invalid settlement chain RPC URL"),
     sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
