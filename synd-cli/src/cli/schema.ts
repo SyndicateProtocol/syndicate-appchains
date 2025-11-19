@@ -276,3 +276,20 @@ export function handleSchemaErrors(errors: z.ZodError) {
     .join("\n")
   return exitWithError(`Invalid options:\n${err}`)
 }
+
+// Type utilities for generating valid synd object paths
+type PathImpl<T, Key extends keyof T> = Key extends string
+  ? T[Key] extends Record<string, unknown>
+    ?
+        | `${Key}.${PathImpl<T[Key], Exclude<keyof T[Key], keyof unknown[]>> & string}`
+        | `${Key}.${Exclude<keyof T[Key], keyof unknown[]> & string}`
+    : never
+  : never
+
+type PathImpl2<T> = PathImpl<T, keyof T> | keyof T
+
+export type SyndPath<T> = PathImpl2<T> extends string | keyof T
+  ? PathImpl2<T>
+  : keyof T
+
+export type SyndObjectPaths = SyndPath<z.infer<typeof synd>>
