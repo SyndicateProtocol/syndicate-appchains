@@ -13,7 +13,7 @@ import { type Hex, parseAbi } from "viem";
 import { deployAssertionPoster } from "./deployAssertionPoster";
 import { deployTeeModule } from "./deployTeeModule";
 
-export async function deployWithdrawalsContracts({
+export async function deployWithdrawals({
 	settlementPublicClient,
 	coreContracts: { rollup, upgradeExecutor, bridge },
 	deployerSettlementWalletClient,

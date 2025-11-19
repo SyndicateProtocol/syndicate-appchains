@@ -208,7 +208,7 @@ export const appchainCreateTeeModuleOptionsSchema = z
 		syndForkSequencingRpc: z.url("Invalid synd fork sequencing chain RPC URL"),
 		ethereumRpc: z.url("Invalid ethereum chain RPC URL"),
 		appchainRpc: z.url("Invalid appchain RPC URL"),
-		sequencingContractAddress: ethAddressSchema,
+		sequencingContract: ethAddressSchema,
 		rollup: ethAddressSchema,
 		upgradeExecutor: ethAddressSchema,
 		bridge: ethAddressSchema,
@@ -237,6 +237,16 @@ export const appchainDeployTeeModuleOptionsSchema = z
 		sequencingContract: ethAddressSchema,
 		assertionPoster: ethAddressSchema,
 		bridge: ethAddressSchema,
+	})
+	.strict();
+
+export const appchainDeployAssertionPosterOptionsSchema = z
+	.object({
+		ownerPrivateKey: privateKeySchema("owner"),
+		deployerPrivateKey: privateKeySchema("deployer"),
+		settlementRpc: z.url("Invalid settlement chain RPC URL"),
+		rollup: ethAddressSchema,
+		upgradeExecutor: ethAddressSchema,
 	})
 	.strict();
 

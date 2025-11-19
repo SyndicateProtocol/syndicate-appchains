@@ -14,7 +14,7 @@ import { erc20Abi, formatEther, parseEther, parseUnits } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createTokenBridge } from "./createTokenBridge";
 import { canDeployMulticall3, deployMulticall3 } from "./deployMulticall3";
-import { deployWithdrawalsContracts } from "./deployWithdrawalsContracts";
+import { deployWithdrawals } from "./deployWithdrawals";
 import { pollEmptyTxs } from "./pollEmptyTxs";
 
 export async function features({
@@ -217,7 +217,7 @@ export async function features({
 		teeModuleAddress,
 		attestationDocVerifierAddress,
 		teeKeyManagerAddress,
-	} = await deployWithdrawalsContracts({
+	} = await deployWithdrawals({
 		settlementPublicClient,
 		deployerSettlementWalletClient,
 		ownerSettlementWalletClient,

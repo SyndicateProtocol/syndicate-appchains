@@ -22,10 +22,6 @@ export function createTeeModuleCommand(program: Command) {
 		.command("tee-module")
 		.description("Deploy a new TeeModule contract")
 		.requiredOption(
-			"--deployer-private-key <key>",
-			"Private key of the deployer account",
-		)
-		.requiredOption(
 			"--settlement-rpc <url>",
 			"RPC URL for the settlement chain",
 		)
@@ -39,6 +35,10 @@ export function createTeeModuleCommand(program: Command) {
 		)
 		.requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
 		.requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
+		.requiredOption(
+			"--deployer-private-key <key>",
+			"Private key of the deployer account",
+		)
 		.requiredOption(
 			"--sequencing-contract <address>",
 			"Address of the sequencing contract",

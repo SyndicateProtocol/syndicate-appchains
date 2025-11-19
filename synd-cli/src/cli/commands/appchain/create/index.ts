@@ -1,4 +1,5 @@
 import type { Command } from "@commander-js/extra-typings";
+import { createAssertionPosterCommand } from "./assertionPoster";
 import { createFeaturesCommand } from "./features";
 import { createFoundationCommand } from "./foundation";
 import { createTeeModuleCommand } from "./teeModule";
@@ -13,6 +14,7 @@ export function createAppchainCommand(program: Command) {
 		});
 	createFoundationCommand(createAppchainProgram);
 	createFeaturesCommand(createAppchainProgram);
+	createAssertionPosterCommand(createAppchainProgram);
 	createTeeModuleCommand(createAppchainProgram);
 	createWithdrawalsContractsCommand(createAppchainProgram);
 }

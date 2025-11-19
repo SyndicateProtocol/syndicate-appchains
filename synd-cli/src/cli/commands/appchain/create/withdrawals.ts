@@ -13,22 +13,14 @@ import {
 	supportedSettlementChains,
 } from "@/utils/constants";
 import type { Command } from "@commander-js/extra-typings";
-import { zeroAddress } from "viem";
+import { type Hex, zeroAddress } from "viem";
 import { getNativeTokenFromBridge } from "../arbOwner/helpers";
-import { deployWithdrawalsContracts } from "./features/deployWithdrawalsContracts";
+import { deployWithdrawals } from "./features/deployWithdrawals";
 
 export function createWithdrawalsContractsCommand(program: Command) {
 	program
 		.command("withdrawals")
 		.description("Deploy withdrawals contracts. AssertionPoster & TeeModule")
-		.requiredOption(
-			"--owner-private-key <key>",
-			"Private key of the owner account",
-		)
-		.requiredOption(
-			"--deployer-private-key <key>",
-			"Private key of the deployer account",
-		)
 		.requiredOption(
 			"--settlement-rpc <url>",
 			"RPC URL for the settlement chain",
@@ -44,7 +36,15 @@ export function createWithdrawalsContractsCommand(program: Command) {
 		.requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
 		.requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
 		.requiredOption(
-			"--sequencing-contract-address <address>",
+			"--owner-private-key <key>",
+			"Private key of the owner account",
+		)
+		.requiredOption(
+			"--deployer-private-key <key>",
+			"Private key of the deployer account",
+		)
+		.requiredOption(
+			"--sequencing-contract <address>",
 			"Address of the sequencing contract",
 		)
 		.requiredOption("--rollup <address>", "Address of the rollup contract")
@@ -74,6 +74,7 @@ export function createWithdrawalsContractsCommand(program: Command) {
 				upgradeExecutor,
 				bridge,
 				appchainRpc,
+				sequencingContract,
 			} = validatedOptions;
 
 			const [
@@ -109,13 +110,14 @@ export function createWithdrawalsContractsCommand(program: Command) {
 				rpcUrl: appchainRpc,
 			});
 
-			await deployWithdrawalsContracts({
+			await deployWithdrawals({
 				...validatedOptions,
 				coreContracts: {
 					rollup,
 					upgradeExecutor,
 					bridge,
 				},
+				sequencingContractAddress: sequencingContract as Hex,
 				settlementPublicClient,
 				deployerSettlementWalletClient,
 				ownerSettlementWalletClient,
