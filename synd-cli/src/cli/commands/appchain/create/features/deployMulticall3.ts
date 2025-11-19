@@ -1,7 +1,7 @@
-import { multicall3Abi, multicall3Bytecode } from "../abi/Multicall3";
-import type { CanDeployMulticall3, DeployMulticall3 } from "../types";
-import { getChainExplorerUrl } from "../utils/helpers";
-import { print } from "../utils/print";
+import { multicall3Abi, multicall3Bytecode } from "@/abi/Multicall3";
+import type { CanDeployMulticall3, DeployMulticall3 } from "@/types";
+import { getChainExplorerUrl } from "@/utils/helpers";
+import { print } from "@/utils/print";
 
 export async function deployMulticall3({
 	appchainPublicClient,

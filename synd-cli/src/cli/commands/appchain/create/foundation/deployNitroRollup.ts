@@ -1,8 +1,8 @@
+import type { DeployNitroRollupParams } from "@/types";
+import { generateBridgeConfig } from "@/utils/generateBridgeConfig";
+import { print } from "@/utils/print";
 import { sleep } from "bun";
 import { stringify } from "viem";
-import type { DeployNitroRollupParams } from "../types";
-import { generateBridgeConfig } from "../utils/generateBridgeConfig";
-import { print } from "../utils/print";
 import { createRollup } from "./createRollup";
 import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts";
 

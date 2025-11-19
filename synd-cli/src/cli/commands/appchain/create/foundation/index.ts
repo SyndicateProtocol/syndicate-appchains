@@ -1,16 +1,16 @@
-import { getPublicClient, getWalletClient } from "@/src/cli/helpers";
 import {
 	appchainCreateFoundationOptionsSchema,
 	handleSchemaErrors,
-} from "@/src/cli/schema";
-import { foundation } from "@/src/foundation/foundation";
+} from "@/cli/schema";
+import { getPublicClient, getWalletClient } from "@/utils/clients";
 import {
 	supportedEthereumChains,
 	supportedSequencingChains,
 	supportedSettlementChains,
-} from "@/src/utils/constants";
+} from "@/utils/constants";
 import type { Command } from "@commander-js/extra-typings";
 import type { Hex } from "viem";
+import { foundation } from "./foundation";
 
 export function createFoundationCommand(program: Command) {
 	program

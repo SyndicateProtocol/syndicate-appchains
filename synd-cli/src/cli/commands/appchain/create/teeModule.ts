@@ -1,26 +1,26 @@
 import {
-	appchainCreateFeaturesOptionsSchema,
+	appchainCreateTeeModuleOptionsSchema,
 	handleSchemaErrors,
 } from "@/cli/schema";
-import { getPublicClient, getWalletClient } from "@/utils/clients";
-import { getAppchainClient } from "@/utils/config";
+import {
+	getAppchainClient,
+	getPublicClient,
+	getWalletClient,
+} from "@/utils/clients";
 import {
 	supportedEthereumChains,
 	supportedSequencingChains,
 	supportedSettlementChains,
 } from "@/utils/constants";
-import { getChainRpcUrl } from "@/utils/helpers";
 import type { Command } from "@commander-js/extra-typings";
-import { createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { features } from "./features";
+import { zeroAddress } from "viem";
+import { getNativeTokenFromBridge } from "../arbOwner/helpers";
+import { deployWithdrawalsContracts } from "./features/deployWithdrawalsContracts";
 
-export function createFeaturesCommand(program: Command) {
+export function createTeeModuleCommand(program: Command) {
 	program
-		.command("features")
-		.description(
-			"Deploy features for a new appchain. The foundation must be deployed first. Nitro token bridge, Syndicate withdrawals, multicall3",
-		)
+		.command("teeModule")
+		.description("Deploy a TeeModule")
 		.requiredOption(
 			"--owner-private-key <key>",
 			"Private key of the owner account",
@@ -29,8 +29,6 @@ export function createFeaturesCommand(program: Command) {
 			"--deployer-private-key <key>",
 			"Private key of the deployer account",
 		)
-		.requiredOption("--chain-id <id>", "Chain ID of the appchain")
-		.requiredOption("--chain-name <name>", "Name of the appchain")
 		.requiredOption(
 			"--settlement-rpc <url>",
 			"RPC URL for the settlement chain",
@@ -46,23 +44,21 @@ export function createFeaturesCommand(program: Command) {
 		.requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
 		.requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
 		.requiredOption(
-			"--appchain-explorer <url>",
-			"Explorer URL for the appchain",
-		)
-		.requiredOption(
 			"--sequencing-contract-address <address>",
 			"Address of the sequencing contract",
 		)
+		.requiredOption("--rollup <address>", "Address of the rollup contract")
 		.requiredOption(
-			"--core-contracts <contracts>",
-			"Core contracts for the appchain",
+			"--upgrade-executor <address>",
+			"Address of the upgrade executor contract",
 		)
+		.requiredOption("--bridge <address>", "Address of the bridge contract")
 		.action(async (options: Record<string, unknown>) => {
 			const {
 				data: validatedOptions,
 				success,
 				error,
-			} = appchainCreateFeaturesOptionsSchema.safeParse(options);
+			} = appchainCreateTeeModuleOptionsSchema.safeParse(options);
 
 			if (!success) {
 				return handleSchemaErrors(error);
@@ -74,11 +70,10 @@ export function createFeaturesCommand(program: Command) {
 				ethereumRpc,
 				deployerPrivateKey,
 				ownerPrivateKey,
-				coreContracts,
+				rollup,
+				upgradeExecutor,
+				bridge,
 				appchainRpc,
-				appchainExplorer,
-				chainId,
-				chainName,
 			} = validatedOptions;
 
 			const [
@@ -87,7 +82,6 @@ export function createFeaturesCommand(program: Command) {
 				ethereumPublicClient,
 				ownerSettlementWalletClient,
 				deployerSettlementWalletClient,
-				deployerSequencingWalletClient,
 			] = await Promise.all([
 				getPublicClient(settlementRpc, supportedSettlementChains),
 				getPublicClient(sequencingRpc, supportedSequencingChains),
@@ -102,37 +96,31 @@ export function createFeaturesCommand(program: Command) {
 					supportedSettlementChains,
 					deployerPrivateKey as `0x${string}`,
 				),
-				getWalletClient(
-					sequencingRpc,
-					supportedSequencingChains,
-					deployerPrivateKey as `0x${string}`,
-				),
 			]);
 
+			const customNativeToken = await getNativeTokenFromBridge(
+				settlementPublicClient,
+				bridge,
+			);
+
 			const appchainPublicClient = await getAppchainClient({
-				chainId: chainId,
-				chainName: chainName,
-				nativeToken: coreContracts.nativeToken,
+				nativeToken: customNativeToken?.address ?? zeroAddress,
 				settlementPublicClient: settlementPublicClient,
 				rpcUrl: appchainRpc,
-				explorerUrl: appchainExplorer,
 			});
 
-			const deployerAppchainWalletClient = createWalletClient({
-				chain: appchainPublicClient.chain,
-				account: privateKeyToAccount(deployerPrivateKey as `0x${string}`),
-				transport: http(getChainRpcUrl(appchainPublicClient.chain)),
-			});
-
-			await features({
+			await deployWithdrawalsContracts({
 				...validatedOptions,
-				appchainPublicClient,
-				deployerSequencingWalletClient,
-				ownerSettlementWalletClient,
-				deployerSettlementWalletClient,
+				coreContracts: {
+					rollup,
+					upgradeExecutor,
+					bridge,
+				},
 				settlementPublicClient,
-				deployerAppchainWalletClient,
+				deployerSettlementWalletClient,
+				ownerSettlementWalletClient,
 				sequencingPublicClient,
+				appchainPublicClient,
 				ethereumPublicClient,
 			});
 		});

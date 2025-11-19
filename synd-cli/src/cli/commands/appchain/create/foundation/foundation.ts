@@ -1,23 +1,25 @@
-import type { ChainConfig, CoreContracts } from "@arbitrum/orbit-sdk";
-import { type Hex, parseEther, stringify } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { getBlockNumber } from "viem/actions";
-import type { Foundation } from "../types";
+import type { Foundation } from "@/types";
 import {
 	supportedSequencingChains,
 	supportedSettlementChains,
-} from "../utils/constants";
-import { fundAccount } from "../utils/fundAccount";
-import { generateBridgeConfig } from "../utils/generateBridgeConfig";
+} from "@/utils/constants";
+import {
+	upsertToEoaSecrets,
+	upsertToSyndObject,
+	writeToFile,
+} from "@/utils/fs";
+import { fundAccount } from "@/utils/fundAccount";
+import { generateBridgeConfig } from "@/utils/generateBridgeConfig";
 import {
 	getDoesChainExist,
 	getNativeCurrency,
 	isNativeTokenEth,
-	upsertToEoaSecrets,
-	upsertToSyndObject,
-	writeToFile,
-} from "../utils/helpers";
-import { print } from "../utils/print";
+} from "@/utils/helpers";
+import { print } from "@/utils/print";
+import type { ChainConfig, CoreContracts } from "@arbitrum/orbit-sdk";
+import { type Hex, parseEther, stringify } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { getBlockNumber } from "viem/actions";
 import { createArbChainConfig } from "./createArbChainConfig";
 import { deployNitroRollup } from "./deployNitroRollup";
 import { deploySequencingChain } from "./deploySequencingChain";

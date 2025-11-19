@@ -1,9 +1,9 @@
-import { arbConfigManagerABI } from "@/src/abi/synd/ArbConfigManager";
+import { arbConfigManagerABI } from "@/abi/synd/ArbConfigManager";
+import type { CreateArbChainConfig } from "@/types";
+import { supportedSettlementChains } from "@/utils/constants";
+import { getChainExplorerUrl } from "@/utils/helpers";
+import { print } from "@/utils/print";
 import { parseEventLogs } from "viem";
-import type { CreateArbChainConfig } from "../types";
-import { supportedSettlementChains } from "../utils/constants";
-import { getChainExplorerUrl } from "../utils/helpers";
-import { print } from "../utils/print";
 
 export async function createArbChainConfig({
 	coreContracts,

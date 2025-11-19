@@ -1,6 +1,6 @@
-import type { Command } from "@/node_modules/@commander-js/extra-typings";
-import { applyL1ToL2Alias } from "../../utils/alias";
-import { print } from "../../utils/print";
+import { applyL1ToL2Alias } from "@/utils/alias";
+import { print } from "@/utils/print";
+import type { Command } from "@commander-js/extra-typings";
 import { ethAddressSchema, handleSchemaErrors } from "../schema";
 
 export function aliasCommand(program: Command) {

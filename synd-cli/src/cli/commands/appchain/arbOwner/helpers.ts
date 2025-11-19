@@ -1,11 +1,33 @@
-import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner";
-import { getNativeCurrency } from "@/src/utils/helpers";
+import { ArbOwnerABI } from "@/abi/nitro/ArbOwner";
+import { getNativeCurrency } from "@/utils/helpers";
 import {
 	type AbiFunction,
 	type Address,
 	type PublicClient,
 	parseAbiItem,
 } from "viem";
+
+export async function getNativeTokenFromBridge(
+	publicClient: PublicClient,
+	bridgeAddress: Address,
+) {
+	try {
+		const address = await publicClient.readContract({
+			address: bridgeAddress,
+			abi: [
+				parseAbiItem("function nativeToken() public view returns (address)"),
+			],
+			functionName: "nativeToken",
+		});
+		const currency = await getNativeCurrency(publicClient, address);
+		return {
+			...currency,
+			address,
+		};
+	} catch (_) {
+		return null;
+	}
+}
 
 export async function detectCustomNativeToken(
 	publicClient: PublicClient,
@@ -18,22 +40,7 @@ export async function detectCustomNativeToken(
 			functionName: "bridge",
 		});
 
-		try {
-			const address = await publicClient.readContract({
-				address: bridgeAddress,
-				abi: [
-					parseAbiItem("function nativeToken() public view returns (address)"),
-				],
-				functionName: "nativeToken",
-			});
-			const currency = await getNativeCurrency(publicClient, address);
-			return {
-				...currency,
-				address,
-			};
-		} catch (_) {
-			return null;
-		}
+		return await getNativeTokenFromBridge(publicClient, bridgeAddress);
 	} catch (_) {
 		console.warn("⚠️  Could not detect native token, assuming ETH-native chain");
 		return null;

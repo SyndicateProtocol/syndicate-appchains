@@ -1,6 +1,7 @@
-import type { Command } from "@/node_modules/@commander-js/extra-typings";
+import type { Command } from "@commander-js/extra-typings";
 import { createFeaturesCommand } from "./features";
 import { createFoundationCommand } from "./foundation";
+import { createTeeModuleCommand } from "./teeModule";
 
 export function createAppchainCommand(program: Command) {
 	const createAppchainProgram = program
@@ -11,4 +12,5 @@ export function createAppchainCommand(program: Command) {
 		});
 	createFoundationCommand(createAppchainProgram);
 	createFeaturesCommand(createAppchainProgram);
+	createTeeModuleCommand(createAppchainProgram);
 }

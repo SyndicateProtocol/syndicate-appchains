@@ -1,10 +1,7 @@
-import type { Command } from "@/node_modules/@commander-js/extra-typings";
-import { ArbOwnerABI } from "@/src/abi/nitro/ArbOwner";
-import {
-	callArbOwnerOptionsSchema,
-	handleSchemaErrors,
-} from "@/src/cli/schema";
-import { exitWithError } from "@/src/utils/print";
+import { ArbOwnerABI } from "@/abi/nitro/ArbOwner";
+import { callArbOwnerOptionsSchema, handleSchemaErrors } from "@/cli/schema";
+import { exitWithError } from "@/utils/print";
+import type { Command } from "@commander-js/extra-typings";
 import type { AbiFunction, ExtractAbiFunctionNames } from "abitype";
 import { encodeFunctionData } from "viem";
 import {

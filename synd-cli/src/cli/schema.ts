@@ -199,6 +199,25 @@ export const appchainCreateFeaturesOptionsSchema = z
 	})
 	.strict();
 
+export const appchainCreateTeeModuleOptionsSchema = z
+	.object({
+		ownerPrivateKey: privateKeySchema("owner"),
+		deployerPrivateKey: privateKeySchema("deployer"),
+		chainId: chainIdSchema,
+		chainName: chainNameSchema,
+		settlementRpc: z.url("Invalid settlement chain RPC URL"),
+		sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
+		syndForkSequencingRpc: z.url("Invalid synd fork sequencing chain RPC URL"),
+		ethereumRpc: z.url("Invalid ethereum chain RPC URL"),
+		appchainRpc: z.url("Invalid appchain RPC URL"),
+		appchainExplorer: z.url("Invalid appchain explorer URL"),
+		sequencingContractAddress: ethAddressSchema,
+		rollup: ethAddressSchema,
+		upgradeExecutor: ethAddressSchema,
+		bridge: ethAddressSchema,
+	})
+	.strict();
+
 export function handleSchemaErrors(errors: z.ZodError) {
 	const err = errors.issues
 		.map((err) => `  - ${err.path.join(".")}: ${err.message}`)

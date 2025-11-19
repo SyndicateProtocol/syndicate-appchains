@@ -1,12 +1,15 @@
+import type { PublicClientWithChain } from "@/types";
 import {
 	type Chain,
 	createPublicClient,
 	createWalletClient,
+	defineChain,
 	type Hex,
 	hexToNumber,
 	http,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { getNativeCurrency } from "./helpers";
 
 export async function getPublicClient(
 	rpcUrl: string,
@@ -28,6 +31,50 @@ export async function getWalletClient(
 	return createWalletClient({
 		chain,
 		account: privateKeyToAccount(privateKey),
+		transport: http(rpcUrl),
+	});
+}
+
+export async function getAppchainClient({
+	nativeToken,
+	rpcUrl,
+	explorerUrl,
+	settlementPublicClient,
+}: {
+	nativeToken: Hex;
+	rpcUrl: string;
+	explorerUrl?: string;
+	settlementPublicClient: PublicClientWithChain;
+}) {
+	const chainId = await getRpcUrlChainId(rpcUrl);
+	const nativeCurrency = await getNativeCurrency(
+		settlementPublicClient,
+		nativeToken,
+	);
+	const chainName = `appchain: ${chainId}`;
+	return createPublicClient({
+		chain: defineChain({
+			id: chainId,
+			name: chainName,
+			network: chainName,
+			nativeCurrency: nativeCurrency ?? {
+				decimals: 18,
+				name: "Ether",
+				symbol: "ETH",
+			},
+			rpcUrls: {
+				default: { http: [rpcUrl] },
+				public: { http: [rpcUrl] },
+			},
+			blockExplorers: explorerUrl
+				? {
+						default: {
+							name: `${chainName} Explorer`,
+							url: explorerUrl,
+						},
+					}
+				: undefined,
+		}),
 		transport: http(rpcUrl),
 	});
 }

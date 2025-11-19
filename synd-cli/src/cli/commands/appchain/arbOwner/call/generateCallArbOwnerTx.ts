@@ -1,4 +1,19 @@
-import { ERC20Abi } from "@/src/abi/ERC20";
+import { ERC20Abi } from "@/abi/ERC20";
+import { ERC20InboxABI } from "@/abi/nitro/ERC20Inbox";
+import { InboxABI } from "@/abi/nitro/Inbox";
+import { NodeInterfaceABI } from "@/abi/nitro/NodeInterface";
+import { UpgradeExecutorABI } from "@/abi/nitro/UpgradeExecutor";
+import {
+	ARB_OWNER_PRECOMPILE_ADDRESS,
+	NODE_INTERFACE_ADDRESS,
+} from "@/utils/constants";
+import { scaleByPercentage } from "@/utils/helpers";
+import {
+	print,
+	printIndented,
+	printSection,
+	printSeparator,
+} from "@/utils/print";
 import type { Address, Hex } from "viem";
 import {
 	createPublicClient,
@@ -8,21 +23,6 @@ import {
 	formatUnits,
 	http,
 } from "viem";
-import { ERC20InboxABI } from "../../../../../abi/nitro/ERC20Inbox";
-import { InboxABI } from "../../../../../abi/nitro/Inbox";
-import { NodeInterfaceABI } from "../../../../../abi/nitro/NodeInterface";
-import { UpgradeExecutorABI } from "../../../../../abi/nitro/UpgradeExecutor";
-import {
-	ARB_OWNER_PRECOMPILE_ADDRESS,
-	NODE_INTERFACE_ADDRESS,
-} from "../../../../../utils/constants";
-import { scaleByPercentage } from "../../../../../utils/helpers";
-import {
-	print,
-	printIndented,
-	printSection,
-	printSeparator,
-} from "../../../../../utils/print";
 import { detectCustomNativeToken } from "../helpers";
 
 /*

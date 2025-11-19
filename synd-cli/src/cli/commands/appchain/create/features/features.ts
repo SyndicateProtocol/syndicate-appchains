@@ -1,21 +1,20 @@
-import { sleep } from "bun";
-import { erc20Abi, formatEther, parseEther, parseUnits } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import type { Features } from "../types";
-import { supportedSettlementChains } from "../utils/constants";
-import { fundAccount } from "../utils/fundAccount";
-import { generateBridgeConfig } from "../utils/generateBridgeConfig";
+import type { Features } from "@/types";
+import { supportedSettlementChains } from "@/utils/constants";
+import { upsertToEoaSecrets, upsertToSyndObject } from "@/utils/fs";
+import { fundAccount } from "@/utils/fundAccount";
+import { generateBridgeConfig } from "@/utils/generateBridgeConfig";
 import {
 	getChainRpcUrl,
 	getNativeCurrency,
 	isNativeTokenEth,
-	upsertToEoaSecrets,
-	upsertToSyndObject,
-} from "../utils/helpers";
-import { print } from "../utils/print";
+} from "@/utils/helpers";
+import { print } from "@/utils/print";
+import { sleep } from "bun";
+import { erc20Abi, formatEther, parseEther, parseUnits } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { createTokenBridge } from "./createTokenBridge";
 import { canDeployMulticall3, deployMulticall3 } from "./deployMulticall3";
-import { deployTeeModule } from "./deployTeeModule";
+import { deployWithdrawalsContracts } from "./deployWithdrawalsContracts";
 import { pollEmptyTxs } from "./pollEmptyTxs";
 
 export async function features({
@@ -218,7 +217,7 @@ export async function features({
 		teeModuleAddress,
 		attestationDocVerifierAddress,
 		teeKeyManagerAddress,
-	} = await deployTeeModule({
+	} = await deployWithdrawalsContracts({
 		settlementPublicClient,
 		deployerSettlementWalletClient,
 		ownerSettlementWalletClient,
