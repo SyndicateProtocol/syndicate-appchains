@@ -11,8 +11,8 @@ export function appchainCommand(program: Command) {
     .action(async () => {
       console.log("Managing appchains...")
     })
-  arbOwnerCommand(appchainProgram)
   createAppchainCommand(appchainProgram)
+  arbOwnerCommand(appchainProgram)
   checkTokenBridgeCommand(appchainProgram)
   e2eCommand(appchainProgram)
 }
