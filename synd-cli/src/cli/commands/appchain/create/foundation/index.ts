@@ -66,8 +66,6 @@ export function createFoundationCommand(program: Command) {
         deployerPrivateKey
       })
 
-      console.log("got clients")
-
       await foundation({
         deployerSettlementWalletClient,
         deployerSequencingWalletClient,
@@ -85,7 +83,5 @@ export function createFoundationCommand(program: Command) {
         appchainRpc,
         appchainExplorer
       })
-
-      console.log("validatedOptions", validatedOptions)
     })
 }

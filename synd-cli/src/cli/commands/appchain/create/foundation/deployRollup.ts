@@ -61,9 +61,10 @@ export async function deployRollup({
       chainConfig
     }),
     maxDataSize,
-    batchPosterManager: zeroAddress,
     batchPosters: [],
-    validators: []
+    validators: [],
+    batchPosterManager: zeroAddress,
+    feeTokenPricer: zeroAddress
   }
 
   const costOfRetryables = await createRollupGetRetryablesFeesWithDefaults(

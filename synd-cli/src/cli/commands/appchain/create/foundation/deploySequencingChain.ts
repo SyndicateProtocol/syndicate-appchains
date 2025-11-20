@@ -211,7 +211,7 @@ async function deployAndSetupAllowlistSequencingModule({
       hash: addAllowlistTxHash
     })
   print(
-    `🔍  Sequencer ${sequencerAccount.address} added to sequencer allowlist\n${getChainExplorerUrl(
+    `🔍  Sequencer added to sequencer allowlist\n${getChainExplorerUrl(
       sequencingPublicClient.chain
     )}/tx/${allowlistSequencerTx.transactionHash}`
   )

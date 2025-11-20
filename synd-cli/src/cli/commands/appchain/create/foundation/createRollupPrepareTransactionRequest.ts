@@ -13,16 +13,20 @@ import {
   type Address,
   type CallParameters,
   type Chain,
-  decodeFunctionResult,
-  encodeFunctionData,
   type EstimateGasParameters,
   type Hex,
-  parseEther,
-  parseGwei,
   type PublicClient,
   type Transport,
+  decodeFunctionResult,
+  encodeFunctionData,
+  parseEther,
+  parseGwei,
   zeroAddress
 } from "viem"
+
+// Modified version of Arbitrum Orbit SDK's createRollupPrepareTransactionRequest
+// https://github.com/OffchainLabs/arbitrum-orbit-sdk/blob/7143a874a94dc0d59d076a0407319f4927f5f49d/src/createRollupPrepareTransactionRequest.ts#L51-L52
+// Syndicate Appchains should not have validators, batch posters, batch poster manager or fee token pricer set.
 
 interface CreateRollupTxParams {
   params: Omit<
@@ -83,7 +87,7 @@ export async function createRollupPrepareTransactionRequest({
   const data = encodeFunctionData({
     abi: rollupCreatorAbi,
     functionName: "createRollup",
-    args: paramsWithDefaults
+    args: [paramsWithDefaults]
   })
 
   const request = await publicClient.prepareTransactionRequest({
