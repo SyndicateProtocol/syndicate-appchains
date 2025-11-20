@@ -178,9 +178,9 @@ export async function foundation({
   print("🔍  Deploying Syndicate sequencing chain...")
   // Sequencing Chain
   const {
-    syndicateSequencingChainAddress,
-    allowlistSequencingModuleAddress,
-    requireAndModuleAddress,
+    sequencingContract,
+    allowlistSequencingModule,
+    requireAndModule,
     deployedAtBlock
   } = await deploySequencingChain({
     sequencerAccount,
@@ -190,9 +190,9 @@ export async function foundation({
     ownerSequencingWalletClient
   })
   await upsertToSyndObject(chainName, environment, "sequencing", {
-    syndicateSequencingChain: syndicateSequencingChainAddress,
-    allowlistSequencingModule: allowlistSequencingModuleAddress,
-    requireAndModule: requireAndModuleAddress,
+    sequencingContract,
+    allowlistSequencingModule,
+    requireAndModule,
     settlementBlockBeforeDeployment,
     deployedAtBlock,
     sequencer: sequencerAccount.address
@@ -204,7 +204,7 @@ export async function foundation({
   const arbChainConfigAddress = await createArbChainConfig({
     coreContracts,
     settlementStartBlock: settlementBlockBeforeDeployment,
-    sequencingContract: syndicateSequencingChainAddress,
+    sequencingContract,
     sequencingStartBlock: deployedAtBlock,
     ownerSettlementWalletClient,
     settlementPublicClient,
@@ -253,7 +253,7 @@ export async function foundation({
         "settlement-rpc-url": settlementPublicClient.transport.url,
         "sequencing-chain-rpc-url": sequencingPublicClient.transport.url,
         "ethereum-rpc-url": ethereumChainRpcUrl,
-        "sequencing-chain-contract-address": syndicateSequencingChainAddress,
+        "sequencing-chain-contract-address": sequencingContract,
         "sequencer-private-key": sequencerPrivateKey,
         "assertion-poster-contract-address": "0xREPLACEMELATER",
         "tee-module-address": "0xREPLACEMELATER",
