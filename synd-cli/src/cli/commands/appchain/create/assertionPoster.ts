@@ -9,7 +9,7 @@ import { deployAssertionPoster } from "./features/deployAssertionPoster"
 export function createAssertionPosterCommand(program: Command) {
   program
     .command("assertion-poster")
-    .description("Deploy a new AssertionPoster contract")
+    .description("Deploys AssertionPoster")
     .requiredOption(
       "--settlement-rpc <url>",
       "RPC URL for the settlement chain"

@@ -10,7 +10,7 @@ export function createFoundationCommand(program: Command) {
   program
     .command("foundation")
     .description(
-      "Create foundation for a new appchain. Nitro core, Syndicate sequencing, Arb Chain config "
+      "Deploys Arbitrum nitro core contracts, Syndicate sequencing contracts & ArbChainConfig"
     )
     .requiredOption("--settlement-rpc <url>", "Parent chain RPC URL")
     .requiredOption("--sequencing-rpc <url>", "Sequencing chain RPC URL")

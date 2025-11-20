@@ -251,6 +251,15 @@ export const appchainDeployAssertionPosterOptionsSchema = z
   })
   .strict()
 
+export const appchainCreateSequencingChainOptionsSchema = z
+  .object({
+    sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
+    ownerPrivateKey: privateKeySchema("owner"),
+    deployerPrivateKey: privateKeySchema("deployer"),
+    id: chainIdSchema
+  })
+  .strict()
+
 export const appchainHandoffOptionsSchema = z
   .object({
     settlementRpc: z.url("Invalid settlement chain RPC URL"),

@@ -20,7 +20,7 @@ import { deployWithdrawals } from "./features/deployWithdrawals"
 export function createWithdrawalsContractsCommand(program: Command) {
   program
     .command("withdrawals")
-    .description("Deploy withdrawals contracts. AssertionPoster & TeeModule")
+    .description("Deploy withdrawals contracts: AssertionPoster & TeeModule")
     .requiredOption(
       "--settlement-rpc <url>",
       "RPC URL for the settlement chain"

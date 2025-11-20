@@ -11,7 +11,7 @@ import { deployTeeModule } from "./features/deployTeeModule"
 export function createTeeModuleCommand(program: Command) {
   program
     .command("tee-module")
-    .description("Deploy a new TeeModule contract")
+    .description("Deploys TeeModule")
     .requiredOption(
       "--settlement-rpc <url>",
       "RPC URL for the settlement chain"

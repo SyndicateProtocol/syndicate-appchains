@@ -34,21 +34,21 @@ export async function deploySequencingChain({
     deployerSequencingWalletClient
   })
 
-  // 2. Create SyndicateSequencingChain
+  // 2. Deploy and setup AllowlistSequencingModule
+  const allowlistSequencingModule =
+    await deployAndSetupAllowlistSequencingModule({
+      sequencerAccount,
+      sequencingPublicClient,
+      deployerSequencingWalletClient
+    })
+
+  // 3. Create SyndicateSequencingChain
   const { sequencingContract, deployedAtBlock } =
     await createSyndicateSequencingChain({
       requireAndModule,
       sequencingPublicClient,
       deployerSequencingWalletClient,
       chainId
-    })
-
-  // 3. Deploy and setup AllowlistSequencingModule
-  const allowlistSequencingModule =
-    await deployAndSetupAllowlistSequencingModule({
-      sequencerAccount,
-      sequencingPublicClient,
-      deployerSequencingWalletClient
     })
 
   // 4. Register AllowlistSequencingModule on RequireAllModule

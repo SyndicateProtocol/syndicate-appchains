@@ -69,7 +69,8 @@ export async function foundation({
 
   print("Chain ID", chainId)
   print("Chain Name", chainName)
-  print("Skip Nitro Core", coreContractsCreatedAtHash ? "Yes" : "No")
+  coreContractsCreatedAtHash &&
+    print("Core Contracts Created At Hash", coreContractsCreatedAtHash)
   print("Deployer", deployerSettlementWalletClient.account.address)
   print("Sequencer Address", sequencerAccount.address)
   print("Sequencer PK", sequencerPrivateKey)

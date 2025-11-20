@@ -11,7 +11,7 @@ export function createFeaturesCommand(program: Command) {
   program
     .command("features")
     .description(
-      "Deploy features for a new appchain. The foundation must be deployed first. Nitro token bridge, Syndicate withdrawals, multicall3"
+      "Deploys Arbitrum nitro token bridge, Syndicate withdrawals contracts, Multicall3"
     )
     .requiredOption(
       "--owner-private-key <key>",
