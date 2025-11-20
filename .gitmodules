@@ -42,3 +42,9 @@
 	branch = release-v4
     path = "lib/prb-math"
     url = "https://github.com/PaulRBerg/prb-math"
+[submodule "synd-contracts/lib/nitro-contracts-v213"]
+	path = synd-contracts/lib/nitro-contracts-v213
+	url = https://github.com/OffchainLabs/nitro-contracts.git
+[submodule "synd-contracts/lib/nitro-contracts-v311"]
+	path = synd-contracts/lib/nitro-contracts-v311
+	url = https://github.com/OffchainLabs/nitro-contracts.git

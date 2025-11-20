@@ -278,6 +278,7 @@ async fn e2e_migration() -> Result<()> {
         appchain_owner.address,
         vec![batch_poster.address],
         true,
+        None,
     )
     .await?;
 

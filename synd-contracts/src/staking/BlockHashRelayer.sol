@@ -75,8 +75,9 @@ contract BlockHashRelayer {
         syndToken.transferFrom(msg.sender, address(arbInbox), syndAmount);
 
         // Encode the call to the GasArchive contract
-        bytes memory callData =
-            abi.encodeCall(GasArchive.sendBlockHashes, (IL1Block(L1_BLOCK_ADDRESS).hash(), blockhash(block.number - 1)));
+        bytes memory callData = abi.encodeCall(
+            GasArchive.sendBlockHashes, (IL1Block(L1_BLOCK_ADDRESS).hash(), blockhash(block.number - 1))
+        );
 
         arbInbox.createRetryableTicket(
             gasArchive, // destination address
