@@ -14,7 +14,7 @@ use synd_chain_ingestor::{
     client::{IngestorProvider, IngestorProviderConfig, IngestorProviderImpl},
     eth_client::EthClient,
 };
-use synd_mchain::client::{MProvider, Provider};
+use synd_mchain::client::{MProvider, MchainProvider};
 use tracing::{error, instrument, log::info};
 use url::Url;
 

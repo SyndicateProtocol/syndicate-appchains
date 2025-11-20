@@ -2,7 +2,6 @@
 create-contract-bindings-rust:
 	git submodule sync --recursive
 	git submodule update --init --recursive
-	git submodule update --remote ../synd-contracts/lib/nitro-contracts # needs specific branch
 	git submodule status --recursive
 	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
 	# Generate bindings only for contracts actually used in the codebase
@@ -11,8 +10,8 @@ create-contract-bindings-rust:
 		--select 'GasAggregator|GasArchive|BlockHashRelayer|EmissionsCalculator|EmissionsScheduler|Refunder' \
 		--select 'ArbConfigManager|SyndicateSequencingChain|Rollup|IInbox|AssertionPoster' \
 		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
-		--select 'IBridge|IOutbox|IRollupCore|IRollup|IUpgradeExecutor' \
-		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwnerPublic' \
+		--select 'IBridge|IOutbox|IRollupCore|IUpgradeExecutor' \
+		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwner' \
 		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig'
 	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 

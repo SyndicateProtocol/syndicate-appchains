@@ -15,6 +15,8 @@ import {IUpgradeExecutor} from "@offchainlabs/upgrade-executor/src/IUpgradeExecu
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
 import {IAssertionPoster} from "./IAssertionPoster.sol";
 import {GlobalState} from "@arbitrum/nitro-contracts/src/state/GlobalState.sol";
+import {Assertion} from "@arbitrum/nitro-contracts/src/rollup/Node.sol";
+import {GlobalStateLib} from "@arbitrum/nitro-contracts/src/state/GlobalState.sol";
 
 // Grabbing these from the official v3 Arb contracts because they're missing in these v2 Eigen versions
 // https://github.com/OffchainLabs/nitro-contracts/blob/main/src/rollup/Assertion.sol
@@ -48,33 +50,7 @@ struct ConfigData {
     uint64 nextInboxPosition;
 }
 
-/**
- * @title IRollup Interface
- * @dev Extends IRollupCore and IOwnable to define additional functions needed for assertion management
- */
-interface IRollup is IRollupCore, IOwnable {
-    /**
-     * @notice Forces the creation of a new node in the rollup chain
-     * @param prevNode Index of the previous node
-     * @param prevNodeInboxMaxCount Max inbox count for the previous node
-     * @param assertion The assertion data
-     * @param expectedNodeHash Expected hash of the new node
-     */
-    function forceCreateNode(
-        uint64 prevNode,
-        uint256 prevNodeInboxMaxCount,
-        Assertion memory assertion,
-        bytes32 expectedNodeHash
-    ) external;
-
-    /**
-     * @notice Forces confirmation of a node in the rollup chain
-     * @param nodeNum Index of the node to confirm
-     * @param blockHash Hash of the block
-     * @param sendRoot Root of the sends
-     */
-    function forceConfirmNode(uint64 nodeNum, bytes32 blockHash, bytes32 sendRoot) external;
-
+interface INewRollup {
     /**
      * @notice Computes the hash of an assertion
      * @param prevAssertionHash The hash of the assertion's parent
@@ -97,32 +73,15 @@ interface IRollup is IRollupCore, IOwnable {
 
     function genesisAssertionHash() external pure returns (bytes32);
     function getValidators() external view returns (address[] memory);
-}
-
-/**
- * @title IRollupAdminExtended Interface
- * @dev Extends IRollupAdmin to include a function for checking if the rollup is paused
- */
-interface IRollupAdminExtended is IRollupAdmin {
-    /**
-     * @notice Check if the rollup contract is paused
-     * @return True if the rollup contract is paused
-     */
-    function paused() external view returns (bool);
-
+    function latestConfirmed() external view returns (bytes32);
+    function validatorAfkBlocks() external view returns (uint64);
     function setValidatorAfkBlocks(uint64 newAfkBlocks) external;
-
+    function anyTrustFastConfirmer() external view returns (address);
     function setAnyTrustFastConfirmer(address _anyTrustFastConfirmer) external;
 }
 
-/**
- * @title Assertion Data Structure
- * @dev Defines the structure of an assertion in the legacy rollup system
- */
-struct Assertion {
-    ExecutionState beforeState;
-    ExecutionState afterState;
-    uint64 numBlocks;
+interface IPausable {
+    function paused() external view returns (bool);
 }
 
 /**
@@ -133,7 +92,7 @@ struct Assertion {
 contract AssertionPoster is Ownable, IAssertionPoster {
     // Immutable state variables
     address private immutable self;
-    IRollup private immutable rollup;
+    address private immutable rollup;
     IUpgradeExecutor private immutable executor;
     bool private immutable legacy;
     bytes32 private immutable seqBatchAcc;
@@ -153,28 +112,43 @@ contract AssertionPoster is Ownable, IAssertionPoster {
     /**
      * @notice Constructs the AssertionPoster contract
      * @param rollup_ Address of the rollup contract
+     * @param sendRoot the send root of the latest assertion
+     * @param batchCount the batch count of the latest assertion
+     * @param inboxSize the batch count when the assertion was submitted
      */
     //#olympix-ignore-no-parameter-validation-in-constructor
-    constructor(IRollup rollup_) Ownable(msg.sender) {
+    constructor(address rollup_, bytes32 sendRoot, uint64 batchCount, uint64 inboxSize) Ownable(msg.sender) {
         self = address(this);
         rollup = rollup_;
-        executor = IUpgradeExecutor(rollup_.owner());
-        nodeNum = 0;
+        executor = IUpgradeExecutor(IOwnable(rollup_).owner());
 
         // Detect if we're using legacy or new version and configure accordingly
-        try rollup_.genesisAssertionHash() returns (bytes32 assertionHash_) {
+        try INewRollup(rollup_).genesisAssertionHash() returns (bytes32 genesisAssertionHash) {
             // New version initialization (v3)
-            assertionHash = assertionHash_;
-            seqBatchAcc = rollup_.bridge().sequencerInboxAccs(0);
-            data.wasmModuleRoot = rollup_.wasmModuleRoot();
-            data.requiredStake = rollup_.baseStake();
-            data.challengeManager = address(rollup_.challengeManager());
-            data.confirmPeriodBlocks = rollup_.confirmPeriodBlocks();
+            require(
+                INewRollup(rollup).latestConfirmed() == genesisAssertionHash, "rollup already has confirmed assertions"
+            );
+            assertionHash = genesisAssertionHash;
+            seqBatchAcc = IRollupCore(rollup_).bridge().sequencerInboxAccs(0);
+            _updateConfigData();
+            require(data.nextInboxPosition > 0, "missing genesis batch");
             data.nextInboxPosition = 1;
         } catch {
             // Legacy version initialization (v2)
             legacy = true;
-            currentInboxSize = 1;
+            currentInboxSize = inboxSize;
+            require(currentInboxSize >= batchCount && currentInboxSize > 0, "invalid inbox size / batch count");
+            nodeNum = IRollupCore(rollup).latestConfirmed();
+            require(nodeNum == IRollupCore(rollup).latestNodeCreated(), "unconfirmed nodes exist");
+            state.bytes32Vals = [IRollupCore(rollup_).outbox().roots(sendRoot)];
+            state.u64Vals[0] = batchCount;
+            require(
+                IRollupCore(rollup_).getNode(nodeNum).stateHash
+                    == keccak256(
+                        abi.encodePacked(GlobalStateLib.hash(state), uint256(currentInboxSize), MachineStatus.FINISHED)
+                    ),
+                "stateHash mismatch"
+            );
         }
     }
 
@@ -214,8 +188,8 @@ contract AssertionPoster is Ownable, IAssertionPoster {
     function _configureLegacy() private {
         IAccessControl(address(executor)).grantRole(keccak256("EXECUTOR_ROLE"), self);
         // Prevent anyone except the admin account from creating assertions
-        if (!IRollupAdminExtended(address(rollup)).paused()) {
-            IRollupAdmin(address(rollup)).pause();
+        if (!IPausable(rollup).paused()) {
+            IRollupAdmin(rollup).pause();
         }
     }
 
@@ -224,21 +198,30 @@ contract AssertionPoster is Ownable, IAssertionPoster {
      * @dev Sets up validators, posts initial batch if needed
      */
     function _configureNew() private {
-        address[] memory validators = rollup.getValidators();
+        address[] memory validators = INewRollup(rollup).getValidators();
         // Prevent validators from creating assertions
-        IRollupAdmin(address(rollup)).setValidator(validators, new bool[](validators.length));
-        require(rollup.getValidators().length == 0, "validators not empty");
+        if (validators.length > 0) {
+            IRollupAdmin(rollup).setValidator(validators, new bool[](validators.length));
+        }
+        require(INewRollup(rollup).getValidators().length == 0, "validators not empty");
 
         // Prevent the validator whitelist from being disabled due to inactivity
-        IRollupAdminExtended(address(rollup)).setValidatorAfkBlocks(type(uint64).max);
-        IRollupAdminExtended(address(rollup)).setAnyTrustFastConfirmer(self);
+        if (INewRollup(rollup).validatorAfkBlocks() != 0) {
+            INewRollup(rollup).setValidatorAfkBlocks(0);
+        }
+        if (IRollupCore(rollup).validatorWhitelistDisabled()) {
+            IRollupAdmin(rollup).setValidatorWhitelistDisabled(false);
+        }
+        if (INewRollup(rollup).anyTrustFastConfirmer() != self) {
+            INewRollup(rollup).setAnyTrustFastConfirmer(self);
+        }
 
         // Post a batch if sequencer inbox count is too low
-        if (rollup.bridge().sequencerMessageCount() == 1) {
+        if (IRollupCore(rollup).bridge().sequencerMessageCount() == 1) {
             _postInitialBatch();
         }
 
-        require(rollup.bridge().sequencerMessageCount() > 1, "sequencer message count too low");
+        require(IRollupCore(rollup).bridge().sequencerMessageCount() > 1, "sequencer message count too low");
     }
 
     /**
@@ -246,16 +229,16 @@ contract AssertionPoster is Ownable, IAssertionPoster {
      * @dev Temporarily sets executor as batch poster if needed
      */
     function _postInitialBatch() private {
-        bool isBatchPoster = rollup.sequencerInbox().isBatchPoster(address(executor));
+        bool isBatchPoster = IRollupCore(rollup).sequencerInbox().isBatchPoster(address(executor));
 
         if (!isBatchPoster) {
-            rollup.sequencerInbox().setIsBatchPoster(address(executor), true);
+            IRollupCore(rollup).sequencerInbox().setIsBatchPoster(address(executor), true);
         }
 
-        rollup.sequencerInbox().addSequencerL2Batch(1, "", 1, IGasRefunder(address(0)), 0, 0);
+        IRollupCore(rollup).sequencerInbox().addSequencerL2Batch(1, "", 1, IGasRefunder(address(0)), 0, 0);
 
         if (!isBatchPoster) {
-            rollup.sequencerInbox().setIsBatchPoster(address(executor), false);
+            IRollupCore(rollup).sequencerInbox().setIsBatchPoster(address(executor), false);
         }
     }
 
@@ -278,14 +261,14 @@ contract AssertionPoster is Ownable, IAssertionPoster {
 
         // Execute force create node
         executor.executeCall(
-            address(rollup), abi.encodeCall(IRollup.forceCreateNode, (nodeNum++, currentInboxSize, assertion, 0))
+            rollup, abi.encodeCall(IRollupAdmin.forceCreateNode, (nodeNum++, currentInboxSize, assertion, 0))
         );
 
         // Update inbox size in case a batch was posted
-        currentInboxSize = uint64(rollup.bridge().sequencerMessageCount());
+        currentInboxSize = uint64(IRollupCore(rollup).bridge().sequencerMessageCount());
 
         // Execute force confirm node
-        executor.executeCall(address(rollup), abi.encodeCall(IRollup.forceConfirmNode, (nodeNum, blockHash, sendRoot)));
+        executor.executeCall(rollup, abi.encodeCall(IRollupAdmin.forceConfirmNode, (nodeNum, blockHash, sendRoot)));
     }
 
     /**
@@ -320,10 +303,10 @@ contract AssertionPoster is Ownable, IAssertionPoster {
 
         // Update assertion hashes
         prevAssertionHash = assertionHash;
-        assertionHash = rollup.computeAssertionHash(prevAssertionHash, assertion.afterState, seqBatchAcc);
+        assertionHash = INewRollup(rollup).computeAssertionHash(prevAssertionHash, assertion.afterState, seqBatchAcc);
 
         // Fast confirm the assertion
-        rollup.fastConfirmNewAssertion(assertion, assertionHash);
+        INewRollup(rollup).fastConfirmNewAssertion(assertion, assertionHash);
     }
 
     /**
@@ -331,12 +314,12 @@ contract AssertionPoster is Ownable, IAssertionPoster {
      */
     function _updateConfigData() private {
         // Update in case a batch is posted
-        data.nextInboxPosition = uint64(rollup.bridge().sequencerMessageCount());
+        data.nextInboxPosition = uint64(IRollupCore(rollup).bridge().sequencerMessageCount());
 
         // Update in case any config variables change
-        data.wasmModuleRoot = rollup.wasmModuleRoot();
-        data.requiredStake = rollup.baseStake();
-        data.challengeManager = address(rollup.challengeManager());
-        data.confirmPeriodBlocks = rollup.confirmPeriodBlocks();
+        data.wasmModuleRoot = IRollupCore(rollup).wasmModuleRoot();
+        data.requiredStake = IRollupCore(rollup).baseStake();
+        data.challengeManager = address(IRollupCore(rollup).challengeManager());
+        data.confirmPeriodBlocks = IRollupCore(rollup).confirmPeriodBlocks();
     }
 }
