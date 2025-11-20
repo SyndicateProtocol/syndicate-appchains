@@ -13,14 +13,14 @@ use eyre::Result;
 use shared::types::FilledProvider;
 use std::time::Duration;
 use synd_migration_cli::migration::RollupState;
-use test_utils::{anvil::mine_block, preloaded_config::ContractVersion};
+use test_utils::{anvil::mine_block, nitro_chain::ArbContractVersion};
 use tracing::info;
 
 /// The base chains type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BaseChainsType {
     Anvil,
-    PreLoaded(ContractVersion),
+    PreLoaded(ArbContractVersion),
     Nitro,            // auto-mine enabled
     NitroWithEigenda, // auto-mine enabled
 }

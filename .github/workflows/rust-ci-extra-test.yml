@@ -93,7 +93,7 @@ jobs:
         if: steps.diff.outputs.run_tests == 'true'
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.3.5
+          version: stable
 
       - name: Pre-download docker test docker images
         if: steps.diff.outputs.run_tests == 'true'

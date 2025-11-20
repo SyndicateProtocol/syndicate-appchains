@@ -15,7 +15,6 @@ contract RequireCompositeModule is BaseRequirementModule {
     enum CheckType {
         AND, // Must pass for approval (combined with all other AND checks)
         OR // Any single OR check passing grants approval
-
     }
 
     /// @notice Mapping to store check types
@@ -148,12 +147,7 @@ contract RequireCompositeModule is BaseRequirementModule {
      * @param data The calldata to be checked
      * @return True if permission requirements are met
      */
-    function isAllowed(address msgSender, address txOrigin, bytes calldata data)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function isAllowed(address msgSender, address txOrigin, bytes calldata data) external view override returns (bool) {
         address currentCheck = AddressStructuredLinkedList.getHead(permissionChecks);
 
         // No checks exist, default allow

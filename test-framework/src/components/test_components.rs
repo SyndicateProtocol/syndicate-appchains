@@ -31,7 +31,6 @@ use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
     collections::HashMap,
-    env,
     future::Future,
     str::FromStr,
     time::{Duration, SystemTime},
@@ -53,9 +52,6 @@ use test_utils::{
     },
     nitro_chain::{deploy_nitro_rollup, NitroDeployment},
     port_manager::PortManager,
-    preloaded_config::{
-        get_anvil_file, get_assertion_poster_address, get_bridge_address, get_inbox_address,
-    },
     utils::test_path,
     wait_until,
 };
@@ -213,6 +209,7 @@ impl TestComponents {
                     // NOTE: use a different address to post batches to avoid nonce conflicts
                     vec![test_account8().address],
                     matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
+                    None,
                 )
                 .await?;
 
@@ -326,6 +323,7 @@ impl TestComponents {
                     owner_address,
                     vec![test_account9().address],
                     matches!(options.base_chains_type, BaseChainsType::NitroWithEigenda),
+                    None,
                 )
                 .await?;
 
@@ -369,16 +367,10 @@ impl TestComponents {
                 settlement_deployment = Some(set_deployment);
                 set_chain_info
             }
-            BaseChainsType::PreLoaded(version) => {
-                // If flag is set, load the anvil state from a file
-                // This is the full set of Arb contracts
-                let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("config")
-                    .join(get_anvil_file(&version));
-
+            BaseChainsType::PreLoaded(_) => {
                 start_anvil_with_args(
                     SETTLEMENT_CHAIN_ID,
-                    &["--load-state", state_file.to_str().unwrap(), "--timestamp", "0"], // snapshots expect timestamp to be 0
+                    &["--timestamp", 1756209109.to_string().as_str()],
                 )
                 .await?
             }
@@ -392,14 +384,20 @@ impl TestComponents {
                 rollup: set_provider.default_signer_address().create(0),
                 ..Default::default()
             },
-            BaseChainsType::PreLoaded(version) => NitroDeployment {
-                bridge: get_bridge_address(&version),
-                inbox: get_inbox_address(&version),
-                sequencer_inbox: get_inbox_address(&version),
-                // we use the mock rollup so rollup contract == bridge contract
-                rollup: get_bridge_address(&version),
-                ..Default::default()
-            },
+            BaseChainsType::PreLoaded(version) => {
+                set_provider.anvil_set_auto_mine(true).await?;
+                let deployment = deploy_nitro_rollup(
+                    &set_rpc_http_url,
+                    options.appchain_chain_id,
+                    test_account1().address,
+                    vec![],
+                    false,
+                    Some(version),
+                )
+                .await?;
+                set_provider.anvil_set_auto_mine(false).await?;
+                deployment
+            }
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 deploy_nitro_rollup(
                     &set_rpc_http_url,
@@ -407,6 +405,7 @@ impl TestComponents {
                     options.rollup_owner,
                     vec![],
                     false,
+                    None,
                 )
                 .await?
             }
@@ -533,8 +532,7 @@ impl TestComponents {
         info!("Nitro URL: {}", appchain_ws_rpc_url);
 
         let assertion_poster_contract_address = match options.base_chains_type {
-            BaseChainsType::Anvil => Address::ZERO,
-            BaseChainsType::PreLoaded(version) => get_assertion_poster_address(&version),
+            BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => Address::ZERO,
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let deploy_tx = AssertionPoster::deploy_builder(
                     &set_provider,

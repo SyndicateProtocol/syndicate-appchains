@@ -727,7 +727,11 @@ contract MockRollup {
         bytes32, /* prevAssertionHash */
         AssertionState calldata, /* state */
         bytes32 /* inboxAcc */
-    ) external view returns (bytes32) {
+    )
+        external
+        view
+        returns (bytes32)
+    {
         require(!_legacyMode, "Legacy mode: cannot compute assertion hash");
         return _computedAssertionHash;
     }
