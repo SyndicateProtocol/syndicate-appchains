@@ -7,7 +7,6 @@ import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol
 import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title GasArchive
@@ -274,6 +273,8 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             }
         }
 
+        emit ChainSubmitted(epoch, seqChainID);
+
         epochChainDataSubmitted[epoch][seqChainID] = true;
         epochRemainingChains--;
         if (epochRemainingChains == 0) {
@@ -281,7 +282,6 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             epoch++;
             epochRemainingChains = seqChains.length();
         }
-        emit ChainSubmitted(epoch, seqChainID);
     }
 
     /*//////////////////////////////////////////////////////////////
