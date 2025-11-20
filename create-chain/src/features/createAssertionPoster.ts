@@ -36,7 +36,7 @@ export async function createAssertionPoster() {
       abi: assertionPosterABI,
       bytecode: assertionPosterBytecode,
       account: deployerSettlementWalletClient.account,
-      args: [rollup]
+      args: [rollup, "0x0", BigInt(0), BigInt(1)]
     })
   const receipt = await settlementPublicClient.waitForTransactionReceipt({
     hash: assertionPosterCreationHash
