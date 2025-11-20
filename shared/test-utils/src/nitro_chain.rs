@@ -1,6 +1,10 @@
 //! Appchain utils for the integration tests
 
-use crate::{chain_info::PRIVATE_KEY, docker::E2EProcess};
+use crate::{
+    chain_info::PRIVATE_KEY,
+    docker::E2EProcess,
+    utils::{copy_dir_all, test_path},
+};
 use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::TransactionBuilder,
@@ -14,7 +18,7 @@ use contract_bindings::synd::{
 use eyre::Ok;
 use serde::{Deserialize, Serialize};
 use shared::types::{deserialize_address, FilledProvider};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::{fs, process::Command};
 use tracing::info;
 
@@ -273,6 +277,13 @@ pub struct NitroDeployment {
     pub deployed_at: u64,
 }
 
+struct TempDir(PathBuf);
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 #[allow(clippy::unwrap_used)]
 /// Deploys a mock rollup contract. - It expects `yarn` to be installed.
 /// NOTE: only used for the base chains when in Nitro mode, it expects `l1_provider` to have
@@ -291,17 +302,16 @@ pub async fn deploy_nitro_rollup(
     } else {
         "nitro-contracts".to_string()
     };
-    let nitro_contracts_dir = Path::new(project_root)
-        .join(format!("synd-contracts/lib/{}", repo_name))
-        .to_string_lossy()
-        .to_string();
+    let nitro_contracts_dir =
+        Path::new(project_root).join(format!("synd-contracts/lib/{}", repo_name));
 
-    info!("Nitro contracts dir: {nitro_contracts_dir}");
+    info!("Nitro contracts dir: {:?}", nitro_contracts_dir);
 
     // install and build dependencies
     let status = E2EProcess::new(
         Command::new("yarn")
             .current_dir(nitro_contracts_dir.clone())
+            .arg("--mutex=file:/tmp/.yarn-mutex")
             .arg("install")
             .arg("--frozen-lockfile"),
         "nitro-contracts-install",
@@ -311,16 +321,25 @@ pub async fn deploy_nitro_rollup(
     assert!(status.success(), "Failed to run `yarn install` in nitro contracts");
 
     E2EProcess::new(
-        Command::new("yarn").current_dir(nitro_contracts_dir.clone()).arg("build:all"),
+        Command::new("yarn")
+            .current_dir(nitro_contracts_dir.clone())
+            .arg("--mutex=file:/tmp/.yarn-mutex")
+            .arg("build:all"),
         "nitro-contracts-build",
     )?
     .wait()
     .await?;
     // NOTE: ignore `status` here, as it might be successful but exit with code 1
 
+    // copy the scripts folder to a temp dir
+    let script_folder = test_path("scripts", Some(nitro_contracts_dir.clone()));
+    let _folder = TempDir(script_folder.clone());
+    info!("Temporary script folder: {:?}", &script_folder);
+
+    copy_dir_all(&nitro_contracts_dir.join("scripts"), &script_folder).await.unwrap();
+
     let chain_config_json = chain_config(rollup_chain_id, rollup_owner, use_eigen_da);
 
-    // setup config.ts (unfortunately, the script expects the config to be in a specific path)
     let config_ts = format!(
         r#"
         import {{ ethers }} from 'ethers'
@@ -363,18 +382,23 @@ pub async fn deploy_nitro_rollup(
         }}
     "#
     );
-    let config_ts_path = format!("{nitro_contracts_dir}/scripts/config.ts");
+    let config_ts_path = format!("{}/config.ts", script_folder.to_string_lossy());
     fs::write(config_ts_path, config_ts).await?;
 
-    let l2_chain_config_path = format!("{nitro_contracts_dir}/l2_chain_config.json");
-    fs::write(l2_chain_config_path, chain_config_json).await?;
+    let l2_chain_config_path = format!("{}/l2_chain_config.json", script_folder.to_string_lossy());
+    fs::write(&l2_chain_config_path, chain_config_json).await?;
+
+    let deploy_json_path = format!("{}/deploy.json", script_folder.to_string_lossy());
 
     // deploy the rollup
     let status = E2EProcess::new(
-        Command::new("yarn")
+        Command::new("./node_modules/.bin/hardhat")
             .current_dir(nitro_contracts_dir.clone())
             .arg("run")
-            .arg("create-rollup-testnode")
+            .arg(format!(
+                "{}/local-deployment/deployCreatorAndCreateRollup.ts",
+                script_folder.to_string_lossy()
+            ))
             .arg("--network")
             .arg("custom")
             .env("DEPLOYER_PRIVKEY", PRIVATE_KEY)
@@ -382,8 +406,9 @@ pub async fn deploy_nitro_rollup(
             .env("PARENT_CHAIN_ID", 1.to_string())
             .env("CUSTOM_RPC_URL", l1_rpc_url_http)
             .env("CHILD_CHAIN_NAME", format!("local-rollup-{rollup_chain_id}"))
-            .env("CHILD_CHAIN_CONFIG_PATH", "./l2_chain_config.json")
+            .env("CHILD_CHAIN_CONFIG_PATH", &l2_chain_config_path)
             .env("OWNER_ADDRESS", rollup_owner.to_string())
+            .env("CHAIN_DEPLOYMENT_INFO", &deploy_json_path)
             .env("SEQUENCER_ADDRESS", rollup_owner.to_string()) // is set as the batch poster manager by default
             .env(
                 "BATCH_POSTERS",
@@ -400,7 +425,6 @@ pub async fn deploy_nitro_rollup(
     assert!(status.success(), "failed to deploy rollup");
 
     // Read the deploy.json file
-    let deploy_json_path = format!("{nitro_contracts_dir}/deploy.json");
     let deploy_info: NitroDeployment =
         serde_json::from_reader(std::fs::File::open(deploy_json_path)?)?;
 

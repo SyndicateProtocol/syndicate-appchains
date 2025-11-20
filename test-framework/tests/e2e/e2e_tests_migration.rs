@@ -120,7 +120,7 @@ async fn spin_up_syndicate_stack(
     )
     .await?;
 
-    let temp = test_path("chain_ingestor");
+    let temp = test_path("chain_ingestor", None).to_string_lossy().to_string();
     let seq_chain_ingestor_cfg = ChainIngestorConfig {
         ws_urls: vec![sequencing_rpc_url.clone()],
         db_file: temp.clone() + "/sequencing_chain.db",
@@ -284,7 +284,7 @@ async fn e2e_migration() -> Result<()> {
 
     let (_instance, eigenda_proxy_url) = start_eigenda_proxy().await?;
 
-    let data_dir = test_path("nitro");
+    let data_dir = test_path("nitro", None).to_string_lossy().to_string();
 
     // setup a normal arb rollup on an anvil chain
     let appchain = launch_nitro_node(NitroNodeArgs {

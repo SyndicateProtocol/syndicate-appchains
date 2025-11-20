@@ -444,7 +444,7 @@ impl TestComponents {
         .await?;
 
         info!("Starting chain ingestors...");
-        let temp = test_path("chain_ingestor");
+        let temp = test_path("chain_ingestor", None).to_string_lossy().to_string();
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
             ws_urls: vec![seq_rpc_ws_url.clone()],
             db_file: temp.clone() + "/sequencing_chain.db",

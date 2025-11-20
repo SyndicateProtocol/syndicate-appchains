@@ -67,7 +67,7 @@ mod tests {
         }
 
         info!("Starting chain ingestors...");
-        let temp = test_path("chain_ingestor");
+        let temp = test_path("chain_ingestor", None).to_string_lossy().to_string();
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
             ws_urls: vec![ws_url],
             db_file: temp.clone() + "/sequencing_chain.db",
