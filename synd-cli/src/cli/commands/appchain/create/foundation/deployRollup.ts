@@ -20,11 +20,12 @@ import {
   type TransactionSerializable,
   erc20Abi,
   formatEther,
-  parseUnits
+  parseUnits,
+  zeroAddress
 } from "viem"
 import { createRollupPrepareTransactionRequest } from "./createRollupPrepareTransactionRequest"
 
-export async function createRollup({
+export async function deployRollup({
   chainId,
   nativeToken,
   deployerSettlementWalletClient,
@@ -59,10 +60,10 @@ export async function createRollup({
       owner,
       chainConfig
     }),
-    maxDataSize
-    // batchPosterManager,
-    // batchPosters,
-    // validators,
+    maxDataSize,
+    batchPosterManager: zeroAddress,
+    batchPosters: [],
+    validators: []
   }
 
   const costOfRetryables = await createRollupGetRetryablesFeesWithDefaults(

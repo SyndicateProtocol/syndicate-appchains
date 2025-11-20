@@ -164,6 +164,8 @@ export async function createClients<T extends ClientOptions>(
   // Wait for all basic clients to be created first
   await Promise.all(promises)
 
+  console.log("got all basic clients")
+
   // Appchain clients (requires settlement client for some cases)
   if (options.appchainRpc) {
     const settlementClient =

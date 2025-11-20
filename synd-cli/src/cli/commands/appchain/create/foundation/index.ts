@@ -44,10 +44,13 @@ export function createFoundationCommand(program: Command) {
         name,
         nativeToken,
         ownerPrivateKey,
+        deployerPrivateKey,
         coreContractsCreatedAtHash,
         appchainRpc,
         appchainExplorer,
-        ethereumRpc
+        ethereumRpc,
+        settlementRpc,
+        sequencingRpc
       } = validatedOptions
       const {
         deployerSettlementWalletClient,
@@ -55,9 +58,15 @@ export function createFoundationCommand(program: Command) {
         ownerSettlementWalletClient,
         ownerSequencingWalletClient,
         settlementPublicClient,
-        sequencingPublicClient,
-        ethereumPublicClient
-      } = await createClients(validatedOptions)
+        sequencingPublicClient
+      } = await createClients({
+        settlementRpc,
+        sequencingRpc,
+        ownerPrivateKey,
+        deployerPrivateKey
+      })
+
+      console.log("got clients")
 
       await foundation({
         deployerSettlementWalletClient,

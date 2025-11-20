@@ -3,7 +3,7 @@ import { generateBridgeConfig } from "@/utils/generateBridgeConfig"
 import { print } from "@/utils/print"
 import { sleep } from "bun"
 import { stringify } from "viem"
-import { createRollup } from "./createRollup"
+import { deployRollup } from "./deployRollup"
 import { getConfigAndCoreContracts } from "./getConfigAndCoreContracts"
 
 export async function deployNitroRollup({
@@ -16,7 +16,7 @@ export async function deployNitroRollup({
   nativeToken,
   deployerSettlementWalletClient
 }: DeployNitroRollupParams) {
-  const hash = await createRollup({
+  const hash = await deployRollup({
     chainId,
     nativeToken,
     deployerSettlementWalletClient,
