@@ -137,9 +137,9 @@ export interface Foundation {
     PrivateKeyAccount
   >
   ownerPrivateKey: Hex
-  coreContractsCreatedAtHash: Hex
-  appChainRpc: string
-  appChainExplorer: string
+  coreContractsCreatedAtHash?: Hex
+  appchainRpc: string
+  appchainExplorer: string
 }
 
 export interface DeployNitroRollupParams {
@@ -147,8 +147,8 @@ export interface DeployNitroRollupParams {
   chainName: string
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
-  appChainRpc: string
-  appChainExplorer: string
+  appchainRpc: string
+  appchainExplorer: string
   nativeToken: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
@@ -169,7 +169,7 @@ export interface CreateArbChainConfig {
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   sequencingPublicClient: PublicClientWithChain
-  appChainExplorer: string
+  appchainExplorer: string
   chainId: number
   deployerSettlementWalletClient: PrivateKeyWalletAccount
 }

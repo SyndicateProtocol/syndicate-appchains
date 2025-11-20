@@ -4,7 +4,6 @@ import {
 } from "@/cli/schema"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
-import type { Hex } from "viem"
 import { foundation } from "./foundation"
 
 export function createFoundationCommand(program: Command) {
@@ -23,7 +22,7 @@ export function createFoundationCommand(program: Command) {
     .requiredOption("--deployer-private-key <key>", "Deployer private key")
     .requiredOption("--owner-private-key <key>", "Owner private key")
     .option(
-      "--native-token-address <address>",
+      "--native-token <address>",
       "Native token address (optional): defaults to ETH"
     )
     .option(
@@ -40,27 +39,42 @@ export function createFoundationCommand(program: Command) {
       if (!success) {
         return handleSchemaErrors(error)
       }
-
-      const clients = await createClients(validatedOptions)
+      const {
+        id,
+        name,
+        nativeToken,
+        ownerPrivateKey,
+        coreContractsCreatedAtHash,
+        appchainRpc,
+        appchainExplorer,
+        ethereumRpc
+      } = validatedOptions
+      const {
+        deployerSettlementWalletClient,
+        deployerSequencingWalletClient,
+        ownerSettlementWalletClient,
+        ownerSequencingWalletClient,
+        settlementPublicClient,
+        sequencingPublicClient,
+        ethereumPublicClient
+      } = await createClients(validatedOptions)
 
       await foundation({
-        deployerSettlementWalletClient: clients.deployerSettlementWalletClient,
-        deployerSequencingWalletClient: clients.deployerSequencingWalletClient,
-        ownerSettlementWalletClient: clients.ownerSettlementWalletClient,
-        ownerSequencingWalletClient: clients.ownerSequencingWalletClient,
-        settlementPublicClient: clients.settlementPublicClient,
-        sequencingPublicClient: clients.sequencingPublicClient,
+        deployerSettlementWalletClient,
+        deployerSequencingWalletClient,
+        ownerSettlementWalletClient,
+        ownerSequencingWalletClient,
+        settlementPublicClient,
+        sequencingPublicClient,
 
-        chainId: validatedOptions.id,
-        chainName: validatedOptions.name.toLowerCase().replace(/\s+/g, "-"),
-        nativeToken: validatedOptions.nativeTokenAddress,
-        ethereumChainRpcUrl:
-          clients.ethereumPublicClient.chain.rpcUrls.default.http[0],
-        ownerPrivateKey: validatedOptions.ownerPrivateKey as Hex,
-        coreContractsCreatedAtHash:
-          validatedOptions.coreContractsCreatedAtHash as Hex,
-        appChainRpc: validatedOptions.appchainRpc,
-        appChainExplorer: validatedOptions.appchainExplorer
+        chainId: id,
+        chainName: name,
+        nativeToken,
+        ethereumChainRpcUrl: ethereumRpc,
+        ownerPrivateKey,
+        coreContractsCreatedAtHash,
+        appchainRpc,
+        appchainExplorer
       })
 
       console.log("validatedOptions", validatedOptions)

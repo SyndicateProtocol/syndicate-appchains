@@ -34,8 +34,8 @@ export async function foundation({
   deployerSequencingWalletClient,
   ownerPrivateKey,
   coreContractsCreatedAtHash,
-  appChainRpc,
-  appChainExplorer
+  appchainRpc,
+  appchainExplorer
 }: Foundation) {
   const validators = [ownerSettlementWalletClient.account.address]
   const batchPosters = [ownerSettlementWalletClient.account.address]
@@ -143,15 +143,14 @@ export async function foundation({
 
   if (coreContractsCreatedAtHash && chainConfig && coreContracts) {
     print("🔍  Using existing Nitro core contracts")
-    // Create bridgeConfig structure compatible with existing code
     bridgeConfig = generateBridgeConfig({
       coreContracts,
       chainName,
       chainId,
       parentChainId: settlementPublicClient.chain.id,
       chainOwner: ownerSettlementWalletClient.account.address,
-      rpcUrl: appChainRpc,
-      explorerUrl: appChainExplorer
+      rpcUrl: appchainRpc,
+      explorerUrl: appchainExplorer
     })
   } else {
     print("🔍  Deploying Nitro core contracts")
@@ -160,8 +159,8 @@ export async function foundation({
       chainName,
       ownerSettlementWalletClient,
       settlementPublicClient,
-      appChainRpc: appChainRpc,
-      appChainExplorer,
+      appchainRpc,
+      appchainExplorer,
       nativeToken,
       deployerSettlementWalletClient
     })
@@ -209,7 +208,7 @@ export async function foundation({
     ownerSettlementWalletClient,
     settlementPublicClient,
     sequencingPublicClient,
-    appChainExplorer,
+    appchainExplorer,
     chainId,
     deployerSettlementWalletClient
   })

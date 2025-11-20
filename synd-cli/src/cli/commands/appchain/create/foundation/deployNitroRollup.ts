@@ -11,8 +11,8 @@ export async function deployNitroRollup({
   chainName,
   ownerSettlementWalletClient,
   settlementPublicClient,
-  appChainRpc,
-  appChainExplorer,
+  appchainRpc,
+  appchainExplorer,
   nativeToken,
   deployerSettlementWalletClient
 }: DeployNitroRollupParams) {
@@ -37,8 +37,8 @@ export async function deployNitroRollup({
     chainId,
     parentChainId: settlementPublicClient.chain.id,
     chainOwner: ownerSettlementWalletClient.account.address,
-    rpcUrl: appChainRpc,
-    explorerUrl: appChainExplorer
+    rpcUrl: appchainRpc,
+    explorerUrl: appchainExplorer
   })
   print("🔍  Bridge Config")
   print(stringify(bridgeConfig, null, 2))

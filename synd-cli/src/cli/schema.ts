@@ -175,10 +175,11 @@ export const appchainCreateFoundationOptionsSchema = z
     name: chainNameSchema,
     deployerPrivateKey: privateKeySchema("deployer"),
     ownerPrivateKey: privateKeySchema("owner"),
-    nativeTokenAddress: ethAddressSchema.default(zeroAddress),
+    nativeToken: ethAddressSchema.default(zeroAddress),
     coreContractsCreatedAtHash: z
       .string()
       .regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash")
+      .transform((val) => (val ? (val as Hex) : undefined))
       .optional()
   })
   .strict()

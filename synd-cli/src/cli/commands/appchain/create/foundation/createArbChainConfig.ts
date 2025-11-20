@@ -13,7 +13,7 @@ export async function createArbChainConfig({
   ownerSettlementWalletClient,
   settlementPublicClient,
   sequencingPublicClient,
-  appChainExplorer,
+  appchainExplorer,
   chainId,
   deployerSettlementWalletClient
 }: CreateArbChainConfig) {
@@ -50,8 +50,8 @@ export async function createArbChainConfig({
       // sequencingChainUrl
       // @note we are leaving blank for now as we require node operators to get their own private RPC URL
       "",
-      // appChainBlockExplorerUrl
-      appChainExplorer
+      // appchainBlockExplorerUrl
+      appchainExplorer
     ]
   })
   const txHash = await deployerSettlementWalletClient.writeContract(request)
