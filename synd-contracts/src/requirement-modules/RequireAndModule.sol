@@ -33,12 +33,7 @@ contract RequireAndModule is BaseRequirementModule {
      * @param data The calldata to be checked
      * @return True if the sender passes all checks, reverts otherwise
      */
-    function isAllowed(address msgSender, address txOrigin, bytes calldata data)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function isAllowed(address msgSender, address txOrigin, bytes calldata data) external view override returns (bool) {
         address currentCheck = AddressStructuredLinkedList.getHead(permissionChecks);
 
         while (currentCheck != address(0)) {

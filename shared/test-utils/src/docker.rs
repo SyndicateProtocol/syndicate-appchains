@@ -356,7 +356,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
     docker_cmd.arg("run").arg("--init").arg("--rm");
 
     if let Some(data_dir) = &args.data_dir {
-        #[cfg(unix)]
+        #[cfg(target_os = "linux")]
         // fix permissions on CI
         {
             use std::os::unix::fs::PermissionsExt;

@@ -13,7 +13,7 @@ name: Certora
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
   # Only run on PRs that touch synd-contracts .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review] # the first 3 are the defaults if you dont specify `types`

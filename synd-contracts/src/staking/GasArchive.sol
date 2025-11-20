@@ -7,7 +7,6 @@ import {MerklePatriciaProofVerifier} from "./lib/MerklePatriciaProofVerifier.sol
 import {IGasDataProvider} from "./interfaces/IGasDataProvider.sol";
 import {RLPReader} from "./lib/RLPReader.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title GasArchive
@@ -274,6 +273,8 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             }
         }
 
+        emit ChainSubmitted(epoch, seqChainID);
+
         epochChainDataSubmitted[epoch][seqChainID] = true;
         epochRemainingChains--;
         if (epochRemainingChains == 0) {
@@ -281,7 +282,6 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
             epoch++;
             epochRemainingChains = seqChains.length();
         }
-        emit ChainSubmitted(epoch, seqChainID);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -309,19 +309,19 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         bytes32 storageSlot
     ) internal pure returns (bytes32) {
         RLPReader.RLPItem memory accountRlp = MerklePatriciaProofVerifier.extractProofValue({
-            rootHash: bytes32(blockHeader.toRlpItem().toList()[HEADER_STATE_ROOT_INDEX].toUint()),
-            path: abi.encodePacked(keccak256(abi.encodePacked(account))),
-            stack: _RLPItemsFromProofBytes(accountProof)
-        }).toRlpItem();
+                rootHash: bytes32(blockHeader.toRlpItem().toList()[HEADER_STATE_ROOT_INDEX].toUint()),
+                path: abi.encodePacked(keccak256(abi.encodePacked(account))),
+                stack: _RLPItemsFromProofBytes(accountProof)
+            }).toRlpItem();
 
         // If the account does not exist, return the hash of an empty trie.
         require(accountRlp.len > 0, AccountDoesNotExistInProof());
 
         RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({
-            rootHash: bytes32(accountRlp.toList()[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint()),
-            path: abi.encodePacked(keccak256(abi.encodePacked(storageSlot))),
-            stack: _RLPItemsFromProofBytes(storageProof)
-        }).toRlpItem();
+                rootHash: bytes32(accountRlp.toList()[STORAGE_ROOT_ACCOUNT_FIELDS_INDEX].toUint()),
+                path: abi.encodePacked(keccak256(abi.encodePacked(storageSlot))),
+                stack: _RLPItemsFromProofBytes(storageProof)
+            }).toRlpItem();
 
         require(slotContents.len > 0, EmptySlot());
         return bytes32(slotContents.toUint());
