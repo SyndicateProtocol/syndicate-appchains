@@ -14,15 +14,6 @@ export function createFeaturesCommand(program: Command) {
       "Deploys Arbitrum nitro token bridge, Syndicate withdrawals contracts, Multicall3"
     )
     .requiredOption(
-      "--owner-private-key <key>",
-      "Private key of the owner account"
-    )
-    .requiredOption(
-      "--deployer-private-key <key>",
-      "Private key of the deployer account"
-    )
-    .requiredOption("--chain-name <name>", "Name of the appchain")
-    .requiredOption(
       "--settlement-rpc <url>",
       "RPC URL for the settlement chain"
     )
@@ -40,6 +31,15 @@ export function createFeaturesCommand(program: Command) {
       "--appchain-explorer <url>",
       "Explorer URL for the appchain"
     )
+    .requiredOption(
+      "--owner-private-key <key>",
+      "Private key of the owner account"
+    )
+    .requiredOption(
+      "--deployer-private-key <key>",
+      "Private key of the deployer account"
+    )
+    .requiredOption("--chain-name <name>", "Name of the appchain")
     .requiredOption(
       "--sequencing-contract <address>",
       "Address of the sequencing contract"
@@ -59,7 +59,13 @@ export function createFeaturesCommand(program: Command) {
         return handleSchemaErrors(error)
       }
 
-      const { coreContracts, appchainExplorer, chainName } = validatedOptions
+      const {
+        coreContracts,
+        appchainExplorer,
+        chainName,
+        sequencingContract,
+        syndForkSequencingRpc
+      } = validatedOptions
 
       const {
         appchainPublicClient,
@@ -80,8 +86,6 @@ export function createFeaturesCommand(program: Command) {
       const chainId = await getChainIdFromRpc(validatedOptions.appchainRpc)
 
       await features({
-        ...validatedOptions,
-        chainId,
         appchainPublicClient,
         deployerSequencingWalletClient,
         ownerSettlementWalletClient,
@@ -89,7 +93,12 @@ export function createFeaturesCommand(program: Command) {
         settlementPublicClient,
         deployerAppchainWalletClient,
         sequencingPublicClient,
-        ethereumPublicClient
+        ethereumPublicClient,
+        coreContracts,
+        chainId,
+        chainName,
+        sequencingContract,
+        syndForkSequencingRpc
       })
     })
 }

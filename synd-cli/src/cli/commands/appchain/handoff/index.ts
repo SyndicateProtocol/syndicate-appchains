@@ -24,7 +24,7 @@ export function handoffCommand(program: Command) {
       "--owner-private-key <key>",
       "Private key of the current owner"
     )
-    .requiredOption("--new-owner-address <address>", "Address of the new owner")
+    .requiredOption("--new-owner <address>", "Address of the new owner")
     .requiredOption(
       "--synd <json>",
       "JSON string containing synd contract addresses (config, bridge, sequencing, withdrawals)"
@@ -65,7 +65,6 @@ export function handoffCommand(program: Command) {
         appchainPublicClient
       } = await createClients(validatedOptions)
 
-      // Check balances
       const balanceThreshold = parseEther("0.001")
       const [appchainBalance, sequencingBalance, settlementBalance] =
         await Promise.all([

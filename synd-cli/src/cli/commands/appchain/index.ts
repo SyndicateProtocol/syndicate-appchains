@@ -3,6 +3,7 @@ import { arbOwnerCommand } from "./arbOwner"
 import { checkTokenBridgeCommand } from "./checkTokenBridge/"
 import { createAppchainCommand } from "./create"
 import { e2eCommand } from "./e2e"
+import { handoffCommand } from "./handoff"
 
 export function appchainCommand(program: Command) {
   const appchainProgram = program
@@ -12,6 +13,7 @@ export function appchainCommand(program: Command) {
       console.log("Managing appchains...")
     })
   createAppchainCommand(appchainProgram)
+  handoffCommand(appchainProgram)
   arbOwnerCommand(appchainProgram)
   checkTokenBridgeCommand(appchainProgram)
   e2eCommand(appchainProgram)

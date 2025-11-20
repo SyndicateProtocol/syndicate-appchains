@@ -73,7 +73,6 @@ export function createFoundationCommand(program: Command) {
         ownerSequencingWalletClient,
         settlementPublicClient,
         sequencingPublicClient,
-
         chainId: id,
         chainName: name,
         nativeToken,

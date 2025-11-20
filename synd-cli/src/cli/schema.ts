@@ -196,7 +196,10 @@ export const appchainCreateFeaturesOptionsSchema = z
     appchainRpc: z.url("Invalid appchain RPC URL"),
     appchainExplorer: z.url("Invalid appchain explorer URL"),
     sequencingContract: ethAddressSchema,
-    coreContracts
+    coreContracts: z
+      .string()
+      .transform((val) => JSON.parse(val))
+      .pipe(coreContracts)
   })
   .strict()
 
