@@ -37,9 +37,6 @@ export async function foundation({
   appchainRpc,
   appchainExplorer
 }: Foundation) {
-  const validators = [ownerSettlementWalletClient.account.address]
-  const batchPosters = [ownerSettlementWalletClient.account.address]
-  const batchPosterManager = ownerSettlementWalletClient.account.address
   const sequencerPrivateKey = generatePrivateKey()
   const sequencerAccount = privateKeyToAccount(sequencerPrivateKey)
   const nativeCurrency = nativeToken
@@ -78,9 +75,6 @@ export async function foundation({
   print("Sequencer PK", sequencerPrivateKey)
   print("Owner Address", ownerSettlementWalletClient.account.address)
   print("Owner PK", ownerPrivateKey)
-  print("Validators", validators.join(", "))
-  print("Batch Posters", batchPosters.join(", "))
-  print("Batch Poster Manager", batchPosterManager)
   print(
     "Native Token",
     isNativeTokenEth(nativeToken)
