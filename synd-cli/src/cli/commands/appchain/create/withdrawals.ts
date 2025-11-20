@@ -2,19 +2,8 @@ import {
   appchainCreateTeeModuleOptionsSchema,
   handleSchemaErrors
 } from "@/cli/schema"
-import {
-  getAppchainClient,
-  getPublicClient,
-  getWalletClient
-} from "@/utils/clients"
-import {
-  supportedEthereumChains,
-  supportedSequencingChains,
-  supportedSettlementChains
-} from "@/utils/constants"
+import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
-import { type Hex, zeroAddress } from "viem"
-import { getNativeTokenFromBridge } from "../arbOwner/helpers"
 import { deployWithdrawals } from "./features/deployWithdrawals"
 
 export function createWithdrawalsContractsCommand(program: Command) {
@@ -74,56 +63,40 @@ export function createWithdrawalsContractsCommand(program: Command) {
         upgradeExecutor,
         bridge,
         appchainRpc,
-        sequencingContract
+        sequencingContract,
+        syndForkSequencingRpc
       } = validatedOptions
 
-      const [
+      const {
         settlementPublicClient,
         sequencingPublicClient,
         ethereumPublicClient,
         ownerSettlementWalletClient,
-        deployerSettlementWalletClient
-      ] = await Promise.all([
-        getPublicClient(settlementRpc, supportedSettlementChains),
-        getPublicClient(sequencingRpc, supportedSequencingChains),
-        getPublicClient(ethereumRpc, supportedEthereumChains),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          ownerPrivateKey as `0x${string}`
-        ),
-        getWalletClient(
-          settlementRpc,
-          supportedSettlementChains,
-          deployerPrivateKey as `0x${string}`
-        )
-      ])
-
-      const customNativeToken = await getNativeTokenFromBridge(
-        settlementPublicClient,
-        bridge
-      )
-
-      const appchainPublicClient = await getAppchainClient({
-        nativeToken: customNativeToken?.address ?? zeroAddress,
-        settlementPublicClient: settlementPublicClient,
-        rpcUrl: appchainRpc
+        deployerSettlementWalletClient,
+        appchainPublicClient
+      } = await createClients({
+        settlementRpc,
+        sequencingRpc,
+        ethereumRpc,
+        deployerPrivateKey,
+        ownerPrivateKey,
+        appchainRpc
       })
 
       await deployWithdrawals({
-        ...validatedOptions,
+        syndForkSequencingRpc,
+        settlementPublicClient,
+        deployerSettlementWalletClient,
+        ownerSettlementWalletClient,
+        sequencingContract,
+        sequencingPublicClient,
+        appchainPublicClient,
+        ethereumPublicClient,
         coreContracts: {
           rollup,
           upgradeExecutor,
           bridge
-        },
-        sequencingContract: sequencingContract as Hex,
-        settlementPublicClient,
-        deployerSettlementWalletClient,
-        ownerSettlementWalletClient,
-        sequencingPublicClient,
-        appchainPublicClient,
-        ethereumPublicClient
+        }
       })
     })
 }

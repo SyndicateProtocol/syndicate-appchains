@@ -49,7 +49,7 @@ export function checkTokenBridgeCommand(program: Command) {
         rollup,
         appchainPublicClient,
         settlementPublicClient,
-        tokenBridgeCreatedAtHash: createdAtHash as `0x${string}`
+        createdAtHash
       })
     })
 }

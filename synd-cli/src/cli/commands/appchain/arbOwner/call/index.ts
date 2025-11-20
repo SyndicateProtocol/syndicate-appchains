@@ -1,5 +1,6 @@
 import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
 import { callArbOwnerOptionsSchema, handleSchemaErrors } from "@/cli/schema"
+import { createClients } from "@/utils/createClients"
 import { exitWithError } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import type { AbiFunction, ExtractAbiFunctionNames } from "abitype"
@@ -83,7 +84,7 @@ export function callArbOwnerCommand(program: Command) {
           )
         }
 
-        const arbOwnerCalldata = encodeFunctionData({
+        const calldata = encodeFunctionData({
           abi: ArbOwnerABI,
           functionName: functionName as ExtractAbiFunctionNames<
             typeof ArbOwnerABI
@@ -92,10 +93,34 @@ export function callArbOwnerCommand(program: Command) {
           args: preprocessedArgs as any
         })
 
+        const {
+          settlementRpc,
+          appchainRpc,
+          settlementUpgradeExecutor,
+          settlementInbox,
+          appchainUpgradeExecutor,
+          refundAddress,
+          gasLimit,
+          maxFeePerGas
+        } = validatedOptions
+
+        const { settlementPublicClient, appchainPublicClient } =
+          await createClients({
+            settlementRpc,
+            appchainRpc
+          })
+
         await generateCallArbOwnerTx({
-          ...validatedOptions,
-          arbOwnerFunctionName: functionName,
-          arbOwnerCalldata
+          settlementPublicClient,
+          appchainPublicClient,
+          settlementUpgradeExecutor,
+          settlementInbox,
+          appchainUpgradeExecutor,
+          refundAddress,
+          gasLimit,
+          maxFeePerGas,
+          functionName,
+          calldata
         })
       }
     )

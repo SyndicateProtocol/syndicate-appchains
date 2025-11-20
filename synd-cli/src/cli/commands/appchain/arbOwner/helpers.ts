@@ -1,51 +1,5 @@
 import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
-import { getNativeCurrency } from "@/utils/helpers"
-import {
-  type AbiFunction,
-  type Address,
-  type PublicClient,
-  parseAbiItem
-} from "viem"
-
-export async function getNativeTokenFromBridge(
-  publicClient: PublicClient,
-  bridgeAddress: Address
-) {
-  try {
-    const address = await publicClient.readContract({
-      address: bridgeAddress,
-      abi: [
-        parseAbiItem("function nativeToken() public view returns (address)")
-      ],
-      functionName: "nativeToken"
-    })
-    const currency = await getNativeCurrency(publicClient, address)
-    return {
-      ...currency,
-      address
-    }
-  } catch (_) {
-    return null
-  }
-}
-
-export async function detectCustomNativeToken(
-  publicClient: PublicClient,
-  inboxAddress: Address
-) {
-  try {
-    const bridgeAddress = await publicClient.readContract({
-      address: inboxAddress,
-      abi: [parseAbiItem("function bridge() public view returns (address)")],
-      functionName: "bridge"
-    })
-
-    return await getNativeTokenFromBridge(publicClient, bridgeAddress)
-  } catch (_) {
-    console.warn("⚠️  Could not detect native token, assuming ETH-native chain")
-    return null
-  }
-}
+import type { AbiFunction } from "viem"
 
 export function formatFunctionSignatureForDisplay(
   functionAbi: AbiFunction

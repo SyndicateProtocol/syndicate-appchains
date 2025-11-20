@@ -1,4 +1,4 @@
-import type { PublicClientWithChain } from "@/types"
+import type { CheckTokenBridge, PublicClientWithChain } from "@/types"
 import { supportedSettlementChains } from "@/utils/constants"
 import { getTokenBridgeContracts } from "@/utils/getTokenBridgeContracts"
 import { createTokenBridgePrepareTransactionReceipt } from "@arbitrum/orbit-sdk"
@@ -14,13 +14,8 @@ export async function checkTokenBridge({
   rollup,
   appchainPublicClient,
   settlementPublicClient,
-  tokenBridgeCreatedAtHash
-}: {
-  rollup: `0x${string}`
-  appchainPublicClient: PublicClientWithChain
-  settlementPublicClient: PublicClientWithChain
-  tokenBridgeCreatedAtHash: `0x${string}`
-}) {
+  createdAtHash
+}: CheckTokenBridge) {
   registerNewNetwork(
     publicClientToProvider(settlementPublicClient),
     publicClientToProvider(appchainPublicClient),
@@ -29,13 +24,13 @@ export async function checkTokenBridge({
   )
 
   const transaction = await settlementPublicClient.getTransaction({
-    hash: tokenBridgeCreatedAtHash
+    hash: createdAtHash
   })
   console.log("Bridge created at transaction:", transaction)
 
   const txReceipt = createTokenBridgePrepareTransactionReceipt(
     await settlementPublicClient.waitForTransactionReceipt({
-      hash: tokenBridgeCreatedAtHash
+      hash: createdAtHash
     })
   )
 
@@ -53,7 +48,7 @@ export async function checkTokenBridge({
 
   // fetching the TokenBridge contracts
   const tokenBridgeContracts = await getTokenBridgeContracts({
-    bridgeCreationHash: tokenBridgeCreatedAtHash,
+    bridgeCreationHash: createdAtHash,
     parentChainPublicClient: settlementPublicClient,
     tokenBridgeCreatorAddressOverride:
       supportedSettlementChains[settlementPublicClient.chain.id]

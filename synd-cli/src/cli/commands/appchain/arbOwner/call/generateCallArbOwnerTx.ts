@@ -3,27 +3,20 @@ import { ERC20InboxABI } from "@/abi/nitro/ERC20Inbox"
 import { InboxABI } from "@/abi/nitro/Inbox"
 import { NodeInterfaceABI } from "@/abi/nitro/NodeInterface"
 import { UpgradeExecutorABI } from "@/abi/nitro/UpgradeExecutor"
+import type { CallArbOwner } from "@/types"
 import {
   ARB_OWNER_PRECOMPILE_ADDRESS,
   NODE_INTERFACE_ADDRESS
 } from "@/utils/constants"
-import { scaleByPercentage } from "@/utils/helpers"
+import { detectCustomNativeToken, scaleByPercentage } from "@/utils/helpers"
 import {
   print,
   printIndented,
   printSection,
   printSeparator
 } from "@/utils/print"
-import type { Address, Hex } from "viem"
-import {
-  createPublicClient,
-  encodeFunctionData,
-  formatEther,
-  formatGwei,
-  formatUnits,
-  http
-} from "viem"
-import { detectCustomNativeToken } from "../helpers"
+import type { Hex } from "viem"
+import { encodeFunctionData, formatEther, formatGwei, formatUnits } from "viem"
 
 /*
 Flow:
@@ -34,40 +27,23 @@ Flow:
 	Appchain (Child):  Retryable auto-redeems → ChildUpgradeExecutor → ArbOwner.<functionName>()
 */
 
-interface CallArbOwnerParams {
-  settlementRpc: string
-  appchainRpc?: string
-  settlementUpgradeExecutor: Address
-  settlementInbox: Address
-  appchainUpgradeExecutor: Address
-  refundAddress: Address
-  gasLimit?: bigint
-  maxFeePerGas?: bigint
-  arbOwnerFunctionName: string
-  arbOwnerCalldata: Hex
-}
-
 const DEFAULT_GAS_LIMIT = BigInt(100_000)
 const DEFAULT_MAX_FEE_PER_GAS = BigInt(100_000_000) // 0.1 gwei
 
 export async function generateCallArbOwnerTx({
-  settlementRpc,
-  appchainRpc,
+  settlementPublicClient,
+  appchainPublicClient,
   settlementUpgradeExecutor,
   settlementInbox,
   appchainUpgradeExecutor,
   gasLimit,
   maxFeePerGas,
   refundAddress,
-  arbOwnerFunctionName,
-  arbOwnerCalldata
-}: CallArbOwnerParams) {
-  const publicClient = createPublicClient({
-    transport: http(settlementRpc)
-  })
-
+  functionName,
+  calldata
+}: CallArbOwner) {
   const customNativeToken = await detectCustomNativeToken(
-    publicClient,
+    settlementPublicClient,
     settlementInbox
   )
   const useCustomGasToken = !!customNativeToken
@@ -76,20 +52,16 @@ export async function generateCallArbOwnerTx({
   const l3UpgradeExecutorCalldata = encodeFunctionData({
     abi: UpgradeExecutorABI,
     functionName: "executeCall",
-    args: [ARB_OWNER_PRECOMPILE_ADDRESS, arbOwnerCalldata]
+    args: [ARB_OWNER_PRECOMPILE_ADDRESS, calldata]
   })
 
   let estimatedGasLimit: bigint
   let estimatedMaxFeePerGas: bigint
 
-  if (appchainRpc) {
-    const childPublicClient = createPublicClient({
-      transport: http(appchainRpc)
-    })
-
+  if (appchainPublicClient) {
     try {
       // Use NodeInterface to estimate the full retryable ticket execution
-      estimatedGasLimit = await childPublicClient.estimateGas({
+      estimatedGasLimit = await appchainPublicClient.estimateGas({
         to: NODE_INTERFACE_ADDRESS,
         data: encodeFunctionData({
           abi: NodeInterfaceABI,
@@ -108,7 +80,7 @@ export async function generateCallArbOwnerTx({
 
       // maxFeePerGas of 1 is a magic value in arbitrum but is a valid setting for a syndicate appchain. We add 1 here to avoid reverting.
       // https://github.com/OffchainLabs/nitro-contracts/blob/c32af127fe6a9124316abebbf756609649ede1f5/src/bridge/AbsInbox.sol#L276-L277
-      estimatedMaxFeePerGas = await childPublicClient.getGasPrice()
+      estimatedMaxFeePerGas = await appchainPublicClient.getGasPrice()
       if (estimatedMaxFeePerGas === BigInt(1)) {
         estimatedMaxFeePerGas += BigInt(1)
       }
@@ -148,9 +120,9 @@ export async function generateCallArbOwnerTx({
   } else {
     // For ETH chains, calculate the retryable ticket submission cost
     try {
-      const block = await publicClient.getBlock()
+      const block = await settlementPublicClient.getBlock()
       const baseFeePerGas = block.baseFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS
-      submissionCost = await publicClient.readContract({
+      submissionCost = await settlementPublicClient.readContract({
         address: settlementInbox,
         abi: InboxABI,
         functionName: "calculateRetryableSubmissionFee",
@@ -235,7 +207,7 @@ export async function generateCallArbOwnerTx({
   !useCustomGasToken &&
     print("Total Cost To Execute", `${formatEther(totalValue)} ETH`)
   print("Refund Address", refundAddress)
-  print("ArbOwner Function", arbOwnerFunctionName)
+  print("ArbOwner Function", functionName)
   print("")
 
   printSection("💡 INSTRUCTIONS")
@@ -287,7 +259,9 @@ export async function generateCallArbOwnerTx({
     printIndented("Calldata", upgradeExecutorCalldata)
   }
   print("")
-  print("⚠️  Note: The retryable ticket will need to be redeemed on L3.")
+  print(
+    "⚠️  Note: The retryable ticket may need to be redeemed on the appchain."
+  )
   print("    This usually happens automatically.")
   print("")
   printSeparator()

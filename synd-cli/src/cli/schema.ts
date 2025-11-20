@@ -224,6 +224,7 @@ export const appchainCheckTokenBridgeOptionsSchema = z
     createdAtHash: z
       .string()
       .regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash")
+      .transform((val) => val as Hex)
   })
   .strict()
 

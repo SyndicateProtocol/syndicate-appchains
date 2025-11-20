@@ -2,11 +2,12 @@ import type { ChainNativeCurrency, GetChainsResponse } from "@/types"
 import {
   type Address,
   type Chain,
+  type Hex,
+  type PublicClient,
   erc20Abi,
   getAddress,
-  type Hex,
   isAddress,
-  type PublicClient,
+  parseAbiItem,
   zeroAddress
 } from "viem"
 
@@ -102,4 +103,42 @@ export function scaleByPercentage(
   percentIncrease: number | bigint
 ) {
   return value + (value * BigInt(percentIncrease)) / BigInt(100)
+}
+export async function detectCustomNativeToken(
+  publicClient: PublicClient,
+  inboxAddress: Address
+) {
+  try {
+    const bridgeAddress = await publicClient.readContract({
+      address: inboxAddress,
+      abi: [parseAbiItem("function bridge() public view returns (address)")],
+      functionName: "bridge"
+    })
+
+    return await getNativeTokenFromBridge(publicClient, bridgeAddress)
+  } catch (_) {
+    console.warn("⚠️  Could not detect native token, assuming ETH-native chain")
+    return null
+  }
+}
+export async function getNativeTokenFromBridge(
+  publicClient: PublicClient,
+  bridgeAddress: Address
+) {
+  try {
+    const address = await publicClient.readContract({
+      address: bridgeAddress,
+      abi: [
+        parseAbiItem("function nativeToken() public view returns (address)")
+      ],
+      functionName: "nativeToken"
+    })
+    const currency = await getNativeCurrency(publicClient, address)
+    return {
+      ...currency,
+      address
+    }
+  } catch (_) {
+    return null
+  }
 }

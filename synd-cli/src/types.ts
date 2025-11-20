@@ -409,3 +409,23 @@ export interface CheckSequencerInbox {
   settlementPublicClient: PublicClientWithChain
   synd: Synd
 }
+
+export interface CallArbOwner {
+  settlementPublicClient: PublicClientWithChain
+  appchainPublicClient?: PublicClientWithChain
+  settlementUpgradeExecutor: Hex
+  settlementInbox: Hex
+  appchainUpgradeExecutor: Hex
+  refundAddress: Hex
+  gasLimit?: bigint
+  maxFeePerGas?: bigint
+  functionName: string
+  calldata: Hex
+}
+
+export interface CheckTokenBridge {
+  rollup: Hex
+  appchainPublicClient: PublicClientWithChain
+  settlementPublicClient: PublicClientWithChain
+  createdAtHash: Hex
+}

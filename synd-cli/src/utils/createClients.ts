@@ -23,7 +23,6 @@ interface AppchainOptions {
   chainName?: string
   nativeToken?: Hex
   appchainExplorer?: string
-  settlementPublicClient?: PublicClientWithChain
 }
 
 type ClientOptions = BaseClientOptions & AppchainOptions
@@ -39,9 +38,11 @@ type CreatedClients<T extends ClientOptions> = {
   ethereumPublicClient: T["ethereumRpc"] extends string
     ? PublicClientWithChain
     : undefined
-  appchainPublicClient: T["appchainRpc"] extends string
-    ? PublicClientWithChain
-    : undefined
+  appchainPublicClient: undefined extends T["appchainRpc"]
+    ? PublicClientWithChain | undefined
+    : T["appchainRpc"] extends string
+      ? PublicClientWithChain
+      : undefined
   ownerSettlementWalletClient: T["settlementRpc"] extends string
     ? T["ownerPrivateKey"] extends Hex
       ? PrivateKeyWalletAccount
@@ -62,22 +63,31 @@ type CreatedClients<T extends ClientOptions> = {
       ? PrivateKeyWalletAccount
       : undefined
     : undefined
-  ownerAppchainWalletClient: T["appchainRpc"] extends string
+  ownerAppchainWalletClient: undefined extends T["appchainRpc"]
     ? T["ownerPrivateKey"] extends Hex
-      ? PrivateKeyWalletAccount
+      ? PrivateKeyWalletAccount | undefined
       : undefined
-    : undefined
-  deployerAppchainWalletClient: T["appchainRpc"] extends string
+    : T["appchainRpc"] extends string
+      ? T["ownerPrivateKey"] extends Hex
+        ? PrivateKeyWalletAccount
+        : undefined
+      : undefined
+  deployerAppchainWalletClient: undefined extends T["appchainRpc"]
     ? T["deployerPrivateKey"] extends Hex
-      ? PrivateKeyWalletAccount
+      ? PrivateKeyWalletAccount | undefined
       : undefined
-    : undefined
+    : T["appchainRpc"] extends string
+      ? T["deployerPrivateKey"] extends Hex
+        ? PrivateKeyWalletAccount
+        : undefined
+      : undefined
 }
 
 export async function createClients<T extends ClientOptions>(
   options: T
 ): Promise<CreatedClients<T>> {
-  const clients: Record<string, any> = {}
+  // biome-ignore lint/suspicious/noExplicitAny: conditional logic here makes typing difficult
+  const clients = {} as Record<string, any>
   const promises: Promise<void>[] = []
 
   // Settlement chain clients
@@ -166,16 +176,13 @@ export async function createClients<T extends ClientOptions>(
 
   // Appchain clients (requires settlement client for some cases)
   if (options.appchainRpc) {
-    const settlementClient =
-      clients.settlementPublicClient || options.settlementPublicClient
-
-    if (settlementClient) {
+    if (clients.settlementPublicClient) {
       clients.appchainPublicClient = await getAppchainClient({
         chainName: options.chainName,
         nativeToken: options.nativeToken,
         rpcUrl: options.appchainRpc,
         explorerUrl: options.appchainExplorer,
-        settlementPublicClient: settlementClient
+        settlementPublicClient: clients.settlementPublicClient
       })
 
       // Create appchain wallet clients if appchain client exists

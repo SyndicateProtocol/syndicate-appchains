@@ -15,13 +15,13 @@ import { deployTeeModule } from "./deployTeeModule"
 
 export async function deployWithdrawals({
   settlementPublicClient,
-  coreContracts: { rollup, upgradeExecutor, bridge },
   deployerSettlementWalletClient,
   ownerSettlementWalletClient,
-  sequencingContract,
   sequencingPublicClient,
   appchainPublicClient,
   ethereumPublicClient,
+  coreContracts: { rollup, upgradeExecutor, bridge },
+  sequencingContract,
   syndForkSequencingRpc
 }: DeployTeeModule) {
   const assertionPoster = await deployAssertionPoster({

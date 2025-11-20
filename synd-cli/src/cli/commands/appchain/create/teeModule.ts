@@ -4,8 +4,6 @@ import {
 } from "@/cli/schema"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
-import { type Hex, zeroAddress } from "viem"
-import { getNativeTokenFromBridge } from "../arbOwner/helpers"
 import { deployTeeModule } from "./features/deployTeeModule"
 
 export function createTeeModuleCommand(program: Command) {
@@ -54,33 +52,26 @@ export function createTeeModuleCommand(program: Command) {
         bridge,
         assertionPoster,
         sequencingContract,
-        syndForkSequencingRpc
+        syndForkSequencingRpc,
+        settlementRpc,
+        sequencingRpc,
+        ethereumRpc,
+        deployerPrivateKey,
+        appchainRpc
       } = validatedOptions
 
-      // Create basic clients first (without appchain)
       const {
         settlementPublicClient,
         deployerSettlementWalletClient,
         sequencingPublicClient,
-        ethereumPublicClient
+        ethereumPublicClient,
+        appchainPublicClient
       } = await createClients({
-        settlementRpc: validatedOptions.settlementRpc,
-        sequencingRpc: validatedOptions.sequencingRpc,
-        ethereumRpc: validatedOptions.ethereumRpc,
-        deployerPrivateKey: validatedOptions.deployerPrivateKey
-      })
-
-      // Get native token to determine appchain setup
-      const customNativeToken = await getNativeTokenFromBridge(
-        settlementPublicClient,
-        bridge
-      )
-
-      // Now create appchain client with the native token info
-      const appchainClients = await createClients({
-        appchainRpc: validatedOptions.appchainRpc,
-        nativeToken: customNativeToken?.address ?? zeroAddress,
-        settlementPublicClient
+        settlementRpc,
+        sequencingRpc,
+        ethereumRpc,
+        deployerPrivateKey,
+        appchainRpc
       })
 
       const teeModuleAddress = await deployTeeModule({
@@ -88,9 +79,9 @@ export function createTeeModuleCommand(program: Command) {
         bridge,
         deployerSettlementWalletClient,
         settlementPublicClient,
-        sequencingContract: sequencingContract as Hex,
+        sequencingContract,
         sequencingPublicClient,
-        appchainPublicClient: appchainClients.appchainPublicClient,
+        appchainPublicClient,
         ethereumPublicClient,
         syndForkSequencingRpc
       })
