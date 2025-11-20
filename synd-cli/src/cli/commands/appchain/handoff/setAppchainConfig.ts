@@ -10,7 +10,7 @@ import { print } from "@/utils/print"
 export default async function setAppchainConfig({
   appchainPublicClient,
   ownerAppchainWalletClient,
-  newOwnerAddress
+  newOwner
 }: SetAppchainConfig) {
   // The chain owner is the only one who can set the config
   const isSignerChainOwner = await appchainPublicClient.readContract({
@@ -40,7 +40,9 @@ export default async function setAppchainConfig({
     throw new Error("Transaction failed, could not set the Minimum base fee")
   }
   print(
-    `🔍  Minimum base fee set to ${DEFAULT_APPCHAIN_MIN_BASE_FEE} wei on appchain in ${getChainExplorerUrl(appchainPublicClient.chain)}/tx/${setMinimumL2BaseFeeTx}`
+    `🔍  Minimum base fee set to ${DEFAULT_APPCHAIN_MIN_BASE_FEE} wei on appchain in ${getChainExplorerUrl(
+      appchainPublicClient.chain
+    )}/tx/${setMinimumL2BaseFeeTx}`
   )
 
   // 2. Set the network fee receiver - this should be a customer provided address
@@ -49,7 +51,7 @@ export default async function setAppchainConfig({
     address: ARB_OWNER_PRECOMPILE_ADDRESS,
     abi: ArbOwnerABI,
     functionName: "setNetworkFeeAccount",
-    args: [newOwnerAddress]
+    args: [newOwner]
   })
 
   const receipt2 = await appchainPublicClient.waitForTransactionReceipt({
@@ -59,7 +61,9 @@ export default async function setAppchainConfig({
     throw new Error("Network fee receiver setting transaction failed")
   }
   print(
-    `🔍  Network fee receiver set to ${newOwnerAddress} on appchain in ${getChainExplorerUrl(appchainPublicClient.chain)}/tx/${setNetworkFeeAccountTx}`
+    `🔍  Network fee receiver set to ${newOwner} on appchain in ${getChainExplorerUrl(
+      appchainPublicClient.chain
+    )}/tx/${setNetworkFeeAccountTx}`
   )
 
   // 3. Set the infrastructure fee collector
@@ -68,7 +72,7 @@ export default async function setAppchainConfig({
     address: ARB_OWNER_PRECOMPILE_ADDRESS,
     abi: ArbOwnerABI,
     functionName: "setInfraFeeAccount",
-    args: [newOwnerAddress]
+    args: [newOwner]
   })
 
   const receipt3 = await appchainPublicClient.waitForTransactionReceipt({
@@ -78,7 +82,9 @@ export default async function setAppchainConfig({
     throw new Error("Setting infrastructure fee collector transaction failed")
   }
   print(
-    `🔍  Infrastructure fee collector set to ${newOwnerAddress} on appchain in ${getChainExplorerUrl(appchainPublicClient.chain)}/tx/${setInfraFeeAccountTx}`
+    `🔍  Infrastructure fee collector set to ${newOwner} on appchain in ${getChainExplorerUrl(
+      appchainPublicClient.chain
+    )}/tx/${setInfraFeeAccountTx}`
   )
 
   // 4. Set the WASM stack depth to 22_000
@@ -95,6 +101,8 @@ export default async function setAppchainConfig({
     throw new Error("Setting WASM stack depth transaction failed")
   }
   print(
-    `🔍  WASM stack depth set to 22_000 on appchain in ${getChainExplorerUrl(appchainPublicClient.chain)}/tx/${setWasmMaxStackDepthTx}`
+    `🔍  WASM stack depth set to 22_000 on appchain in ${getChainExplorerUrl(
+      appchainPublicClient.chain
+    )}/tx/${setWasmMaxStackDepthTx}`
   )
 }

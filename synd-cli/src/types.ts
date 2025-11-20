@@ -69,7 +69,7 @@ export interface GenerateBridgeConfigParams {
   tokenContracts?: TokenContracts
   chainName: string
   chainId: number
-  rollupOwnerAddress: Hex
+  chainOwner: Hex
 }
 
 export interface CreateNodeConfigParams {
@@ -341,7 +341,7 @@ interface Synd {
 }
 
 export interface Handoff {
-  newOwnerAddress: Hex
+  newOwner: Hex
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   ownerSequencingWalletClient: PrivateKeyWalletAccount
   ownerAppchainWalletClient: PrivateKeyWalletAccount
@@ -354,11 +354,11 @@ export interface Handoff {
 export interface SetAppchainConfig {
   appchainPublicClient: PublicClientWithChain
   ownerAppchainWalletClient: PrivateKeyWalletAccount
-  newOwnerAddress: Hex
+  newOwner: Hex
 }
 
 export interface HandoffNitro {
-  newOwnerAddress: Hex
+  newOwner: Hex
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   synd: Synd
@@ -370,7 +370,7 @@ export interface HandoffSynd {
   ownerSettlementWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   synd: Synd
-  newOwnerAddress: Hex
+  newOwner: Hex
   ownerSequencingWalletClient: PrivateKeyWalletAccount
   sequencingPublicClient: PublicClientWithChain
 }

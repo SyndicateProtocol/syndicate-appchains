@@ -160,7 +160,7 @@ export const handoffConfig = z.object({
   appChainRpcUrl: z.string().url(),
   appChainExplorerUrl: z.string().url(),
   ownerPrivateKey: z.string(),
-  newOwnerAddress: z.string().transform((val) => getAddress(val)),
+  newOwner: z.string().transform((val) => getAddress(val)),
   synd
 })
 
@@ -256,7 +256,7 @@ export const appchainHandoffOptionsSchema = z
     sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
     appchainRpc: z.url("Invalid appchain RPC URL"),
     ownerPrivateKey: privateKeySchema("owner"),
-    newOwnerAddress: ethAddressSchema,
+    newOwner: ethAddressSchema,
     synd
   })
   .strict()

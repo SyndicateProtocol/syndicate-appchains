@@ -6,7 +6,7 @@ import setAppchainConfig from "./setAppchainConfig"
 
 export async function handoff(params: Handoff) {
   const {
-    newOwnerAddress,
+    newOwner,
     ownerSettlementWalletClient,
     settlementPublicClient,
     sequencingPublicClient,
@@ -20,7 +20,7 @@ export async function handoff(params: Handoff) {
   print("---------------------------------------------------------")
 
   print("Current Owner", ownerSettlementWalletClient.account.address)
-  print("New Owner", newOwnerAddress)
+  print("New Owner", newOwner)
   print("Settlement Chain", settlementPublicClient.chain.name)
   print("Sequencing Chain", sequencingPublicClient.chain.name)
   print("Appchain Chain", appchainPublicClient.chain.name)
@@ -36,10 +36,10 @@ export async function handoff(params: Handoff) {
   await setAppchainConfig({
     appchainPublicClient,
     ownerAppchainWalletClient,
-    newOwnerAddress
+    newOwner
   })
   await handoffNitro({
-    newOwnerAddress,
+    newOwner,
     ownerSettlementWalletClient,
     settlementPublicClient,
     synd,
@@ -47,5 +47,5 @@ export async function handoff(params: Handoff) {
     appchainPublicClient
   })
   await handoffSynd(params)
-  print(`🏁  Handoff complete: Ownership transferred to ${newOwnerAddress}`)
+  print(`🏁  Handoff complete: Ownership transferred to ${newOwner}`)
 }

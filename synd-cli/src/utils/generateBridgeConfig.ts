@@ -11,13 +11,13 @@ export function generateBridgeConfig({
   parentChainId,
   chainName,
   chainId,
-  rollupOwnerAddress
+  chainOwner
 }: GenerateBridgeConfigParams) {
   const bridgeConfig = {
     chainInfo: {
       chainName,
       chainId,
-      chainOwner: rollupOwnerAddress,
+      chainOwner,
       minL2BaseFee: DEFAULT_APPCHAIN_MIN_BASE_FEE,
       parentChainId: Number(parentChainId),
       nativeToken: coreContracts.nativeToken ?? zeroAddress,

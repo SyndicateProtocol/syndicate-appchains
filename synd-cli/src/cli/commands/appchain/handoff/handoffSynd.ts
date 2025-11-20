@@ -11,7 +11,7 @@ export default async function handoffSynd({
   ownerSettlementWalletClient,
   settlementPublicClient,
   synd,
-  newOwnerAddress,
+  newOwner,
   ownerSequencingWalletClient,
   sequencingPublicClient
 }: HandoffSynd) {
@@ -21,13 +21,15 @@ export default async function handoffSynd({
       address: synd.config.arbChainConfig,
       abi: arbChainConfigABI,
       functionName: "transferOwnership",
-      args: [newOwnerAddress]
+      args: [newOwner]
     })
   await settlementPublicClient.waitForTransactionReceipt({
     hash: transferArbChainConfigTx
   })
   print(
-    `🔍  Syndicate internal owner transferred ownership of the ArbChainConfig to ${newOwnerAddress} in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${transferArbChainConfigTx}`
+    `🔍  Syndicate internal owner transferred ownership of the ArbChainConfig to ${newOwner} in ${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${transferArbChainConfigTx}`
   )
 
   // 2. Transfer ownership of the TeeModule
@@ -42,13 +44,15 @@ export default async function handoffSynd({
       address: synd.withdrawals.teeModule,
       abi: teeModuleABI,
       functionName: "grantRole",
-      args: [teeModuleDefaultAdminRole, newOwnerAddress]
+      args: [teeModuleDefaultAdminRole, newOwner]
     })
   await settlementPublicClient.waitForTransactionReceipt({
     hash: teeModuleDefaultAdminRoleTransferHash
   })
   print(
-    `🔍  Syndicate internal owner set the DEFAULT_ADMIN_ROLE of the TeeModule to ${newOwnerAddress} in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${teeModuleDefaultAdminRoleTransferHash}`
+    `🔍  Syndicate internal owner set the DEFAULT_ADMIN_ROLE of the TeeModule to ${newOwner} in ${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${teeModuleDefaultAdminRoleTransferHash}`
   )
 
   // Revoke the DEFAULT_ADMIN_ROLE from the owner
@@ -66,7 +70,9 @@ export default async function handoffSynd({
     hash: teeModuleDefaultAdminRoleRevokeHash
   })
   print(
-    `🔍  Syndicate internal owner revoked the DEFAULT_ADMIN_ROLE of the TeeModule from the owner in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${teeModuleDefaultAdminRoleRevokeHash}`
+    `🔍  Syndicate internal owner revoked the DEFAULT_ADMIN_ROLE of the TeeModule from the owner in ${getChainExplorerUrl(
+      settlementPublicClient.chain
+    )}/tx/${teeModuleDefaultAdminRoleRevokeHash}`
   )
 
   // 1. Transfer ownership of the SyndicateSequencingChain
@@ -75,13 +81,15 @@ export default async function handoffSynd({
       address: synd.sequencing.syndicateSequencingChain,
       abi: syndicateSequencingChainABI,
       functionName: "transferOwnership",
-      args: [newOwnerAddress]
+      args: [newOwner]
     })
   await sequencingPublicClient.waitForTransactionReceipt({
     hash: transferSyndicateSequencingChainTx
   })
   print(
-    `🔍  Syndicate internal owner transferred ownership of the SyndicateSequencingChain to ${newOwnerAddress} in ${getChainExplorerUrl(sequencingPublicClient.chain)}/tx/${transferSyndicateSequencingChainTx}`
+    `🔍  Syndicate internal owner transferred ownership of the SyndicateSequencingChain to ${newOwner} in ${getChainExplorerUrl(
+      sequencingPublicClient.chain
+    )}/tx/${transferSyndicateSequencingChainTx}`
   )
 
   // 2. Transfer ownership of the AllowlistSequencingModule
@@ -90,13 +98,15 @@ export default async function handoffSynd({
       address: synd.sequencing.allowlistSequencingModule,
       abi: allowlistSequencingModuleABI,
       functionName: "transferAdmin",
-      args: [newOwnerAddress]
+      args: [newOwner]
     })
   await sequencingPublicClient.waitForTransactionReceipt({
     hash: transferAllowlistSequencingModuleTx
   })
   print(
-    `🔍  Syndicate internal owner transferred ownership of the AllowlistSequencingModule to ${newOwnerAddress} in ${getChainExplorerUrl(sequencingPublicClient.chain)}/tx/${transferAllowlistSequencingModuleTx}`
+    `🔍  Syndicate internal owner transferred ownership of the AllowlistSequencingModule to ${newOwner} in ${getChainExplorerUrl(
+      sequencingPublicClient.chain
+    )}/tx/${transferAllowlistSequencingModuleTx}`
   )
 
   // 3. Transfer ownership of the RequireAndModule
@@ -105,12 +115,14 @@ export default async function handoffSynd({
       address: synd.sequencing.requireAndModule,
       abi: requireAndModuleABI,
       functionName: "transferOwnership",
-      args: [newOwnerAddress]
+      args: [newOwner]
     })
   await sequencingPublicClient.waitForTransactionReceipt({
     hash: transferRequireAndModuleTx
   })
   print(
-    `🔍  Syndicate internal owner transferred ownership of the RequireAndModule to ${newOwnerAddress} in ${getChainExplorerUrl(sequencingPublicClient.chain)}/tx/${transferRequireAndModuleTx}`
+    `🔍  Syndicate internal owner transferred ownership of the RequireAndModule to ${newOwner} in ${getChainExplorerUrl(
+      sequencingPublicClient.chain
+    )}/tx/${transferRequireAndModuleTx}`
   )
 }

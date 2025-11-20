@@ -10,7 +10,7 @@ import {
 import { checkSequencerInboxConfig } from "./checkSequencerInboxConfig"
 
 export default async function handoffNitro({
-  newOwnerAddress,
+  newOwner,
   ownerSettlementWalletClient,
   settlementPublicClient,
   synd,
@@ -26,7 +26,7 @@ export default async function handoffNitro({
   // 1. Add new owner as EXECUTOR_ROLE on settlement chain
   const addSettlementExecutorTx =
     await upgradeExecutorPrepareAddExecutorTransactionRequest({
-      account: newOwnerAddress,
+      account: newOwner,
       upgradeExecutorAddress: synd.bridge.coreContracts.upgradeExecutor,
       executorAccountAddress: ownerSettlementWalletClient.account.address,
       publicClient: settlementPublicClient
@@ -42,7 +42,7 @@ export default async function handoffNitro({
     hash: addSettlementExecutorHash
   })
   print(
-    `🔍  Added new owner ${newOwnerAddress} as EXECUTOR on settlement chain in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${addSettlementExecutorHash}`
+    `🔍  Added new owner ${newOwner} as EXECUTOR on settlement chain in ${getChainExplorerUrl(settlementPublicClient.chain)}/tx/${addSettlementExecutorHash}`
   )
 
   // 2. Remove EXECUTOR_ROLE from syndicate internal owner on the settlement chain

@@ -186,7 +186,7 @@ export async function features({
       coreContracts,
       chainName,
       chainId,
-      rollupOwnerAddress: ownerSettlementWalletClient.account.address
+      chainOwner: ownerSettlementWalletClient.account.address
     })
   )
 

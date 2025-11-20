@@ -36,7 +36,7 @@ export async function deployNitroRollup({
     chainName,
     chainId,
     parentChainId: settlementPublicClient.chain.id,
-    rollupOwnerAddress: ownerSettlementWalletClient.account.address,
+    chainOwner: ownerSettlementWalletClient.account.address,
     rpcUrl: appChainRpc,
     explorerUrl: appChainExplorer
   })
