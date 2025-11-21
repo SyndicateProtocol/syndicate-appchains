@@ -78,6 +78,15 @@ jobs:
           make -C shared create-contract-bindings
           git diff --quiet || (echo "Error: Rust contract bindings are out of date. Please run 'make -C shared create-contract-bindings' to update them." && exit 1)
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install synd-cli dependencies
+        working-directory: "synd-cli"
+        run: bun install
+
       - name: Check TypeScript ABI files for synd-cli
         working-directory: "."
         run: |
