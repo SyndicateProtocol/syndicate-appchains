@@ -1,5 +1,6 @@
 import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
 import { callArbOwnerOptionsSchema } from "@/cli/schema"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { parseConfigAndOptions } from "@/utils/config"
 import { createClients } from "@/utils/createClients"
 import { exitWithError } from "@/utils/print"
@@ -14,9 +15,13 @@ import {
 import { generateCallArbOwnerTx } from "./generateCallArbOwnerTx"
 
 export function callArbOwnerCommand(program: Command) {
-  program
+  const callCmd = program
     .command("call")
     .description("Call a specific ArbOwner function")
+
+  addInitSubcommand(callCmd, "call-arb-owner", callArbOwnerOptionsSchema)
+
+  callCmd
     .argument("<functionName>", "Name of the ArbOwner function to call")
     .argument("[args...]", "Arguments for the function")
     .option("--config <path>", "Path to JSON config file")
