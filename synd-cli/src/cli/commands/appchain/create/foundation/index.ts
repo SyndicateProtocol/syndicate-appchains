@@ -13,7 +13,11 @@ export function createFoundationCommand(program: Command) {
     )
 
   // Add init subcommand - automatically extracts from schema!
-  addInitSubcommand(foundationCmd, "foundation", appchainCreateFoundationOptionsSchema)
+  addInitSubcommand(
+    foundationCmd,
+    "foundation",
+    appchainCreateFoundationOptionsSchema
+  )
 
   // Original foundation command
   foundationCmd

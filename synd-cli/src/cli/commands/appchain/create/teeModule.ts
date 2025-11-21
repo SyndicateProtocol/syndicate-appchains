@@ -6,9 +6,7 @@ import type { Command } from "@commander-js/extra-typings"
 import { deployTeeModule } from "./features/deployTeeModule"
 
 export function createTeeModuleCommand(program: Command) {
-  const teeCmd = program
-    .command("tee-module")
-    .description("Deploys TeeModule")
+  const teeCmd = program.command("tee-module").description("Deploys TeeModule")
 
   addInitSubcommand(teeCmd, "tee-module", appchainDeployTeeModuleOptionsSchema)
 

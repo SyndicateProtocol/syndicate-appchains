@@ -13,7 +13,11 @@ export function createSequencingCommand(program: Command) {
       "Deploy sequencing contracts: SyndicateSequencingChain, AllowlistSequencingModule, RequireAndModule"
     )
 
-  addInitSubcommand(sequencingCmd, "sequencing", appchainCreateSequencingChainOptionsSchema)
+  addInitSubcommand(
+    sequencingCmd,
+    "sequencing",
+    appchainCreateSequencingChainOptionsSchema
+  )
 
   sequencingCmd
     .option("--config <path>", "Path to JSON config file")

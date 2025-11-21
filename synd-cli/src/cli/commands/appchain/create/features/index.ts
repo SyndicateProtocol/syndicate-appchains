@@ -13,7 +13,11 @@ export function createFeaturesCommand(program: Command) {
       "Deploys Arbitrum nitro token bridge, Syndicate withdrawals contracts, Multicall3"
     )
 
-  addInitSubcommand(featuresCmd, "features", appchainCreateFeaturesOptionsSchema)
+  addInitSubcommand(
+    featuresCmd,
+    "features",
+    appchainCreateFeaturesOptionsSchema
+  )
 
   featuresCmd
     .option("--config <path>", "Path to JSON config file")

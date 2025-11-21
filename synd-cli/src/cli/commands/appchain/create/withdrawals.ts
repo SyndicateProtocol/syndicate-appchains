@@ -10,7 +10,11 @@ export function createWithdrawalsContractsCommand(program: Command) {
     .command("withdrawals")
     .description("Deploy withdrawals contracts: AssertionPoster & TeeModule")
 
-  addInitSubcommand(withdrawalsCmd, "withdrawals", appchainCreateTeeModuleOptionsSchema)
+  addInitSubcommand(
+    withdrawalsCmd,
+    "withdrawals",
+    appchainCreateTeeModuleOptionsSchema
+  )
 
   withdrawalsCmd
     .option("--config <path>", "Path to JSON config file")

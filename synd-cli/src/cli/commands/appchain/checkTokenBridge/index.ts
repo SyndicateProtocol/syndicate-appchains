@@ -11,7 +11,11 @@ export function checkTokenBridgeCommand(program: Command) {
     .command("check-token-bridge")
     .description("Check token bridge deployment and retryable ticket execution")
 
-  addInitSubcommand(checkCmd, "check-token-bridge", appchainCheckTokenBridgeOptionsSchema)
+  addInitSubcommand(
+    checkCmd,
+    "check-token-bridge",
+    appchainCheckTokenBridgeOptionsSchema
+  )
 
   checkCmd
     .option("--config <path>", "Path to JSON config file")

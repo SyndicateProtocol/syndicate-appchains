@@ -10,7 +10,11 @@ export function createAssertionPosterCommand(program: Command) {
     .command("assertion-poster")
     .description("Deploys AssertionPoster")
 
-  addInitSubcommand(assertionCmd, "assertion-poster", appchainDeployAssertionPosterOptionsSchema)
+  addInitSubcommand(
+    assertionCmd,
+    "assertion-poster",
+    appchainDeployAssertionPosterOptionsSchema
+  )
 
   assertionCmd
     .option("--config <path>", "Path to JSON config file")
