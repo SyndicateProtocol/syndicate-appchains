@@ -126,8 +126,8 @@ const sequencing = z.object({
   syndicateSequencingChain: z.string().transform((val) => getAddress(val)),
   allowlistSequencingModule: z.string().transform((val) => getAddress(val)),
   requireAndModule: z.string().transform((val) => getAddress(val)),
-  settlementBlockBeforeDeployment: z.string(),
-  deployedAtBlock: z.string()
+  settlementBlockBeforeDeployment: z.number(),
+  deployedAtBlock: z.number()
 })
 
 const withdrawals = z.object({

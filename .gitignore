@@ -87,8 +87,8 @@ run.sh
 
 .ignore
 
-synd-cli/*.json
-!synd-cli/*.config.json.example
+synd-cli/options/*
+!synd-cli/options/examples
 synd-cli/node_modules
 synd-cli/*.tsbuildinfo
 synd-cli/src/dev

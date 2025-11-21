@@ -1,7 +1,7 @@
 {
-  "settlement-rpc": "https://sepolia.arbiscan.io",
-  "sequencing-rpc": "https://rpc.ankr.com/base_sepolia",
-  "ethereum-rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "settlement-rpc": "https://sepolia.base.org",
+  "sequencing-rpc": "https://rpc.testnet.syndicate.io",
+  "ethereum-rpc": "https://sepolia.drpc.org",
   "appchain-rpc": "http://localhost:8449",
   "appchain-explorer": "https://explorer.example.com",
   "id": 123456,

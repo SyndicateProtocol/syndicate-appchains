@@ -1,6 +1,6 @@
 {
-  "settlement-rpc": "https://sepolia.arbiscan.io",
-  "sequencing-rpc": "https://rpc.ankr.com/base_sepolia",
+  "settlement-rpc": "https://sepolia.base.org",
+  "sequencing-rpc": "https://rpc.testnet.syndicate.io",
   "appchain-rpc": "http://localhost:8449",
   "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
   "new-owner": "0x0000000000000000000000000000000000000000",
@@ -32,7 +32,7 @@
         "bridge": "0x0000000000000000000000000000000000000000",
         "upgradeExecutor": "0x0000000000000000000000000000000000000000",
         "validatorWalletCreator": "0x0000000000000000000000000000000000000000",
-        "deployedAtBlockNumber": 12345
+        "deployedAtBlockNumber": 0
       },
       "tokenBridgeContracts": {
         "l2Contracts": {
@@ -61,8 +61,8 @@
       "syndicateSequencingChain": "0x0000000000000000000000000000000000000000",
       "allowlistSequencingModule": "0x0000000000000000000000000000000000000000",
       "requireAndModule": "0x0000000000000000000000000000000000000000",
-      "settlementBlockBeforeDeployment": "12345",
-      "deployedAtBlock": "12345"
+      "settlementBlockBeforeDeployment": 12345,
+      "deployedAtBlock": 12345
     },
     "withdrawals": {
       "teeKeyManager": "0x0000000000000000000000000000000000000000",
