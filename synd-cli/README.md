@@ -8,237 +8,122 @@ A TypeScript-based CLI tool for creating and managing Syndicate Appchains. It ha
 bun install
 ```
 
+## Quick Start
+
+1. **Generate example config files:**
+   ```bash
+   bun run synd-cli appchain create foundation init
+   bun run synd-cli appchain create features init
+   ```
+
+2. **Edit the generated config files** in `options/` with your values
+
+3. **Deploy contracts:**
+   ```bash
+   bun run synd-cli appchain create foundation --config options/foundation.json
+   bun run synd-cli appchain create features --config options/features.json
+   ```
+
+4. **Save the private keys** displayed during deployment (sequencer, proposer, etc.)
+
 ## Usage
 
-The CLI is invoked using:
+The CLI supports two ways to provide configuration:
+
+### Config Files (Recommended)
+
+Most commands support an `init` subcommand that generates an example config file with only the required fields:
 
 ```bash
-bun run synd-cli [command] [options]
+# Generate example config
+bun run synd-cli appchain create foundation init
+
+# Use the config file
+bun run synd-cli appchain create foundation --config options/foundation.json
 ```
 
-### Available Commands
+Config files use kebab-case keys matching CLI flag names. CLI flags can override config file values.
 
-- `appchain` - Manage appchains
-  - `create foundation` - Deploy foundational contracts
-  - `create features` - Deploy additional features (token bridge, withdrawals, etc.)
-  - `create sequencing` - Deploy sequencing-related contracts
-  - `create withdrawals` - Deploy withdrawal-related contracts
-  - `create assertion-poster` - Deploy AssertionPoster contract
-  - `create tee-module` - Deploy TeeModule contract
-  - `handoff` - Transfer ownership of contracts
-  - `arb-owner` - Manage Arbitrum owner operations
-  - `check-token-bridge` - Verify token bridge setup
-  - `e2e` - Run end-to-end tests
-- `alias` - Calculate aliased address for L1->L2 messages
+### CLI Flags
 
-## Using Config Files
-
-All commands support loading configuration from a JSON file using the `--config` flag. This is more convenient than passing many CLI arguments.
-
-### Example: Using a config file
+All options can also be passed as CLI flags. Run any command with `--help` to see available options:
 
 ```bash
-# Create a config file
-cp foundation.config.json.example my-chain.config.json
-# Edit the config file with your values
-# Run with config file
-bun run synd-cli appchain create foundation --config my-chain.config.json
+bun run synd-cli appchain create foundation --help
 ```
-
-**Config file format:**
-
-Config files use kebab-case keys (matching the CLI flag names):
-
-```json
-{
-  "settlement-rpc": "https://...",
-  "sequencing-rpc": "https://...",
-  "ethereum-rpc": "https://...",
-  "id": 123456,
-  "name": "my-appchain",
-  "deployer-private-key": "0x...",
-  "owner-private-key": "0x..."
-}
-```
-
-**Overriding config values:**
-
-CLI flags take precedence over config file values:
-
-```bash
-# Use config file but override the chain name
-bun run synd-cli appchain create foundation \
-  --config my-chain.config.json \
-  --name different-chain-name
-```
-
-**File path support:**
-
-For complex JSON values like `--core-contracts` and `--synd`, you can provide a file path instead of a JSON string:
-
-```bash
-bun run synd-cli appchain create features \
-  --config features.config.json \
-  --core-contracts ./appchains/my-chain/core-contracts.json
-```
-
-See the `*.config.json.example` files for complete examples.
 
 ## Creating a New Appchain
 
-### Step 1: Deploy Foundation Contracts
+The typical workflow involves two main steps:
 
-Deploy foundational dependencies onto the settlement & sequencing chains required by the Appchain node to run.
+### 1. Deploy Foundation Contracts
 
-**What gets deployed:**
+Deploys foundational contracts required by the Appchain node to run:
+- Nitro core contracts on the settlement chain
+- Sequencing contracts on the sequencing chain
+- ArbChainConfig
 
-Settlement Chain:
-- [Nitro Core Contracts](https://github.com/OffchainLabs/nitro-contracts)
-- `ArbChainConfig`
+> **Important:** Save the sequencer and interim-owner private keys displayed during this step.
 
-Sequencing Chain:
-- `RequireAndModule`
-- `AllowlistSequencingModule`
-- `SyndicateSequencingChain`
+### 2. Deploy Features
 
-**Command (with config file):**
+Deploys additional contracts that depend on the Appchain node:
+- Token bridge contracts
+- Withdrawal-related contracts (TeeModule, AssertionPoster, etc.)
+- Utility contracts (Multicall3)
 
-```bash
-bun run synd-cli appchain create foundation --config foundation.config.json
-```
+> **Important:** The Appchain RPC must be available before running this step. This process can take 5-10 minutes as it waits for retryable tickets to succeed.
 
-**Command (with CLI flags):**
+## Available Commands
 
-```bash
-bun run synd-cli appchain create foundation \
-  --settlement-rpc <SETTLEMENT_RPC_URL> \
-  --sequencing-rpc <SEQUENCING_RPC_URL> \
-  --ethereum-rpc <ETHEREUM_RPC_URL> \
-  --appchain-rpc <APPCHAIN_RPC_URL> \
-  --appchain-explorer <APPCHAIN_EXPLORER_URL> \
-  --id <CHAIN_ID> \
-  --name <CHAIN_NAME> \
-  --deployer-private-key <DEPLOYER_PRIVATE_KEY> \
-  --owner-private-key <OWNER_PRIVATE_KEY> \
-  [--native-token <TOKEN_ADDRESS>] \
-  [--core-contracts-created-at-hash <HASH>]
-```
+Run `bun run synd-cli` to see all available commands. Main command categories:
 
-**Optional flags:**
-- `--native-token` - Native token address (defaults to ETH if not provided)
-- `--core-contracts-created-at-hash` - Skip deploying nitro core contracts if already deployed
+- `appchain create` - Deploy various contract sets (foundation, features, sequencing, withdrawals, etc.)
+- `appchain handoff` - Transfer contract ownership
+- `appchain arb-owner` - Manage Arbitrum owner operations
+- `appchain check-token-bridge` - Verify token bridge setup
+- `appchain e2e` - Run end-to-end tests
+- `alias` - Calculate L1->L2 aliased addresses
 
-**Output:** Contract addresses will be saved to `appchains/<chain_name>/*.json`
-
-> [!NOTE]
-> An EOA is created for the batch sequencer during this process. Save the interim-owner and sequencer private keys securely.
-
-### Step 2: Deploy Features
-
-Deploy additional contracts to the settlement chain & appchain that depend on the Appchain node.
-
-> [!IMPORTANT]
-> The Appchain RPC URL must be available for this step! DO NOT CONTINUE unless the appchain RPC is working!
-
-**What gets deployed:**
-
-Settlement Chain:
-- [Nitro Token Bridge](https://github.com/OffchainLabs/token-bridge-contracts): Allows users to bridge non-native tokens
-- `TeeKeyManager`: Required for withdrawals
-- `AssertionPoster`: Required for withdrawals
-- `TeeModule`: Required for withdrawals
-
-Appchain:
-- [`Multicall3`](https://github.com/mds1/multicall3/blob/main/src/Multicall3.sol): Utility contract for aggregating function calls
-
-**Command (with config file):**
-
-```bash
-bun run synd-cli appchain create features --config features.config.json
-```
-
-**Command (with CLI flags):**
-
-```bash
-bun run synd-cli appchain create features \
-  --settlement-rpc <SETTLEMENT_RPC_URL> \
-  --sequencing-rpc <SEQUENCING_RPC_URL> \
-  --synd-fork-sequencing-rpc <SYND_FORK_SEQUENCING_RPC_URL> \
-  --ethereum-rpc <ETHEREUM_RPC_URL> \
-  --appchain-rpc <APPCHAIN_RPC_URL> \
-  --appchain-explorer <APPCHAIN_EXPLORER_URL> \
-  --owner-private-key <OWNER_PRIVATE_KEY> \
-  --deployer-private-key <DEPLOYER_PRIVATE_KEY> \
-  --chain-name <CHAIN_NAME> \
-  --sequencing-contract <SEQUENCING_CONTRACT_ADDRESS> \
-  --core-contracts <CORE_CONTRACTS_JSON_OR_FILE_PATH>
-```
-
-**Output:** Contract addresses will be saved to `appchains/<chain_name>/*.json`
-
-> [!NOTE]
-> This process can take 5-10 minutes as it waits for retryable tickets between settlement and appchain to succeed. An EOA is created for the proposer during this process - save the private key securely.
-
-## Additional Commands
-
-### Transfer Ownership (Handoff)
-
-Transfer contract ownership to a new address:
-
-```bash
-bun run synd-cli appchain handoff [options]
-```
-
-### Check Token Bridge
-
-Verify token bridge setup and configuration:
-
-```bash
-bun run synd-cli appchain check-token-bridge [options]
-```
-
-### Calculate L1->L2 Alias
-
-Calculate the aliased address for L1->L2 messages:
-
-```bash
-bun run synd-cli alias <address>
-```
-
-### E2E Testing
-
-Run end-to-end tests using a config file:
-
-```bash
-bun run synd-cli appchain e2e --config e2e.config.json
-```
-
-See [e2e.config.json.example](./e2e.config.json.example) for the required configuration format.
+Each command supports:
+- `init` subcommand to generate example config files
+- `--config <path>` to load options from a JSON file
+- `--help` to see all available options
 
 ## Development
 
-### Format Code
+### Prerequisites
+
+- [Bun](https://bun.sh) - JavaScript runtime and package manager
+- Node.js (for pre-commit hooks)
+
+### Scripts
 
 ```bash
-bun run format
-```
-
-### Lint
-
-```bash
-bun run lint
-```
-
-### Type Check
-
-```bash
-bun run typecheck
+bun run format          # Format code with Biome
+bun run lint            # Lint code with Biome
+bun run typecheck       # Type check with TypeScript
+bun run biome:check     # Run all Biome checks
 ```
 
 ### Generate Contract ABIs
 
-Contract ABIs are generated from the `synd-contracts` directory:
-
 ```bash
 make generate-contract-abis
+```
+
+## Project Structure
+
+```
+synd-cli/
+├── src/
+│   ├── abi/              # Contract ABIs
+│   ├── cli/
+│   │   ├── commands/     # CLI command implementations
+│   │   ├── schema.ts     # Zod schemas for option validation
+│   │   └── index.ts      # Main CLI entry point
+│   └── utils/            # Utility functions
+├── options/              # Config file examples and generated configs
+│   └── examples/         # Example config files
+└── biome.json            # Biome formatter/linter configuration
 ```
