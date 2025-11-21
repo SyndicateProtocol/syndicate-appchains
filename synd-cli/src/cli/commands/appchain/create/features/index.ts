@@ -1,16 +1,21 @@
 import { appchainCreateFeaturesOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { getChainIdFromRpc } from "@/utils/clients"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { features } from "./features"
 
 export function createFeaturesCommand(program: Command) {
-  program
+  const featuresCmd = program
     .command("features")
     .description(
       "Deploys Arbitrum nitro token bridge, Syndicate withdrawals contracts, Multicall3"
     )
+
+  addInitSubcommand(featuresCmd, "features", appchainCreateFeaturesOptionsSchema)
+
+  featuresCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")

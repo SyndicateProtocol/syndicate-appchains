@@ -1,13 +1,18 @@
 import { appchainDeployAssertionPosterOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { deployAssertionPoster } from "./features/deployAssertionPoster"
 
 export function createAssertionPosterCommand(program: Command) {
-  program
+  const assertionCmd = program
     .command("assertion-poster")
     .description("Deploys AssertionPoster")
+
+  addInitSubcommand(assertionCmd, "assertion-poster", appchainDeployAssertionPosterOptionsSchema)
+
+  assertionCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--owner-private-key <key>", "Private key of the owner account")

@@ -1,13 +1,18 @@
 import { appchainCreateTeeModuleOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { deployWithdrawals } from "./features/deployWithdrawals"
 
 export function createWithdrawalsContractsCommand(program: Command) {
-  program
+  const withdrawalsCmd = program
     .command("withdrawals")
     .description("Deploy withdrawals contracts: AssertionPoster & TeeModule")
+
+  addInitSubcommand(withdrawalsCmd, "withdrawals", appchainCreateTeeModuleOptionsSchema)
+
+  withdrawalsCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")

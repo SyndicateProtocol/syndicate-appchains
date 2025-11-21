@@ -1,15 +1,22 @@
 import { appchainCreateFoundationOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { foundation } from "./foundation"
 
 export function createFoundationCommand(program: Command) {
-  program
+  const foundationCmd = program
     .command("foundation")
     .description(
       "Deploys Arbitrum nitro core contracts, Syndicate sequencing contracts & ArbChainConfig"
     )
+
+  // Add init subcommand - automatically extracts from schema!
+  addInitSubcommand(foundationCmd, "foundation", appchainCreateFoundationOptionsSchema)
+
+  // Original foundation command
+  foundationCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "Parent chain RPC URL")
     .option("--sequencing-rpc <url>", "Sequencing chain RPC URL")

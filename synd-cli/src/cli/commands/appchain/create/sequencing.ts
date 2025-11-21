@@ -1,16 +1,21 @@
 import { deploySequencingChain } from "@/cli/commands/appchain/create/foundation/deploySequencingChain"
 import { appchainCreateSequencingChainOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 
 export function createSequencingCommand(program: Command) {
-  program
+  const sequencingCmd = program
     .command("sequencing")
     .description(
       "Deploy sequencing contracts: SyndicateSequencingChain, AllowlistSequencingModule, RequireAndModule"
     )
+
+  addInitSubcommand(sequencingCmd, "sequencing", appchainCreateSequencingChainOptionsSchema)
+
+  sequencingCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
     .option("--owner-private-key <key>", "Private key of the owner account")

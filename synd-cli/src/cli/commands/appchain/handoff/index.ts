@@ -3,12 +3,17 @@ import type { Command } from "@commander-js/extra-typings"
 import { formatEther, parseEther } from "viem"
 import { appchainHandoffOptionsSchema } from "../../../schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { handoff } from "./handoff"
 
 export function handoffCommand(program: Command) {
-  program
+  const handoffCmd = program
     .command("handoff")
     .description("Transfer appchain ownership to a new owner")
+
+  addInitSubcommand(handoffCmd, "handoff", appchainHandoffOptionsSchema)
+
+  handoffCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")

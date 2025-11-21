@@ -3,12 +3,17 @@ import { supportedSettlementChains } from "@/utils/constants"
 import type { Command } from "@commander-js/extra-typings"
 import { appchainCheckTokenBridgeOptionsSchema } from "../../../schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { checkTokenBridge } from "./checkTokenBridge"
 
 export function checkTokenBridgeCommand(program: Command) {
-  program
+  const checkCmd = program
     .command("check-token-bridge")
     .description("Check token bridge deployment and retryable ticket execution")
+
+  addInitSubcommand(checkCmd, "check-token-bridge", appchainCheckTokenBridgeOptionsSchema)
+
+  checkCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--appchain-rpc <url>", "RPC URL for the appchain")

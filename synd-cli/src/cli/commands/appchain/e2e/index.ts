@@ -1,5 +1,6 @@
 import { appchainE2EOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import {
   getAppchainClient,
   getPublicClient,
@@ -12,9 +13,13 @@ import { privateKeyToAccount } from "viem/accounts"
 import { e2e } from "./e2e"
 
 export function e2eCommand(program: Command) {
-  program
+  const e2eCmd = program
     .command("e2e")
     .description("Run end-to-end tests on an appchain")
+
+  addInitSubcommand(e2eCmd, "e2e", appchainE2EOptionsSchema)
+
+  e2eCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "Settlement chain RPC URL")
     .option("--appchain-rpc <url>", "Appchain RPC URL")

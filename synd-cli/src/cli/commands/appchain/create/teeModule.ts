@@ -1,13 +1,18 @@
 import { appchainDeployTeeModuleOptionsSchema } from "@/cli/schema"
 import { parseConfigAndOptions } from "@/utils/config"
+import { addInitSubcommand } from "@/utils/addInitCommand"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { deployTeeModule } from "./features/deployTeeModule"
 
 export function createTeeModuleCommand(program: Command) {
-  program
+  const teeCmd = program
     .command("tee-module")
     .description("Deploys TeeModule")
+
+  addInitSubcommand(teeCmd, "tee-module", appchainDeployTeeModuleOptionsSchema)
+
+  teeCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
