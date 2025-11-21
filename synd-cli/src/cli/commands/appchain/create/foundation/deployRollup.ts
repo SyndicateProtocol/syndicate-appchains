@@ -1,4 +1,4 @@
-import type { CreateRollupParams } from "@/types"
+import type { DeployRollup } from "@/types"
 import { supportedSettlementChains } from "@/utils/constants"
 import {
   getChainExplorerUrl,
@@ -7,20 +7,20 @@ import {
 } from "@/utils/helpers"
 import { print } from "@/utils/print"
 import {
-  type CreateRollupParams as NitroCreateRollupParams,
   createRollupEnoughCustomFeeTokenAllowance,
   createRollupGetRetryablesFeesWithDefaults,
   createRollupPrepareCustomFeeTokenApprovalTransactionRequest,
   createRollupPrepareDeploymentParamsConfig,
   createRollupPrepareTransactionReceipt,
+  type CreateRollupParams as NitroCreateRollupParams,
   prepareChainConfig
 } from "@arbitrum/orbit-sdk"
 import { sleep } from "bun"
 import {
-  type TransactionSerializable,
   erc20Abi,
   formatEther,
   parseUnits,
+  type TransactionSerializable,
   zeroAddress
 } from "viem"
 import { createRollupPrepareTransactionRequest } from "./createRollupPrepareTransactionRequest"
@@ -31,7 +31,7 @@ export async function deployRollup({
   deployerSettlementWalletClient,
   ownerSettlementWalletClient,
   settlementPublicClient
-}: CreateRollupParams) {
+}: DeployRollup) {
   const deployerAccount = deployerSettlementWalletClient.account
   const rollupOwnerAccount = ownerSettlementWalletClient.account
   const owner = rollupOwnerAccount.address

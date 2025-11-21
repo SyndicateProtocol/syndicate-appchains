@@ -9,6 +9,8 @@ import type {
   WalletClient
 } from "viem"
 
+export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>
+
 export type GetChainsResponse = Array<{
   name: string
   chain: string
@@ -36,48 +38,37 @@ export type GetChainsResponse = Array<{
     standard: string
   }>
 }>
-export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>
 
-export interface TokenContracts {
-  l2Contracts: {
-    router: Hex
-    standardGateway: Hex
-    customGateway: Hex
-    wethGateway: Hex
-    weth: Hex
-    multicall: Hex
-    proxyAdmin: Hex
-  }
-  l3Contracts: {
-    router: Hex
-    standardGateway: Hex
-    customGateway: Hex
-    wethGateway: Hex
-    weth: Hex
-    proxyAdmin: Hex
-    beaconProxyFactory: Hex
-    upgradeExecutor: Hex
-    multicall: Hex
-  }
-}
-
-export interface GenerateBridgeConfigParams {
+export interface GenerateBridgeConfig {
   coreContracts: CoreContracts
   rpcUrl: string
   explorerUrl: string
   parentChainId: number
-  tokenContracts?: TokenContracts
+  tokenContracts?: {
+    l2Contracts: {
+      router: Hex
+      standardGateway: Hex
+      customGateway: Hex
+      wethGateway: Hex
+      weth: Hex
+      multicall: Hex
+      proxyAdmin: Hex
+    }
+    l3Contracts: {
+      router: Hex
+      standardGateway: Hex
+      customGateway: Hex
+      wethGateway: Hex
+      weth: Hex
+      proxyAdmin: Hex
+      beaconProxyFactory: Hex
+      upgradeExecutor: Hex
+      multicall: Hex
+    }
+  }
   chainName: string
   chainId: number
   chainOwner: Hex
-}
-
-export interface CreateNodeConfigParams {
-  chainName: string
-  deploymentTxHash: Hex
-  parentChainClient: PublicClientWithChain
-  batchPosterPrivateKey?: Hex
-  validatorPrivateKey?: Hex
 }
 
 export type ChainNativeCurrency = {
@@ -142,7 +133,7 @@ export interface Foundation {
   appchainExplorer: string
 }
 
-export interface DeployNitroRollupParams {
+export interface DeployNitroRollup {
   chainId: number
   chainName: string
   ownerSettlementWalletClient: PrivateKeyWalletAccount
@@ -153,7 +144,7 @@ export interface DeployNitroRollupParams {
   deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
 
-export interface CreateRollupParams {
+export interface DeployRollup {
   chainId: number
   nativeToken: Hex
   deployerSettlementWalletClient: PrivateKeyWalletAccount
@@ -174,7 +165,7 @@ export interface CreateArbChainConfig {
   deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
 
-export interface DeploySequencingChainParams {
+export interface DeploySequencingChain {
   sequencerAccount: Account
   chainId: number
   sequencingPublicClient: PublicClientWithChain
@@ -182,26 +173,26 @@ export interface DeploySequencingChainParams {
   ownerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
-export interface CreateRequireAndModuleParams {
+export interface CreateRequireAndModule {
   chainId: number
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
-export interface CreateSyndicateSequencingChainParams {
+export interface CreateSyndicateSequencingChain {
   requireAndModule: Hex
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   chainId: number
 }
 
-export interface DeployAndSetupAllowlistSequencingModuleParams {
+export interface DeployAndSetupAllowlistSequencingModule {
   sequencerAccount: Account
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
-export interface RegisterAllowlistSequencingModuleOnRequireAllModuleParams {
+export interface RegisterAllowlistSequencingModuleOnRequireAllModule {
   requireAndModule: Hex
   allowlistSequencingModule: Hex
   deployerSequencingWalletClient: PrivateKeyWalletAccount

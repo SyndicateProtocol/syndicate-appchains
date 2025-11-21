@@ -9,11 +9,11 @@ import { requireAndModuleFactoryABI } from "@/abi/synd/RequireAndModuleFactory"
 import { syndicateFactoryABI } from "@/abi/synd/SyndicateFactory"
 import { syndicateSequencingChainABI } from "@/abi/synd/SyndicateSequencingChain"
 import type {
-  CreateRequireAndModuleParams,
-  CreateSyndicateSequencingChainParams,
-  DeployAndSetupAllowlistSequencingModuleParams,
-  DeploySequencingChainParams,
-  RegisterAllowlistSequencingModuleOnRequireAllModuleParams,
+  CreateRequireAndModule,
+  CreateSyndicateSequencingChain,
+  DeployAndSetupAllowlistSequencingModule,
+  DeploySequencingChain,
+  RegisterAllowlistSequencingModuleOnRequireAllModule,
   TransferAllContractsOwnershipParams
 } from "@/types"
 import { supportedSequencingChains } from "@/utils/constants"
@@ -26,7 +26,7 @@ export async function deploySequencingChain({
   sequencingPublicClient,
   deployerSequencingWalletClient,
   ownerSequencingWalletClient
-}: DeploySequencingChainParams) {
+}: DeploySequencingChain) {
   // 1. Create RequireAndModule
   const requireAndModule = await createRequireAndModule({
     chainId,
@@ -81,7 +81,7 @@ async function createRequireAndModule({
   chainId,
   sequencingPublicClient,
   deployerSequencingWalletClient
-}: CreateRequireAndModuleParams) {
+}: CreateRequireAndModule) {
   const requireAndFactoryAddress =
     supportedSequencingChains[sequencingPublicClient.chain.id].requireAndFactory
 
@@ -125,7 +125,7 @@ async function createSyndicateSequencingChain({
   sequencingPublicClient,
   deployerSequencingWalletClient,
   chainId
-}: CreateSyndicateSequencingChainParams) {
+}: CreateSyndicateSequencingChain) {
   const syndicateFactoryAddress =
     supportedSequencingChains[sequencingPublicClient.chain.id].syndicateFactory
   const { request: syndicateSequencingChainRequest } =
@@ -174,7 +174,7 @@ async function deployAndSetupAllowlistSequencingModule({
   sequencerAccount,
   sequencingPublicClient,
   deployerSequencingWalletClient
-}: DeployAndSetupAllowlistSequencingModuleParams) {
+}: DeployAndSetupAllowlistSequencingModule) {
   const allowlistSequencingModuleHash =
     await deployerSequencingWalletClient.deployContract({
       abi: allowlistSequencingModuleABI,
@@ -223,7 +223,7 @@ async function registerAllowlistSequencingModuleOnRequireAllModule({
   allowlistSequencingModule,
   deployerSequencingWalletClient,
   sequencingPublicClient
-}: RegisterAllowlistSequencingModuleOnRequireAllModuleParams) {
+}: RegisterAllowlistSequencingModuleOnRequireAllModule) {
   const registerSequencerAllowlistTxHash =
     await deployerSequencingWalletClient.writeContract({
       address: requireAndModule,

@@ -1,4 +1,4 @@
-import type { DeployNitroRollupParams } from "@/types"
+import type { DeployNitroRollup } from "@/types"
 import { generateBridgeConfig } from "@/utils/generateBridgeConfig"
 import { print } from "@/utils/print"
 import { sleep } from "bun"
@@ -15,7 +15,7 @@ export async function deployNitroRollup({
   appchainExplorer,
   nativeToken,
   deployerSettlementWalletClient
-}: DeployNitroRollupParams) {
+}: DeployNitroRollup) {
   const hash = await deployRollup({
     chainId,
     nativeToken,

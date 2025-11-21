@@ -1,6 +1,6 @@
 import { zeroAddress } from "viem"
 
-import type { GenerateBridgeConfigParams } from "@/types"
+import type { GenerateBridgeConfig } from "@/types"
 import { DEFAULT_APPCHAIN_MIN_BASE_FEE } from "./constants"
 
 export function generateBridgeConfig({
@@ -12,7 +12,7 @@ export function generateBridgeConfig({
   chainName,
   chainId,
   chainOwner
-}: GenerateBridgeConfigParams) {
+}: GenerateBridgeConfig) {
   const bridgeConfig = {
     chainInfo: {
       chainName,
