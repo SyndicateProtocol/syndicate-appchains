@@ -1,4 +1,5 @@
-import { appchainE2EOptionsSchema, handleSchemaErrors } from "@/cli/schema"
+import { appchainE2EOptionsSchema } from "@/cli/schema"
+import { parseConfigAndOptions } from "@/utils/config"
 import {
   getAppchainClient,
   getPublicClient,
@@ -14,20 +15,16 @@ export function e2eCommand(program: Command) {
   program
     .command("e2e")
     .description("Run end-to-end tests on an appchain")
-    .requiredOption("--settlement-rpc <url>", "Settlement chain RPC URL")
-    .requiredOption("--appchain-rpc <url>", "Appchain RPC URL")
-    .requiredOption("--inbox <address>", "Inbox contract address")
-    .requiredOption("--private-key <key>", "Private key for transactions")
+    .option("--config <path>", "Path to JSON config file")
+    .option("--settlement-rpc <url>", "Settlement chain RPC URL")
+    .option("--appchain-rpc <url>", "Appchain RPC URL")
+    .option("--inbox <address>", "Inbox contract address")
+    .option("--private-key <key>", "Private key for transactions")
     .action(async (options: Record<string, unknown>) => {
-      const {
-        data: validatedOptions,
-        success,
-        error
-      } = appchainE2EOptionsSchema.safeParse(options)
-
-      if (!success) {
-        return handleSchemaErrors(error)
-      }
+      const validatedOptions = parseConfigAndOptions(
+        options,
+        appchainE2EOptionsSchema
+      )
 
       const { settlementRpc, appchainRpc, privateKey } = validatedOptions
 

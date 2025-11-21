@@ -1,12 +1,5 @@
-import {
-  appchainCreateFoundationOptionsSchema,
-  handleSchemaErrors
-} from "@/cli/schema"
-import {
-  kebabToCamelCase,
-  loadConfigFile,
-  mergeConfigWithOptions
-} from "@/utils/config"
+import { appchainCreateFoundationOptionsSchema } from "@/cli/schema"
+import { parseConfigAndOptions } from "@/utils/config"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
 import { foundation } from "./foundation"
@@ -36,33 +29,11 @@ export function createFoundationCommand(program: Command) {
       "Core contracts created at hash (optional): if provided, will skip deploying the nitro core contracts"
     )
     .action(async (options: Record<string, unknown>) => {
-      // Load config file if provided
-      let configFileOptions: Record<string, unknown> = {}
-      if (options.config) {
-        const rawConfig = loadConfigFile<Record<string, unknown>>(
-          options.config as string
-        )
-        configFileOptions = kebabToCamelCase(rawConfig)
-      }
-
-      // Remove config key before merging (it's not part of the schema)
-      const { config, ...optionsWithoutConfig } = options
-
-      // Merge config file with CLI options (CLI takes precedence)
-      const mergedOptions = mergeConfigWithOptions(
-        configFileOptions,
-        optionsWithoutConfig
+      const validatedOptions = parseConfigAndOptions(
+        options,
+        appchainCreateFoundationOptionsSchema
       )
-      console.log("mergedOptions", mergedOptions)
-      const {
-        data: validatedOptions,
-        success,
-        error
-      } = appchainCreateFoundationOptionsSchema.safeParse(mergedOptions)
 
-      if (!success) {
-        return handleSchemaErrors(error)
-      }
       const {
         id,
         name,
@@ -76,6 +47,7 @@ export function createFoundationCommand(program: Command) {
         settlementRpc,
         sequencingRpc
       } = validatedOptions
+
       const {
         deployerSettlementWalletClient,
         deployerSequencingWalletClient,

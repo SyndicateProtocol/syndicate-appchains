@@ -1,7 +1,8 @@
-import type { SyndObjectPaths } from "@/cli/schema";
+import type { synd } from "@/cli/schema";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { stringify } from "viem";
+import type z from "zod";
 
 const outputDirName = "appchains";
 
@@ -121,3 +122,20 @@ export async function upsertToEoaSecrets(
 		JSON.stringify(eoaSecrets, null, 2),
 	);
 }
+
+// Type utilities for generating valid synd object paths
+type PathImpl<T, Key extends keyof T> = Key extends string
+	? T[Key] extends Record<string, unknown>
+		?
+				| `${Key}.${PathImpl<T[Key], Exclude<keyof T[Key], keyof unknown[]>> & string}`
+				| `${Key}.${Exclude<keyof T[Key], keyof unknown[]> & string}`
+		: never
+	: never;
+
+type PathImpl2<T> = PathImpl<T, keyof T> | keyof T;
+
+export type SyndPath<T> = PathImpl2<T> extends string | keyof T
+	? PathImpl2<T>
+	: keyof T;
+
+export type SyndObjectPaths = SyndPath<z.infer<typeof synd>>;
