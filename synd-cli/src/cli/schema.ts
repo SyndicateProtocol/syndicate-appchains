@@ -1,6 +1,8 @@
 import { type Hex, getAddress, zeroAddress } from "viem"
 import { z } from "zod"
 import { exitWithError } from "../utils/print"
+import { existsSync, readFileSync } from "node:fs"
+import { resolve } from "node:path"
 
 export const ethAddressSchema = z
   .string()
@@ -197,8 +199,27 @@ export const appchainCreateFeaturesOptionsSchema = z
     appchainExplorer: z.url("Invalid appchain explorer URL"),
     sequencingContract: ethAddressSchema,
     coreContracts: z
-      .string()
-      .transform((val) => JSON.parse(val))
+      .union([
+        z.string().transform((val) => {
+          // Check if it's a file path
+          const resolvedPath = resolve(val)
+          if (existsSync(resolvedPath)) {
+            try {
+              const fileContent = readFileSync(resolvedPath, "utf-8")
+              return JSON.parse(fileContent)
+            } catch (error) {
+              throw new Error(`Failed to parse JSON from file: ${resolvedPath}`)
+            }
+          }
+          // Otherwise try to parse as JSON string
+          try {
+            return JSON.parse(val)
+          } catch {
+            throw new Error(`Invalid core-contracts: not a valid JSON string or file path`)
+          }
+        }),
+        z.object({}).passthrough()
+      ])
       .pipe(coreContracts)
   })
   .strict()

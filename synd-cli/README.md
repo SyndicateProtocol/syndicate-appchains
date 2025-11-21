@@ -31,6 +31,59 @@ bun run synd-cli [command] [options]
   - `e2e` - Run end-to-end tests
 - `alias` - Calculate aliased address for L1->L2 messages
 
+## Using Config Files
+
+All commands support loading configuration from a JSON file using the `--config` flag. This is more convenient than passing many CLI arguments.
+
+### Example: Using a config file
+
+```bash
+# Create a config file
+cp foundation.config.json.example my-chain.config.json
+# Edit the config file with your values
+# Run with config file
+bun run synd-cli appchain create foundation --config my-chain.config.json
+```
+
+**Config file format:**
+
+Config files use kebab-case keys (matching the CLI flag names):
+
+```json
+{
+  "settlement-rpc": "https://...",
+  "sequencing-rpc": "https://...",
+  "ethereum-rpc": "https://...",
+  "id": 123456,
+  "name": "my-appchain",
+  "deployer-private-key": "0x...",
+  "owner-private-key": "0x..."
+}
+```
+
+**Overriding config values:**
+
+CLI flags take precedence over config file values:
+
+```bash
+# Use config file but override the chain name
+bun run synd-cli appchain create foundation \
+  --config my-chain.config.json \
+  --name different-chain-name
+```
+
+**File path support:**
+
+For complex JSON values like `--core-contracts` and `--synd`, you can provide a file path instead of a JSON string:
+
+```bash
+bun run synd-cli appchain create features \
+  --config features.config.json \
+  --core-contracts ./appchains/my-chain/core-contracts.json
+```
+
+See the `*.config.json.example` files for complete examples.
+
 ## Creating a New Appchain
 
 ### Step 1: Deploy Foundation Contracts
@@ -48,7 +101,13 @@ Sequencing Chain:
 - `AllowlistSequencingModule`
 - `SyndicateSequencingChain`
 
-**Command:**
+**Command (with config file):**
+
+```bash
+bun run synd-cli appchain create foundation --config foundation.config.json
+```
+
+**Command (with CLI flags):**
 
 ```bash
 bun run synd-cli appchain create foundation \
@@ -69,7 +128,7 @@ bun run synd-cli appchain create foundation \
 - `--native-token` - Native token address (defaults to ETH if not provided)
 - `--core-contracts-created-at-hash` - Skip deploying nitro core contracts if already deployed
 
-**Output:** Contract addresses will be saved to `out/<chain_name>/*.json`
+**Output:** Contract addresses will be saved to `appchains/<chain_name>/*.json`
 
 > [!NOTE]
 > An EOA is created for the batch sequencer during this process. Save the interim-owner and sequencer private keys securely.
@@ -92,7 +151,13 @@ Settlement Chain:
 Appchain:
 - [`Multicall3`](https://github.com/mds1/multicall3/blob/main/src/Multicall3.sol): Utility contract for aggregating function calls
 
-**Command:**
+**Command (with config file):**
+
+```bash
+bun run synd-cli appchain create features --config features.config.json
+```
+
+**Command (with CLI flags):**
 
 ```bash
 bun run synd-cli appchain create features \
@@ -106,10 +171,10 @@ bun run synd-cli appchain create features \
   --deployer-private-key <DEPLOYER_PRIVATE_KEY> \
   --chain-name <CHAIN_NAME> \
   --sequencing-contract <SEQUENCING_CONTRACT_ADDRESS> \
-  --core-contracts <CORE_CONTRACTS_JSON>
+  --core-contracts <CORE_CONTRACTS_JSON_OR_FILE_PATH>
 ```
 
-**Output:** Contract addresses will be saved to `out/<chain_name>/*.json`
+**Output:** Contract addresses will be saved to `appchains/<chain_name>/*.json`
 
 > [!NOTE]
 > This process can take 5-10 minutes as it waits for retryable tickets between settlement and appchain to succeed. An EOA is created for the proposer during this process - save the private key securely.

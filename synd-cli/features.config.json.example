@@ -1,0 +1,13 @@
+{
+  "settlement-rpc": "https://sepolia.arbiscan.io",
+  "sequencing-rpc": "https://rpc.ankr.com/base_sepolia",
+  "synd-fork-sequencing-rpc": "http://localhost:8545",
+  "ethereum-rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "appchain-rpc": "http://localhost:8449",
+  "appchain-explorer": "https://explorer.example.com",
+  "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "deployer-private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+  "chain-name": "my-appchain",
+  "sequencing-contract": "0x0000000000000000000000000000000000000000",
+  "core-contracts": "./appchains/my-appchain/core-contracts.json"
+}

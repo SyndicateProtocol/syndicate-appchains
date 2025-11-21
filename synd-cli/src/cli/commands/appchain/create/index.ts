@@ -11,7 +11,7 @@ export function createAppchainCommand(program: Command) {
     .command("create")
     .description("Create a new appchain")
     .action(async () => {
-      console.log("Creating appchain...")
+      console.log("Use a subcommand to create an appchain")
     })
   createFoundationCommand(createAppchainProgram)
   createFeaturesCommand(createAppchainProgram)

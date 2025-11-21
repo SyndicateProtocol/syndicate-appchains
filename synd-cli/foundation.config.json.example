@@ -1,0 +1,12 @@
+{
+  "settlement-rpc": "https://sepolia.arbiscan.io",
+  "sequencing-rpc": "https://rpc.ankr.com/base_sepolia",
+  "ethereum-rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "appchain-rpc": "http://localhost:8449",
+  "appchain-explorer": "https://explorer.example.com",
+  "id": 123456,
+  "name": "my-appchain",
+  "deployer-private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+  "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "native-token": "0x0000000000000000000000000000000000000000"
+}

@@ -2,6 +2,7 @@ import {
   appchainCreateFeaturesOptionsSchema,
   handleSchemaErrors
 } from "@/cli/schema"
+import { kebabToCamelCase, loadConfigFile, mergeConfigWithOptions } from "@/utils/config"
 import { getChainIdFromRpc } from "@/utils/clients"
 import { createClients } from "@/utils/createClients"
 import type { Command } from "@commander-js/extra-typings"
@@ -13,47 +14,60 @@ export function createFeaturesCommand(program: Command) {
     .description(
       "Deploys Arbitrum nitro token bridge, Syndicate withdrawals contracts, Multicall3"
     )
-    .requiredOption(
+    .option("--config <path>", "Path to JSON config file")
+    .option(
       "--settlement-rpc <url>",
       "RPC URL for the settlement chain"
     )
-    .requiredOption(
+    .option(
       "--sequencing-rpc <url>",
       "RPC URL for the sequencing chain"
     )
-    .requiredOption(
+    .option(
       "--synd-fork-sequencing-rpc <url>",
       "RPC URL for the synd fork sequencing chain"
     )
-    .requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
-    .requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
-    .requiredOption(
+    .option("--ethereum-rpc <url>", "RPC URL for Ethereum")
+    .option("--appchain-rpc <url>", "RPC URL for the appchain")
+    .option(
       "--appchain-explorer <url>",
       "Explorer URL for the appchain"
     )
-    .requiredOption(
+    .option(
       "--owner-private-key <key>",
       "Private key of the owner account"
     )
-    .requiredOption(
+    .option(
       "--deployer-private-key <key>",
       "Private key of the deployer account"
     )
-    .requiredOption("--chain-name <name>", "Name of the appchain")
-    .requiredOption(
+    .option("--chain-name <name>", "Name of the appchain")
+    .option(
       "--sequencing-contract <address>",
       "Address of the sequencing contract"
     )
-    .requiredOption(
+    .option(
       "--core-contracts <contracts>",
-      "Core contracts for the appchain"
+      "Core contracts for the appchain (JSON string or path to JSON file)"
     )
     .action(async (options: Record<string, unknown>) => {
+      // Load config file if provided
+      let configFileOptions: Record<string, unknown> = {}
+      if (options.config) {
+        const rawConfig = loadConfigFile<Record<string, unknown>>(options.config as string)
+        configFileOptions = kebabToCamelCase(rawConfig)
+      }
+
+      // Remove config key before merging (it's not part of the schema)
+      const { config, ...optionsWithoutConfig } = options
+
+      // Merge config file with CLI options (CLI takes precedence)
+      const mergedOptions = mergeConfigWithOptions(configFileOptions, optionsWithoutConfig)
       const {
         data: validatedOptions,
         success,
         error
-      } = appchainCreateFeaturesOptionsSchema.safeParse(options)
+      } = appchainCreateFeaturesOptionsSchema.safeParse(mergedOptions)
 
       if (!success) {
         return handleSchemaErrors(error)
