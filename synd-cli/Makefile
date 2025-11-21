@@ -52,4 +52,7 @@ generate-contract-abis:
 	  echo "export const teeModuleBytecode =" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "  \"$$(forge inspect src/withdrawal/TeeModule.sol:TeeModule bytecode)\"" >> ../synd-cli/src/abi/synd/TeeModule.ts
 	
+	@echo "Formatting generated ABI files..."
+	@bun run format src/abi/synd/
+	
 	@echo "Done! All contract ABIs and bytecode have been generated."
