@@ -130,7 +130,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
      *      3. Therefore, the immutable values from the implementation are used during proxy execution
      *      4. Storage variables, however, must be initialized through the proxy to affect proxy storage
      *
-     * @param _blockHashSender Address authorized to send block hashes (immutable - part of bytecode)
+     * @param _blockHashSender Address authorized to send block hashes (immutable - part of bytecode) IMPORTANT: This address must be the alias of the actual block hash sender address on Base
      * @param _settlementChainID Chain ID of the settlement chain (immutable - part of bytecode)
      */
     constructor(address _blockHashSender, uint256 _settlementChainID) {

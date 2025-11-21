@@ -91,4 +91,4 @@ airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_AD
 deploy-emissions :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --private-key ${PRIVATE_KEY} --rpc-url eth --broadcast -vvv
 
 # Deploy performance staking
-deploy-performance-staking :; forge script script/DeployPerformanceStaking.s.sol:DeployPerformanceStaking --rpc-url exo --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+deploy-performance-staking :; forge script script/DeployPerformanceStaking.s.sol:DeployPerformanceStaking --rpc-url cheesesteak --keystore ${ETH_KEYSTORE} --broadcast -vv
