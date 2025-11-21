@@ -1,30 +1,30 @@
-import { handleSchemaErrors } from "@/cli/schema";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import type { ZodSchema } from "zod";
-import { exitWithError } from "./print";
+import { handleSchemaErrors } from "@/cli/schema"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+import type { ZodSchema } from "zod"
+import { exitWithError } from "./print"
 
 /**
  * Load and parse a JSON config file
  */
 export function loadConfigFile<T>(configPath: string): T {
-	try {
-		const absolutePath = resolve(configPath);
-		const fileContent = readFileSync(absolutePath, "utf-8");
-		return JSON.parse(fileContent) as T;
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			exitWithError(`Config file not found: ${configPath}`);
-		}
-		if (error instanceof SyntaxError) {
-			exitWithError(
-				`Invalid JSON in config file: ${configPath}\n${error.message}`,
-			);
-		}
-		exitWithError(`Failed to load config file: ${configPath}\n${error}`);
-	}
-	// TypeScript doesn't know exitWithError never returns
-	throw new Error("Unreachable");
+  try {
+    const absolutePath = resolve(configPath)
+    const fileContent = readFileSync(absolutePath, "utf-8")
+    return JSON.parse(fileContent) as T
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      exitWithError(`Config file not found: ${configPath}`)
+    }
+    if (error instanceof SyntaxError) {
+      exitWithError(
+        `Invalid JSON in config file: ${configPath}\n${error.message}`
+      )
+    }
+    exitWithError(`Failed to load config file: ${configPath}\n${error}`)
+  }
+  // TypeScript doesn't know exitWithError never returns
+  throw new Error("Unreachable")
 }
 
 /**
@@ -32,24 +32,24 @@ export function loadConfigFile<T>(configPath: string): T {
  * CLI options take precedence over config file values
  */
 export function mergeConfigWithOptions<T extends Record<string, unknown>>(
-	configFile: Partial<T> | undefined,
-	cliOptions: Partial<T>,
+  configFile: Partial<T> | undefined,
+  cliOptions: Partial<T>
 ): Partial<T> {
-	if (!configFile) {
-		return cliOptions;
-	}
+  if (!configFile) {
+    return cliOptions
+  }
 
-	// CLI options override config file values
-	// Only use config file values if CLI option is undefined
-	const merged: Partial<T> = { ...configFile };
+  // CLI options override config file values
+  // Only use config file values if CLI option is undefined
+  const merged: Partial<T> = { ...configFile }
 
-	for (const key in cliOptions) {
-		if (cliOptions[key] !== undefined) {
-			merged[key] = cliOptions[key];
-		}
-	}
+  for (const key in cliOptions) {
+    if (cliOptions[key] !== undefined) {
+      merged[key] = cliOptions[key]
+    }
+  }
 
-	return merged;
+  return merged
 }
 
 /**
@@ -57,18 +57,18 @@ export function mergeConfigWithOptions<T extends Record<string, unknown>>(
  * This allows config files to use more readable kebab-case
  */
 export function kebabToCamelCase(
-	obj: Record<string, unknown>,
+  obj: Record<string, unknown>
 ): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
+  const result: Record<string, unknown> = {}
 
-	for (const key in obj) {
-		const camelKey = key.replace(/-([a-z])/g, (_, letter) =>
-			letter.toUpperCase(),
-		);
-		result[camelKey] = obj[key];
-	}
+  for (const key in obj) {
+    const camelKey = key.replace(/-([a-z])/g, (_, letter) =>
+      letter.toUpperCase()
+    )
+    result[camelKey] = obj[key]
+  }
 
-	return result;
+  return result
 }
 
 /**
@@ -86,38 +86,38 @@ export function kebabToCamelCase(
  * })
  */
 export function parseConfigAndOptions<T extends ZodSchema>(
-	options: Record<string, unknown>,
-	schema: T,
+  options: Record<string, unknown>,
+  schema: T
 ): T["_output"] {
-	// Load config file if provided
-	let configFileOptions: Record<string, unknown> = {};
-	if (options.config) {
-		const rawConfig = loadConfigFile<Record<string, unknown>>(
-			options.config as string,
-		);
-		configFileOptions = kebabToCamelCase(rawConfig);
-	}
+  // Load config file if provided
+  let configFileOptions: Record<string, unknown> = {}
+  if (options.config) {
+    const rawConfig = loadConfigFile<Record<string, unknown>>(
+      options.config as string
+    )
+    configFileOptions = kebabToCamelCase(rawConfig)
+  }
 
-	// Remove config key before merging (it's not part of the schema)
-	const { config, ...optionsWithoutConfig } = options;
+  // Remove config key before merging (it's not part of the schema)
+  const { config, ...optionsWithoutConfig } = options
 
-	// Merge config file with CLI options (CLI takes precedence)
-	const mergedOptions = mergeConfigWithOptions(
-		configFileOptions,
-		optionsWithoutConfig,
-	);
+  // Merge config file with CLI options (CLI takes precedence)
+  const mergedOptions = mergeConfigWithOptions(
+    configFileOptions,
+    optionsWithoutConfig
+  )
 
-	// Validate merged options
-	const {
-		data: validatedOptions,
-		success,
-		error,
-	} = schema.safeParse(mergedOptions);
+  // Validate merged options
+  const {
+    data: validatedOptions,
+    success,
+    error
+  } = schema.safeParse(mergedOptions)
 
-	if (!success) {
-		handleSchemaErrors(error);
-		throw new Error("Validation failed");
-	}
+  if (!success) {
+    handleSchemaErrors(error)
+    throw new Error("Validation failed")
+  }
 
-	return validatedOptions as T["_output"];
+  return validatedOptions as T["_output"]
 }
