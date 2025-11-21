@@ -12,19 +12,13 @@ export function createSequencingCommand(program: Command) {
       "Deploy sequencing contracts: SyndicateSequencingChain, AllowlistSequencingModule, RequireAndModule"
     )
     .option("--config <path>", "Path to JSON config file")
-    .requiredOption(
-      "--sequencing-rpc <url>",
-      "RPC URL for the sequencing chain"
-    )
-    .requiredOption(
-      "--owner-private-key <key>",
-      "Private key of the owner account"
-    )
-    .requiredOption(
+    .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
+    .option("--owner-private-key <key>", "Private key of the owner account")
+    .option(
       "--deployer-private-key <key>",
       "Private key of the deployer account"
     )
-    .requiredOption("--id <number>", "Chain ID for the appchain")
+    .option("--id <number>", "Chain ID for the appchain")
     .action(async (options: Record<string, unknown>) => {
       const validatedOptions = parseConfigAndOptions(
         options,

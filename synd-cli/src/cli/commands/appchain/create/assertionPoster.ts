@@ -9,20 +9,14 @@ export function createAssertionPosterCommand(program: Command) {
     .command("assertion-poster")
     .description("Deploys AssertionPoster")
     .option("--config <path>", "Path to JSON config file")
-    .requiredOption(
-      "--settlement-rpc <url>",
-      "RPC URL for the settlement chain"
-    )
-    .requiredOption(
-      "--owner-private-key <key>",
-      "Private key of the owner account"
-    )
-    .requiredOption(
+    .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
+    .option("--owner-private-key <key>", "Private key of the owner account")
+    .option(
       "--deployer-private-key <key>",
       "Private key of the deployer account"
     )
-    .requiredOption("--rollup <address>", "Address of the rollup contract")
-    .requiredOption(
+    .option("--rollup <address>", "Address of the rollup contract")
+    .option(
       "--upgrade-executor <address>",
       "Address of the upgrade executor contract"
     )

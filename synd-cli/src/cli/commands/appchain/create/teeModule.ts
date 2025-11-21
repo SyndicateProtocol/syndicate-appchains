@@ -9,33 +9,27 @@ export function createTeeModuleCommand(program: Command) {
     .command("tee-module")
     .description("Deploys TeeModule")
     .option("--config <path>", "Path to JSON config file")
-    .requiredOption(
-      "--settlement-rpc <url>",
-      "RPC URL for the settlement chain"
-    )
-    .requiredOption(
-      "--sequencing-rpc <url>",
-      "RPC URL for the sequencing chain"
-    )
-    .requiredOption(
+    .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
+    .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
+    .option(
       "--synd-fork-sequencing-rpc <url>",
       "RPC URL for the synd fork sequencing chain"
     )
-    .requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
-    .requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
-    .requiredOption(
+    .option("--ethereum-rpc <url>", "RPC URL for Ethereum")
+    .option("--appchain-rpc <url>", "RPC URL for the appchain")
+    .option(
       "--deployer-private-key <key>",
       "Private key of the deployer account"
     )
-    .requiredOption(
+    .option(
       "--sequencing-contract <address>",
       "Address of the sequencing contract"
     )
-    .requiredOption(
+    .option(
       "--assertion-poster <address>",
       "Address of the AssertionPoster contract"
     )
-    .requiredOption("--bridge <address>", "Address of the bridge contract")
+    .option("--bridge <address>", "Address of the bridge contract")
     .action(async (options: Record<string, unknown>) => {
       const validatedOptions = parseConfigAndOptions(
         options,

@@ -1,0 +1,12 @@
+{
+  "settlement-rpc": "https://base-sepolia.g.alchemy.com/v2/IIiVZenga4cEv9oqusWg_",
+  "sequencing-rpc": "https://risa-testnet.g.alchemy.com/v2/IIiVZenga4cEv9oqusWg_",
+  "ethereum-rpc": "https://eth-sepolia.g.alchemy.com/v2/IIiVZenga4cEv9oqusWg_",
+  "appchain-rpc": "https://appchain.rpc.testnet.syndicate.io",
+  "appchain-explorer": "https://appchain.explorer.testnet.syndicate.io",
+  "id": 123456,
+  "name": "testnet-appchain",
+  "deployer-private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+  "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "native-token": "0x0000000000000000000000000000000000000000"
+}

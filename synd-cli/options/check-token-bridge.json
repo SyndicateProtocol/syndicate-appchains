@@ -1,0 +1,6 @@
+{
+  "settlement-rpc": "https://base-sepolia.g.alchemy.com/v2/IIiVZenga4cEv9oqusWg_",
+  "appchain-rpc": "https://rpc.testnet.manchego.syndicate.io",
+
+  "rollup": "0xad16129D794E87d391ec58A4741E2156B575C03d"
+}

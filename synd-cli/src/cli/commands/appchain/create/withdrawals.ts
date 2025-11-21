@@ -9,38 +9,29 @@ export function createWithdrawalsContractsCommand(program: Command) {
     .command("withdrawals")
     .description("Deploy withdrawals contracts: AssertionPoster & TeeModule")
     .option("--config <path>", "Path to JSON config file")
-    .requiredOption(
-      "--settlement-rpc <url>",
-      "RPC URL for the settlement chain"
-    )
-    .requiredOption(
-      "--sequencing-rpc <url>",
-      "RPC URL for the sequencing chain"
-    )
-    .requiredOption(
+    .option("--settlement-rpc <url>", "RPC URL for the settlement chain")
+    .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
+    .option(
       "--synd-fork-sequencing-rpc <url>",
       "RPC URL for the synd fork sequencing chain"
     )
-    .requiredOption("--ethereum-rpc <url>", "RPC URL for Ethereum")
-    .requiredOption("--appchain-rpc <url>", "RPC URL for the appchain")
-    .requiredOption(
-      "--owner-private-key <key>",
-      "Private key of the owner account"
-    )
-    .requiredOption(
+    .option("--ethereum-rpc <url>", "RPC URL for Ethereum")
+    .option("--appchain-rpc <url>", "RPC URL for the appchain")
+    .option("--owner-private-key <key>", "Private key of the owner account")
+    .option(
       "--deployer-private-key <key>",
       "Private key of the deployer account"
     )
-    .requiredOption(
+    .option(
       "--sequencing-contract <address>",
       "Address of the sequencing contract"
     )
-    .requiredOption("--rollup <address>", "Address of the rollup contract")
-    .requiredOption(
+    .option("--rollup <address>", "Address of the rollup contract")
+    .option(
       "--upgrade-executor <address>",
       "Address of the upgrade executor contract"
     )
-    .requiredOption("--bridge <address>", "Address of the bridge contract")
+    .option("--bridge <address>", "Address of the bridge contract")
     .action(async (options: Record<string, unknown>) => {
       const validatedOptions = parseConfigAndOptions(
         options,
