@@ -1,6 +1,6 @@
 extern crate alloc;
+use crate::p384::{ecdsa, ecdsa::signature::Verifier as _};
 use alloc::vec::Vec;
-use p384::ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
 
 /// https://tools.ietf.org/html/rfc8152#section-4.2
@@ -40,11 +40,8 @@ impl<'a> CoseSign1<'a> {
             .unwrap()
     }
 
-    pub fn verify_signature(
-        &self,
-        pub_key: &p384::ecdsa::VerifyingKey,
-    ) -> Result<(), &'static str> {
-        let signature = Signature::from_bytes(self.signature.into())
+    pub fn verify_signature(&self, pub_key: &ecdsa::VerifyingKey) -> Result<(), &'static str> {
+        let signature = ecdsa::Signature::from_bytes(self.signature.into())
             .map_err(|_| "Signature deserialization error")?;
         pub_key
             .verify(&self.signed_message_bytes(), &signature)

@@ -1,21 +1,33 @@
-use crate::cose::CoseSign1;
-use alloy_primitives::{keccak256, Address, Keccak256, B256};
-use p384::{
-    ecdsa::{signature::Verifier as P384Verifier, Signature as P384Signature},
-    pkcs8::DecodePublicKey as _,
+use crate::{
+    cose::CoseSign1,
+    keccak256,
+    p384::{
+        ecdsa::{self, signature::Verifier as _},
+        elliptic_curve::PublicKey,
+        NistP384,
+    },
 };
+use alloy_primitives::{Address, B256};
 use serde::Deserialize;
 use x509_cert::{
     certificate::CertificateInner,
-    der::{oid::db::rfc5912::ECDSA_WITH_SHA_384, Decode, Encode},
+    der::{self, referenced::OwnedToRef as _, Decode as _, Encode as _},
+    spki::{self, SubjectPublicKeyInfoOwned},
 };
+
+fn from_public_key_info(
+    info: &SubjectPublicKeyInfoOwned,
+) -> Result<ecdsa::VerifyingKey, spki::Error> {
+    let key: PublicKey<NistP384> = PublicKey::try_from(info.owned_to_ref())?;
+    Ok(ecdsa::VerifyingKey::from_affine(*key.as_affine()).unwrap())
+}
 
 #[derive(Debug)]
 pub enum VerificationError {
     DocumentParseError(serde_cbor::Error),
     CoseSign1ParseError(&'static str),
-    CertificateParseError(x509_cert::spki::Error),
-    CertificateSignatureError(p384::ecdsa::Error),
+    CertificateParseError(spki::Error),
+    CertificateSignatureError(ecdsa::Error),
     InvalidRootCert,
     InvalidSignature,
     MandatoryFieldsMissing,
@@ -122,23 +134,16 @@ pub fn verify_x509_parent(
     cert: &CertificateInner,
     parent_cert: &CertificateInner,
 ) -> Result<(), VerificationError> {
-    if cert.signature_algorithm.oid != ECDSA_WITH_SHA_384 {
+    if cert.signature_algorithm.oid != der::oid::db::rfc5912::ECDSA_WITH_SHA_384 {
         return Err(VerificationError::CertificateParseError(
-            x509_cert::der::Error::from(x509_cert::der::ErrorKind::OidUnknown {
-                oid: cert.signature_algorithm.oid,
-            })
-            .into(),
+            der::Error::from(der::ErrorKind::OidUnknown { oid: cert.signature_algorithm.oid })
+                .into(),
         ));
     }
 
-    let parent_spki_der = parent_cert
-        .tbs_certificate
-        .subject_public_key_info
-        .to_der()
-        .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
-
-    let parent_verifying_key = p384::ecdsa::VerifyingKey::from_public_key_der(&parent_spki_der)
-        .map_err(VerificationError::CertificateParseError)?;
+    let parent_verifying_key =
+        from_public_key_info(&parent_cert.tbs_certificate.subject_public_key_info)
+            .map_err(VerificationError::CertificateParseError)?;
 
     let msg_to_verify = cert
         .tbs_certificate
@@ -148,7 +153,7 @@ pub fn verify_x509_parent(
     let signature_bytes =
         cert.signature.as_bytes().ok_or_else(|| VerificationError::InvalidSignature)?;
 
-    let signature = P384Signature::from_der(signature_bytes)
+    let signature = ecdsa::Signature::from_der(signature_bytes)
         .map_err(VerificationError::CertificateSignatureError)?;
 
     parent_verifying_key
@@ -167,22 +172,14 @@ pub struct ValidationResult {
     pub pcr_2: [u8; 48],
 }
 
-fn keccak(data: &[&[u8]]) -> B256 {
-    let mut hasher = Keccak256::new();
-    for elem in data {
-        hasher.update(elem);
-    }
-    hasher.finalize()
-}
-
 impl ValidationResult {
     pub fn data_hash(&self) -> B256 {
-        keccak(&[
-            self.root_cert_hash.as_slice(),
-            self.pcr_0.as_slice(),
-            self.pcr_1.as_slice(),
-            self.pcr_2.as_slice(),
-        ])
+        let mut buffer = [0; 176];
+        buffer[0..32].copy_from_slice(self.root_cert_hash.as_slice());
+        buffer[32..80].copy_from_slice(&self.pcr_0);
+        buffer[80..128].copy_from_slice(&self.pcr_1);
+        buffer[128..176].copy_from_slice(&self.pcr_2);
+        keccak256(&buffer).into()
     }
     pub fn public_data(&self) -> [u8; 60] {
         let mut buffer = [0; 60];
@@ -217,13 +214,7 @@ pub fn verify_aws_nitro_attestation(input: &[u8]) -> Result<ValidationResult, Ve
     let doc = AwsNitroAttestationDocument::parse_document(&mut payload_data)?;
     let (cert, validity_window_end) = doc.verify_cert_chain()?;
 
-    let spki_der = cert
-        .tbs_certificate
-        .subject_public_key_info
-        .to_der()
-        .map_err(|e| VerificationError::CertificateParseError(e.into()))?;
-
-    let pub_key = p384::ecdsa::VerifyingKey::from_public_key_der(&spki_der)
+    let pub_key = from_public_key_info(&cert.tbs_certificate.subject_public_key_info)
         .map_err(VerificationError::CertificateParseError)?;
 
     cose_sign1.verify_signature(&pub_key).map_err(VerificationError::CoseSign1ParseError)?;
@@ -236,7 +227,7 @@ pub fn verify_aws_nitro_attestation(input: &[u8]) -> Result<ValidationResult, Ve
     }
 
     Ok(ValidationResult {
-        root_cert_hash: keccak256(*doc.cabundle.first().unwrap_or(&doc.certificate)),
+        root_cert_hash: keccak256(doc.cabundle.first().unwrap_or(&doc.certificate)).into(),
         // exclude the leading 0x04 byte prefix
         tee_signing_key: Address::from_raw_public_key(&pub_key[1..]),
         validity_window_end,

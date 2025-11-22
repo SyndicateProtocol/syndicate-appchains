@@ -11,6 +11,14 @@ version.workspace    = true
 synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true }
 
 [features]
+openvm = [
+  "dep:openvm",
+  "dep:openvm-algebra-guest",
+  "dep:openvm-ecc-guest",
+  "dep:openvm-keccak256",
+  "synd-tee-attestation-zk-proofs-aws-nitro/openvm",
+]
+risc0 = ["dep:risc0-zkvm"]
 std = ["synd-tee-attestation-zk-proofs-aws-nitro/std"]
 
 [target.riscv32im-succinct-zkvm-elf.dependencies]
@@ -18,4 +26,8 @@ sp1-zkvm = { workspace = true, features = ["lib"] }
 
 [target.riscv32im-risc0-zkvm-elf.dependencies]
 # the tiny-keccak precompile is unstable - see https://dev.risczero.com/api/zkvm/precompiles for details
-risc0-zkvm = { features = ["unstable"], workspace = true }
+openvm               = { workspace = true, optional = true }
+openvm-algebra-guest = { workspace = true, optional = true }
+openvm-ecc-guest     = { workspace = true, optional = true }
+openvm-keccak256     = { workspace = true, optional = true }
+risc0-zkvm           = { features = ["unstable"], workspace = true, optional = true }

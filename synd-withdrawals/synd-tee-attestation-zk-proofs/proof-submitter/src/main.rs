@@ -20,34 +20,42 @@
 //! The tool is configured via command-line arguments. Key parameters include the
 //! enclave URL, chain RPC URL, contract address, and the private key for on-chain
 //! transactions.
+#![allow(clippy::unwrap_used)]
 
+mod proof;
+mod utils;
+
+use crate::{
+    proof::{generate_proof, get_vkey, ProofSystem},
+    utils::{
+        assert_vkey_and_data_hash_match, get_attestation_doc, get_elf_bytes, submit_proof_to_chain,
+    },
+};
 use alloy::{
     hex,
     network::EthereumWallet,
-    primitives::{fixed_bytes, Address, Bytes, B256},
-    providers::{Provider, ProviderBuilder},
+    primitives::{fixed_bytes, Address, B256},
+    providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
 use clap::Parser;
 use contract_bindings::synd::{
     attestation_doc_verifier::AttestationDocVerifier,
-    tee_key_manager::TeeKeyManager::{self, TeeKeyManagerInstance},
+    tee_key_manager::TeeKeyManager::{self},
 };
+use eyre::{eyre, OptionExt};
 use shared::parse::parse_address;
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 use synd_tee_attestation_zk_proofs_aws_nitro::verify_aws_nitro_attestation;
-use synd_tee_attestation_zk_proofs_submitter::{
-    generate_proof, get_attestation_doc, get_vkey, ProofSubmitterError, ProofSystem,
-};
-use tracing::{error, info};
+use tokio::task::spawn_blocking;
+use tracing::info;
 use zeroize::{Zeroize, Zeroizing};
+
+// openvm keygen needs a larger stack size
+const THREAD_STACK_SIZE: usize = 4 * 1024 * 1024;
 
 const ROOT_CERT_HASH: B256 =
     fixed_bytes!("0x311d96fcd5c5e0ccf72ef548e2ea7d4c0cd53ad7c4cc49e67471aed41d61f185");
-
-/// from <https://docs.rs/risc0-zkos-v1compat/2.2.0/src/risc0_zkos_v1compat/lib.rs.html>
-/// the elf file is located in risc0/zkos/v1compat/elfs/v1compat.elf
-const V1COMPAT_ELF: &[u8] = include_bytes!("../elfs/v1compat.elf");
 
 /// The arguments for the command.
 #[derive(Parser, Debug)]
@@ -64,7 +72,7 @@ pub struct Args {
     #[arg(long)]
     root_certificate_path: Option<PathBuf>,
 
-    #[arg(long, value_enum, default_value = "sp1")]
+    #[arg(long, value_enum)]
     proof_system: ProofSystem,
 
     /// The address of the `TeeKeyManager` contract to submit the proof to
@@ -94,40 +102,38 @@ pub struct Args {
 
     #[arg(long)]
     elf_file_path: PathBuf,
+
+    #[arg(long, default_value_t = false)]
+    mock_proof: bool,
 }
 
-#[tokio::main]
-async fn main() {
+fn runtime(mut builder: tokio::runtime::Builder) -> tokio::runtime::Runtime {
+    builder.enable_all().thread_stack_size(THREAD_STACK_SIZE).build().unwrap()
+}
+
+fn main() {
     _ = shared::tracing::setup_global_logging();
-    let args = Args::parse();
-    match run(args, generate_proof, get_vkey, get_elf_bytes).await {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error: {e}");
-            std::process::exit(1);
+    runtime(tokio::runtime::Builder::new_multi_thread()).block_on(async {
+        let args = Args::parse();
+        match run(args).await {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
         }
-    };
+    })
 }
 
 #[allow(clippy::cognitive_complexity)]
-async fn run(
-    args: Args,
-    generate_proof_fn: impl Fn(
-        &[u8],
-        ProofSystem,
-        &[u8],
-        &[u8; 60],
-    ) -> Result<Vec<u8>, ProofSubmitterError>,
-    get_vkey_fn: impl Fn(ProofSystem, &[u8]) -> [u8; 32],
-    get_elf_bytes_fn: impl Fn(PathBuf, ProofSystem) -> Result<Vec<u8>, ProofSubmitterError>,
-) -> Result<(), ProofSubmitterError> {
+async fn run(args: Args) -> eyre::Result<()> {
     let attestation_doc_hex = match (args.attestation_document, args.enclave_rpc_url) {
         (Some(attestation_document), None) => attestation_document,
         (None, Some(enclave_rpc_url)) => get_attestation_doc(enclave_rpc_url).await?,
         (Some(_), Some(_)) => {
-            return Err(ProofSubmitterError::AttestationDocumentAndEnclaveRpcUrlAreMutuallyExclusive)
+            return Err(eyre!("attestation document and enclave rpc url are mutually exclusive"))
         }
-        (None, None) => return Err(ProofSubmitterError::AttestationDocumentOrEnclaveRpcUrlRequired),
+        (None, None) => return Err(eyre!("attestation document or enclave rpc url required")),
     };
 
     // get attestation doc CBOR
@@ -136,14 +142,15 @@ async fn run(
 
     // make sure the attestation is vaild for the provided root certificate
     let attestation_result = verify_aws_nitro_attestation(&cbor_attestation_doc)
-        .map_err(ProofSubmitterError::InvalidAttestationDocument)?;
+        .map_err(|e| eyre!("invalid attestation document: {e:?}"))?;
     let public_data = attestation_result.public_data();
 
     if attestation_result.root_cert_hash != ROOT_CERT_HASH {
-        return Err(ProofSubmitterError::RootCertificateHashMismatch(
+        return Err(eyre!(
+            "Root certificate hash mismatch: got {}, expected {}",
             attestation_result.root_cert_hash,
             ROOT_CERT_HASH,
-        ))
+        ));
     }
 
     info!(
@@ -153,20 +160,34 @@ async fn run(
         attestation_result.root_cert_hash
     );
 
-    let elf_bytes = get_elf_bytes_fn(args.elf_file_path, args.proof_system)?;
-    let vk_bytes = get_vkey_fn(args.proof_system, &elf_bytes);
+    let elf_bytes = Arc::new(get_elf_bytes(args.elf_file_path, args.proof_system).await?);
+    let vk_bytes = spawn_blocking({
+        let elf_bytes = elf_bytes.clone();
+        move || get_vkey(args.proof_system, &elf_bytes)
+    })
+    .await
+    .unwrap()?;
     info!("Vkey: 0x{}", hex::encode(vk_bytes));
 
     let Some(chain_rpc_url) = args.chain_rpc_url else {
         info!("Skipping submission to chain");
 
-        let proof =
-            generate_proof_fn(&cbor_attestation_doc, args.proof_system, &elf_bytes, &public_data)?;
+        let proof = spawn_blocking(move || {
+            generate_proof(
+                &cbor_attestation_doc,
+                args.proof_system,
+                args.mock_proof,
+                &elf_bytes,
+                &public_data,
+            )
+        })
+        .await
+        .unwrap()?;
         info!("Proof: 0x{}", hex::encode(&proof));
         return Ok(());
     };
     info!("Submitting proof to chain");
-    let mut private_key = args.private_key.ok_or(ProofSubmitterError::PrivateKeyRequired)?;
+    let mut private_key = args.private_key.ok_or_eyre("private key required")?;
     let signer = PrivateKeySigner::from_str(&private_key)?;
     let provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
@@ -193,10 +214,7 @@ async fn run(
                 args.proof_system as u8,
             )
             .await
-            .map_err(|e| {
-                error!("Error deploying attestation doc verifier contract: {e}");
-                ProofSubmitterError::DeployNewContract(e)
-            })?;
+            .map_err(|e| eyre!("Error deploying attestation doc verifier contract: {e}"))?;
             info!(
                 "Attestation doc verifier contract deployed to: {}",
                 attestation_doc_verifier_contract.address()
@@ -207,16 +225,13 @@ async fn run(
                 *attestation_doc_verifier_contract.address(),
             )
             .await
-            .map_err(|e| {
-                error!("Error deploying tee key manager contract: {e}");
-                ProofSubmitterError::DeployNewContract(e)
-            })?;
+            .map_err(|e| eyre!("Error deploying tee key manager contract: {e}"))?;
             info!("Tee key manager contract deployed to: {}", contract.address());
             *contract.address()
         }
-        (None, None) => return Err(ProofSubmitterError::ContractAddressRequired),
+        (None, None) => return Err(eyre!("contract address required")),
         (Some(_), Some(_)) => {
-            return Err(ProofSubmitterError::ContractAddressAndDeployAreMutuallyExclusive)
+            return Err(eyre!("contract address and deploy are mutally exclusive"))
         }
     };
 
@@ -232,102 +247,24 @@ async fn run(
     )
     .await?;
 
-    let proof =
-        generate_proof_fn(&cbor_attestation_doc, args.proof_system, &elf_bytes, &public_data)?;
-    info!("Proof: 0x{}", hex::encode(&proof));
-    submit_proof_to_chain(contract, attestation_result.calldata().into(), proof.into()).await?;
-    Ok(())
-}
-
-fn get_elf_bytes(
-    elf_file_path: PathBuf,
-    proof_system: ProofSystem,
-) -> Result<Vec<u8>, ProofSubmitterError> {
-    let elf = std::fs::read(elf_file_path).map_err(|e| {
-        error!("Error reading ELF file: {e}");
-        ProofSubmitterError::ReadElfFile(e)
-    })?;
-    Ok(match proof_system {
-        ProofSystem::RISC0 => risc0_binfmt::ProgramBinary::new(&elf, V1COMPAT_ELF).encode(),
-        ProofSystem::SP1 => elf,
+    let proof = spawn_blocking({
+        let elf_bytes = elf_bytes.clone();
+        move || {
+            generate_proof(
+                &cbor_attestation_doc,
+                args.proof_system,
+                args.mock_proof,
+                &elf_bytes,
+                &public_data,
+            )
+        }
     })
-}
-
-async fn assert_vkey_and_data_hash_match<P: Provider>(
-    vkey: &[u8; 32],
-    data_hash: &B256,
-    proof_system: ProofSystem,
-    contract: TeeKeyManagerInstance<P>,
-) -> Result<(), ProofSubmitterError> {
-    let att_doc_verifier_address = contract.attestationDocVerifier().call().await.map_err(|e| {
-        error!("Error getting attestation doc verifier address: {e}");
-        ProofSubmitterError::GetAttestationDocVerifierAddress(e)
-    })?;
-    let att_doc_verifier_contract =
-        AttestationDocVerifier::new(att_doc_verifier_address, contract.provider());
-
-    let att_doc_proof_system =
-        att_doc_verifier_contract.proofSystem().call().await.map_err(|e| {
-            error!("Error getting attestation doc verifier proof system: {e}");
-            ProofSubmitterError::GetAttestationDocVerifierProofSystem(e)
-        })?;
-
-    // match proof system
-    if att_doc_proof_system != proof_system as u8 {
-        return Err(ProofSubmitterError::ProofSystemMismatch);
-    }
-
-    let att_doc_verifier_vkey =
-        att_doc_verifier_contract.attestationDocVerifierVKey().call().await.map_err(|e| {
-            error!("Error getting attestation doc verifier vkey hash: {e}");
-            ProofSubmitterError::GetAttestationDocVerifierVKeyHash(e)
-        })?;
-
-    // match vkey
-    if vkey != att_doc_verifier_vkey {
-        return Err(ProofSubmitterError::VkeyMismatch);
-    }
-
-    // match data hash
-    let expected_data_hash = att_doc_verifier_contract.dataHash().call().await.map_err(|e| {
-        error!("Error getting data hash: {e}");
-        ProofSubmitterError::DataHashMismatch
-    })?;
-    if data_hash != &expected_data_hash {
-        error!("Data hash mismatch: got {}, expected {}", data_hash, expected_data_hash);
-        return Err(ProofSubmitterError::DataHashMismatch);
-    }
-
-    Ok(())
-}
-
-async fn submit_proof_to_chain<P: Provider>(
-    contract: TeeKeyManagerInstance<P>,
-    public_values: Bytes,
-    proof: Bytes,
-) -> Result<(), ProofSubmitterError> {
-    let tx = contract.addKey(public_values, proof);
-
-    let receipt = tx
-        .send()
-        .await
-        .map_err(|e| {
-            error!("Error sending transaction: {e}");
-            ProofSubmitterError::SubmitProofToChain(e.to_string())
-        })?
-        .get_receipt()
-        .await
-        .map_err(|e| {
-            error!("Error getting receipt: {e}");
-            ProofSubmitterError::SubmitProofToChain(e.to_string())
-        })?;
-
+    .await
+    .unwrap()?;
+    info!("Proof: 0x{}", hex::encode(&proof));
+    let receipt =
+        submit_proof_to_chain(contract, attestation_result.calldata().into(), proof.into()).await?;
     info!("Successfully submitted proof to chain. Receipt: {receipt:?}");
-
-    if !receipt.status() {
-        return Err(ProofSubmitterError::SubmitProofToChain("receipt status is: failed".to_string()))
-    }
-
     Ok(())
 }
 
@@ -336,29 +273,83 @@ mod tests {
     use super::*;
     use alloy::providers::ext::AnvilApi;
     use contract_bindings::synd::{
-        attestation_doc_verifier::AttestationDocVerifier, dummy_sp1_verifier::DummySP1Verifier,
-        tee_key_manager::TeeKeyManager,
+        attestation_doc_verifier::AttestationDocVerifier, tee_key_manager::TeeKeyManager,
     };
     use test_utils::{anvil::start_anvil, chain_info::PRIVATE_KEY};
 
-    #[tokio::test]
-    async fn post_attestation_proof_onchain() {
-        shared::tracing::setup_global_logging().unwrap();
+    alloy::sol! {
+        #[sol(rpc, bytecode = "0x60038060093d393df35f5ff3")]
+        contract DummyVerifier {
+            fallback() external payable {}
+        }
+    }
 
+    const ELF_DIR: &str = concat!(
+        env!("CARGO_WORKSPACE_DIR"),
+        "/synd-withdrawals/synd-tee-attestation-zk-proofs/proof-submitter/elfs"
+    );
+
+    #[ctor::ctor]
+    fn init() {
+        _ = shared::tracing::setup_global_logging();
+    }
+
+    #[cfg(feature = "risc0")]
+    #[test]
+    fn post_attestation_proof_onchain_risc0() {
+        runtime(tokio::runtime::Builder::new_current_thread()).block_on(
+            post_attestation_proof_onchain_base(
+                ProofSystem::RISC0,
+                PathBuf::from(ELF_DIR).join("risc0.elf"),
+            ),
+        )
+    }
+
+    #[cfg(all(feature = "sp1", not(debug_assertions)))]
+    #[test]
+    fn post_attestation_proof_onchain_sp1() {
+        runtime(tokio::runtime::Builder::new_current_thread()).block_on(
+            post_attestation_proof_onchain_base(
+                ProofSystem::SP1,
+                PathBuf::from(ELF_DIR).join("sp1.elf"),
+            ),
+        )
+    }
+
+    #[cfg(all(feature = "openvm", not(debug_assertions)))]
+    #[test]
+    fn post_attestation_proof_onchain_openvm() {
+        runtime(tokio::runtime::Builder::new_current_thread()).block_on(
+            post_attestation_proof_onchain_base(
+                ProofSystem::OpenVM,
+                PathBuf::from(ELF_DIR).join("openvm.elf"),
+            ),
+        )
+    }
+
+    async fn post_attestation_proof_onchain_base(
+        proof_system: ProofSystem,
+        elf_file_path: PathBuf,
+    ) {
         let chain_info = start_anvil(1).await.unwrap();
         let provider = chain_info.provider;
         provider.anvil_set_auto_mine(true).await.unwrap();
         provider.anvil_set_time(1748509951).await.unwrap();
 
-        let verifier = DummySP1Verifier::deploy(&provider).await.unwrap();
+        let verifier = DummyVerifier::deploy(&provider).await.unwrap();
+        let elf_bytes = get_elf_bytes(elf_file_path.clone(), proof_system).await.unwrap();
         let attestation_doc_verifier_contract = AttestationDocVerifier::deploy(
             &provider,
             verifier.address().to_owned(),
-            Default::default(),
+            spawn_blocking(move || get_vkey(proof_system, &elf_bytes))
+                .await
+                .unwrap()
+                .unwrap()
+                .into(),
             fixed_bytes!("0xb81743c43da8243554a4c316218f9ae15786a3e5c2e19ed404244df90fc5edc5"),
             0,
-            String::new(),
-            ProofSystem::SP1 as u8,
+            Default::default(),
+            proof_system as u8,
         )
         .await
         .unwrap();
@@ -390,30 +381,17 @@ mod tests {
             enclave_rpc_url: Some(mock_enclave_server.url()),
             attestation_document: None,
             root_certificate_path: None,
-            proof_system: ProofSystem::SP1,
+            proof_system,
             contract_address: Some(*key_mgr_contract.address()),
             deploy_new_contract_with_sp1_verifier: None,
             deploy_expiration_tolerance: Duration::from_secs(3600),
             chain_rpc_url: Some(chain_info.ws_url.clone()),
             private_key: Some(Zeroizing::new(PRIVATE_KEY.to_string())),
-            elf_file_path: "".into(),
+            elf_file_path,
+            mock_proof: true,
         };
 
-        let mock_generate_proof =
-            |_: &[u8],
-             _: ProofSystem,
-             _: &[u8],
-             _: &[u8; 60]|
-             -> Result<Vec<u8>, ProofSubmitterError> { Ok(Default::default()) };
-
-        let mock_get_vkey = |_: ProofSystem, _: &[u8]| -> [u8; 32] { Default::default() };
-
-        let mock_get_elf_bytes =
-            |_: PathBuf, _: ProofSystem| -> Result<Vec<u8>, ProofSubmitterError> {
-                Ok(Default::default())
-            };
-
-        let result = run(args, mock_generate_proof, mock_get_vkey, mock_get_elf_bytes).await;
+        let result = run(args).await;
         drop(mock_enclave_server);
 
         assert!(result.is_ok(), "run function failed: {:?}", result.err());

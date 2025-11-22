@@ -1,0 +1,49 @@
+[package]
+description            = "OpenVM fork of p384"
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "openvm-p384"
+repository.workspace   = true
+rust-version.workspace = true
+version                = "0.13.1"
+
+[dependencies]
+openvm                       = { workspace = true }
+openvm-algebra-guest         = { workspace = true }
+openvm-algebra-moduli-macros = { workspace = true }
+openvm-ecc-guest             = { workspace = true }
+openvm-ecc-sw-macros         = { workspace = true }
+
+ecdsa-core     = { workspace = true, optional = true, features = ["der"] }
+elliptic-curve = { workspace = true, features = ["hazmat", "sec1"] }
+ff             = { workspace = true }
+hex-literal    = { workspace = true }
+serde          = { workspace = true }
+sha2           = { workspace = true, optional = true }
+
+[dev-dependencies]
+p384       = { workspace = true, features = ["arithmetic"] }
+primeorder = { workspace = true }
+
+[features]
+alloc        = ["ecdsa-core?/alloc", "elliptic-curve/alloc"]
+arithmetic   = ["elliptic-curve/arithmetic"]
+bits         = ["arithmetic", "elliptic-curve/bits"]
+default      = ["ecdsa"]
+digest       = ["ecdsa-core/digest", "ecdsa-core/hazmat"]
+ecdh         = ["arithmetic", "elliptic-curve/ecdh"]
+ecdsa        = ["arithmetic", "ecdsa-core/signing", "ecdsa-core/verifying"]
+expose-field = ["arithmetic"]
+hash2curve   = ["arithmetic", "elliptic-curve/hash2curve"]
+jwk          = ["elliptic-curve/jwk"]
+pem          = ["ecdsa-core/pem", "elliptic-curve/pem", "pkcs8"]
+pkcs8        = ["ecdsa-core?/pkcs8", "elliptic-curve/pkcs8"]
+serde        = ["ecdsa-core?/serde", "elliptic-curve/serde"]
+sha384       = ["dep:sha2"]
+std          = ["alloc", "ecdsa-core?/std", "elliptic-curve/std", "openvm-ecc-guest/std"]
+test-vectors = []
+voprf        = ["elliptic-curve/voprf"]
+
+[target.'cfg(not(target_os = "zkvm"))'.dependencies]
+num-bigint = { workspace = true }

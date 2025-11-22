@@ -49,6 +49,7 @@ version      = "0.1.0"
 common                                   = { path = "synd-translator/crates/common" }
 contract-bindings                        = { path = "shared/contract-bindings" }
 metrics                                  = { path = "synd-translator/crates/metrics" }
+openvm-p384                              = { path = "synd-withdrawals/synd-tee-attestation-zk-proofs/openvm-p384", default-features = false }
 shared                                   = { path = "shared" }
 synd-block-builder                       = { path = "synd-translator/crates/synd-block-builder" }
 synd-chain-ingestor                      = { path = "synd-chain-ingestor" }
@@ -66,6 +67,7 @@ test-utils                               = { path = "shared/test-utils" }
 # dependencies
 alloy                              = { version = "1.0.25", default-features = false }
 alloy-primitives                   = { version = "1.4.1", default-features = false }
+alloy-rlp                          = "0.3.11"
 arc-swap                           = "1.7.1"
 assert_matches                     = "1.5.0"
 async-trait                        = { version = "0.1" }
@@ -78,23 +80,37 @@ bytes                              = "1.9.0"
 clap                               = { version = "4.5.26" }
 derivative                         = "2.2"
 dotenv                             = "0.15.0"
+ecdsa-core                         = { version = "0.16.9", package = "ecdsa", default-features = false }
+elliptic-curve                     = { version = "0.13.8", default-features = false }
 eyre                               = { version = "0.6.12" }
+ff                                 = { version = "0.13.1", default-features = false }
 figment                            = { version = "0.10.19" }
 fs2                                = { version = "0.4.3" }
 futures-util                       = "0.3.31"
 hex                                = { version = "0.4.3", default-features = false }
+hex-literal                        = { version = "1.1.0", default-features = false }
 http                               = "1.2.0"
 http-body                          = "1.0.1"
 http-body-util                     = "0.1"
 humantime                          = "2.1.0"
 hyper                              = { version = "1.5.2" }
 jsonrpsee                          = "0.26.0"
+num-bigint                         = { version = "0.4.6", default-features = false }
 opentelemetry                      = "0.31.0"
 opentelemetry-otlp                 = "0.31.0"
 opentelemetry-semantic-conventions = { version = "0.31.0", features = ["semconv_experimental"] }
 opentelemetry-stdout               = "0.31.0"
 opentelemetry_sdk                  = { version = "0.31.0", features = ["trace"] }
-p384                               = { version = "0.13.1", default-features = false }            # NOTE: this lib is NOT AUDITED
+openvm                             = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-algebra-guest               = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-algebra-moduli-macros       = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-bigint-guest                = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-ecc-guest                   = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-ecc-sw-macros               = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-keccak256                   = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+openvm-sdk                         = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1" }
+openvm-sha2                        = { git = "https://github.com/openvm-org/openvm.git", tag = "v1.4.1", default-features = false }
+p384                               = { version = "0.13.1", default-features = false }                                               # NOTE: this lib is NOT AUDITED
 pin-project-lite                   = "0.2.16"
 prometheus-client                  = { version = "0.23.1" }
 rand                               = { version = "0.9.0" }
@@ -108,6 +124,7 @@ serde-hex                          = "0.1.0"
 serde_bytes                        = { version = "0.11.19", default-features = false }
 serde_cbor                         = { version = "0.11.2", default-features = false }
 serde_json                         = { version = "1.0.135", default-features = false }
+sha2                               = { version = "0.10.9", default-features = false }
 sp1-sdk                            = "5.2.2"
 sp1-zkvm                           = { version = "5.2.2", default-features = false }
 strum                              = "0.27.1"
@@ -133,6 +150,7 @@ ctor         = "0.4.1"
 mockall      = "0.13.1"
 mockito      = "1.7.0"
 once_cell    = "1.21.3"
+primeorder   = { version = "0.13.6", default-features = false }
 temp-env     = "0.3.6"
 test-case    = "3"
 

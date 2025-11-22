@@ -14,7 +14,6 @@ pub mod r#assertion_poster;
 pub mod r#i_new_rollup;
 pub mod r#attestation_doc_verifier;
 pub mod r#block_hash_relayer;
-pub mod r#dummy_sp1_verifier;
 pub mod r#emissions_calculator;
 pub mod r#emissions_scheduler;
 pub mod r#gas_aggregator;

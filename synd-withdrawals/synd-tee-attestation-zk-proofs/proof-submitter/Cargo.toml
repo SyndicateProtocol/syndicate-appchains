@@ -8,9 +8,6 @@ repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
-[lib]
-path = "src/lib.rs"
-
 [[bin]]
 name = "proof-submitter"
 path = "src/main.rs"
@@ -19,12 +16,14 @@ path = "src/main.rs"
 alloy                                    = { workspace = true, features = ["contract", "provider-ws", "signer-local", "signers"] }
 clap                                     = { workspace = true, features = ["derive"] }
 contract-bindings                        = { workspace = true }
+eyre                                     = { workspace = true }
 humantime                                = { workspace = true }
 jsonrpsee                                = { workspace = true, features = ["http-client"] }
-risc0-binfmt                             = { workspace = true }
-risc0-zkvm                               = { workspace = true, features = ["prove"] }
+openvm-sdk                               = { workspace = true, features = ["evm-prove", "evm-verify"], optional = true }
+risc0-binfmt                             = { workspace = true, optional = true }
+risc0-zkvm                               = { workspace = true, features = ["prove"], optional = true }
 shared                                   = { workspace = true }
-sp1-sdk                                  = { workspace = true }
+sp1-sdk                                  = { workspace = true, optional = true }
 synd-tee-attestation-zk-proofs-aws-nitro = { workspace = true, features = ["std"] }
 thiserror                                = { workspace = true }
 tokio                                    = { workspace = true, features = ["macros", "rt-multi-thread"] }
@@ -33,7 +32,15 @@ tracing-subscriber                       = { workspace = true }
 x509-cert                                = { workspace = true }
 zeroize                                  = { workspace = true }
 
+[features]
+default = ["openvm", "risc0", "sp1"]
+openvm  = ["dep:openvm-sdk"]
+risc0   = ["dep:risc0-binfmt", "dep:risc0-zkvm"]
+sp1     = ["dep:sp1-sdk"]
+# cuda = ["sp1-sdk?/cuda", "risc0-zkvm?/cuda", "openvm-sdk?/cuda"]
+
 [dev-dependencies]
+ctor       = { workspace = true }
 mockito    = { workspace = true }
 serde      = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

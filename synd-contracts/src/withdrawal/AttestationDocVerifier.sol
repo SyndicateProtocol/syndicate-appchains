@@ -29,6 +29,12 @@ interface IRiscZeroVerifier {
     function verify(bytes calldata seal, bytes32 imageId, bytes32 journalDigest) external view;
 }
 
+interface IOpenVmHalo2Verifier {
+    function verify(bytes calldata publicValues, bytes calldata proofData, bytes32 appExeCommit, bytes32 appVmCommit)
+        external
+        view;
+}
+
 contract AttestationDocVerifier is IAttestationDocVerifier {
     /// @notice The address of the verifier contract.
     /// @dev This can either be a specific SP1Verifier for a specific version, or the
@@ -46,6 +52,9 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
     /// @notice The verification key for the cert verifier.
     bytes32 public immutable attestationDocVerifierVKey;
 
+    /// @notice The commitment to the VM configuration
+    bytes32 public constant appVmCommit = bytes32(0x005cb541cc5d9796ffb07fabe7099c6a09c9c5412d1d6e8746b60b1cbaeac858);
+
     /// @notice The expected hash value for important fields in the attestation document.
     bytes32 public immutable dataHash;
 
@@ -53,7 +62,8 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
 
     enum ProofSystem {
         RISC0,
-        SP1
+        SP1,
+        OpenVM
     }
 
     ProofSystem public immutable proofSystem;
@@ -72,7 +82,10 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
         expirationTolerance = _expirationTolerance;
         syndCommitHash = _syndCommitHash;
         proofSystem = _proofSystem;
-        require(proofSystem == ProofSystem.RISC0 || proofSystem == ProofSystem.SP1, "invalid proof system");
+        require(
+            proofSystem == ProofSystem.RISC0 || proofSystem == ProofSystem.SP1 || proofSystem == ProofSystem.OpenVM,
+            "invalid proof system"
+        );
     }
 
     /// @notice The entrypoint for verifying the proof of a certificate.
@@ -90,8 +103,11 @@ contract AttestationDocVerifier is IAttestationDocVerifier {
 
         if (proofSystem == ProofSystem.SP1) {
             ISP1Verifier(verifier).verifyProof(attestationDocVerifierVKey, publicData, proofBytes);
-        } else {
+        } else if (proofSystem == ProofSystem.RISC0) {
             IRiscZeroVerifier(verifier).verify(proofBytes, attestationDocVerifierVKey, sha256(publicData));
+        } else {
+            IOpenVmHalo2Verifier(verifier)
+                .verify(bytes.concat(keccak256(publicData)), proofBytes, attestationDocVerifierVKey, appVmCommit);
         }
 
         return teeSigningKey;

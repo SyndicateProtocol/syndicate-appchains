@@ -15,7 +15,17 @@ fn main() {
     // Make it available as an environment variable at compile time
     println!("cargo:rustc-env=GIT_HASH={git_hash}");
 
+    let git_dir_output = Command::new("git")
+        .args(["rev-parse", "--git-dir"])
+        .output()
+        .expect("Failed to execute git command");
+
+    let git_dir = String::from_utf8(git_dir_output.stdout)
+        .expect("Invalid UTF-8 sequence")
+        .trim()
+        .to_string();
+
     // Tell Cargo to re-run this build script if the git HEAD changes
-    println!("cargo:rerun-if-changed=.git/HEAD");
-    println!("cargo:rerun-if-changed=.git/refs/heads/");
+    println!("cargo:rerun-if-changed={}/HEAD", git_dir);
+    println!("cargo:rerun-if-changed={}/refs/", git_dir);
 }

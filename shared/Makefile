@@ -12,8 +12,7 @@ create-contract-bindings-rust:
 		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
 		--select 'IBridge|IOutbox|IRollupCore|IUpgradeExecutor' \
 		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwner' \
-		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig' \
-		--select 'DummySP1Verifier'
+		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig'
 	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 
 .PHONY: create-withdrawal-contract-bindings-go

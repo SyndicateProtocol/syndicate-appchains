@@ -21,6 +21,7 @@ jobs:
       eif-hash: ${{ steps.artifact-hashes.outputs.eif-hash }}
       sp1-hash: ${{ steps.artifact-hashes.outputs.sp1-hash }}
       risc0-hash: ${{ steps.artifact-hashes.outputs.risc0-hash }}
+      openvm-hash: ${{ steps.artifact-hashes.outputs.openvm-hash }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,9 +51,11 @@ jobs:
           EIF_SHA512=$(sha512sum synd-withdrawals/out/eif.bin | awk '{print $1}')
           SP1_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-sp1-program | awk '{print $1}')
           RISC0_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-risc0-program | awk '{print $1}')
+          OPENVM_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-openvm-program | awk '{print $1}')
           echo "eif-hash=$EIF_SHA512" >> $GITHUB_OUTPUT
           echo "sp1-hash=$SP1_SHA512" >> $GITHUB_OUTPUT
           echo "risc0-hash=$RISC0_SHA512" >> $GITHUB_OUTPUT
+          echo "openvm-hash=$OPENVM_SHA512" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -120,6 +123,18 @@ jobs:
             exit 1
           else
             echo "risc0 program hash verification succeeded, hash: $RISC0_SHA512"
+          fi
+
+      - name: Verify that hashes of openvm program files match
+        run: |
+          OPENVM_SHA512=$(sha512sum sp1-build/synd-tee-attestation-zk-proofs-openvm-program | awk '{print $1}')
+          if [[ "$OPENVM_SHA512" != "${{ needs.build.outputs.openvm-hash }}" ]]; then
+            echo "Error: openvm program hash doesn't match the one from the build job"
+            echo "Expected: ${{ needs.build.outputs.openvm-hash }}"
+            echo "Got: $OPENVM_SHA512"
+            exit 1
+          else
+            echo "openvm program hash verification succeeded, hash: $OPENVM_SHA512"
           fi
 
   publish-release:
