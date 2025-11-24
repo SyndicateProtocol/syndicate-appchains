@@ -4,9 +4,6 @@ import { resolve } from "node:path"
 import type { ZodSchema } from "zod"
 import { exitWithError } from "./print"
 
-/**
- * Load and parse a JSON config file
- */
 export function loadConfigFile<T>(configPath: string): T {
   try {
     const absolutePath = resolve(configPath)
@@ -27,10 +24,6 @@ export function loadConfigFile<T>(configPath: string): T {
   throw new Error("Unreachable")
 }
 
-/**
- * Merge config file values with CLI options
- * CLI options take precedence over config file values
- */
 export function mergeConfigWithOptions<T extends Record<string, unknown>>(
   configFile: Partial<T> | undefined,
   cliOptions: Partial<T>
@@ -52,10 +45,6 @@ export function mergeConfigWithOptions<T extends Record<string, unknown>>(
   return merged
 }
 
-/**
- * Convert kebab-case keys to camelCase for config files
- * This allows config files to use more readable kebab-case
- */
 export function kebabToCamelCase(
   obj: Record<string, unknown>
 ): Record<string, unknown> {

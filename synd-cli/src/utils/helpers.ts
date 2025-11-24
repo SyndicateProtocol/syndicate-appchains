@@ -2,12 +2,11 @@ import type { ChainNativeCurrency, GetChainsResponse } from "@/types"
 import {
   type Address,
   type Chain,
-  type Hex,
-  type PublicClient,
   erc20Abi,
   getAddress,
-  isAddress,
+  type Hex,
   parseAbiItem,
+  type PublicClient,
   zeroAddress
 } from "viem"
 
@@ -20,16 +19,6 @@ export async function getDoesChainExist(chainId: number) {
     return true
   }
   return false
-}
-
-export function isNonZeroAddress(
-  address: Address | undefined
-): address is Address {
-  return (
-    typeof address !== "undefined" &&
-    isAddress(address) &&
-    address !== zeroAddress
-  )
 }
 
 export function isNativeTokenEth(nativeTokenAddress?: string) {
@@ -82,15 +71,6 @@ export function getChainRpcUrl(chain: Chain) {
   return chain.rpcUrls.default.http[0]
 }
 
-export function isValidAddress(address: string) {
-  try {
-    getAddress(address)
-    return true
-  } catch (_error) {
-    return false
-  }
-}
-
 export function isAddressEq(
   address1: Address | Hex | string,
   address2: Address | Hex | string
@@ -104,6 +84,7 @@ export function scaleByPercentage(
 ) {
   return value + (value * BigInt(percentIncrease)) / BigInt(100)
 }
+
 export async function detectCustomNativeToken(
   publicClient: PublicClient,
   inboxAddress: Address

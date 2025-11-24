@@ -1,15 +1,8 @@
 import { appchainE2EOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import {
-  getAppchainClient,
-  getPublicClient,
-  getWalletClient
-} from "@/utils/clients"
-import { supportedSettlementChains } from "@/utils/constants"
+import { getAppchainClients, getSupportedChainClients } from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
-import { createWalletClient, http } from "viem"
-import { privateKeyToAccount } from "viem/accounts"
 import { e2e } from "./e2e"
 
 export function e2eCommand(program: Command) {
@@ -33,22 +26,11 @@ export function e2eCommand(program: Command) {
 
       const { settlementRpc, appchainRpc, privateKey } = validatedOptions
 
-      const [settlementPublicClient, settlementWalletClient] =
-        await Promise.all([
-          getPublicClient(settlementRpc, supportedSettlementChains),
-          getWalletClient(settlementRpc, supportedSettlementChains, privateKey)
-        ])
+      const [settlementPublicClient, [settlementWalletClient]] =
+        await getSupportedChainClients(settlementRpc, [privateKey])
 
-      const appchainPublicClient = await getAppchainClient({
-        settlementPublicClient,
-        rpcUrl: appchainRpc
-      })
-
-      const appchainWalletClient = createWalletClient({
-        chain: appchainPublicClient.chain,
-        account: privateKeyToAccount(privateKey),
-        transport: http(appchainRpc)
-      })
+      const [appchainPublicClient, [appchainWalletClient]] =
+        await getAppchainClients(appchainRpc, [privateKey])
 
       await e2e({
         ...validatedOptions,

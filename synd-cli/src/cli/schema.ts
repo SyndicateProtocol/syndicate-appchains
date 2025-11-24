@@ -156,16 +156,6 @@ export const synd = z.object({
   withdrawals
 })
 
-export const handoffConfig = z.object({
-  settlementChainRpcUrl: z.string().url(),
-  sequencingChainRpcUrl: z.string().url(),
-  appChainRpcUrl: z.string().url(),
-  appChainExplorerUrl: z.string().url(),
-  ownerPrivateKey: z.string(),
-  newOwner: z.string().transform((val) => getAddress(val)),
-  synd
-})
-
 export const appchainCreateFoundationOptionsSchema = z
   .object({
     settlementRpc: z.url("Invalid settlement chain RPC URL"),

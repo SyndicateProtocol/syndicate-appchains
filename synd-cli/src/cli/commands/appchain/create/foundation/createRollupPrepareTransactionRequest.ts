@@ -2,7 +2,7 @@ import { bridgeCreatorAbi } from "@/abi/nitro/BridgeCreator"
 import { deployHelperAbi } from "@/abi/nitro/DeployHelper"
 import { rollupCreatorAbi } from "@/abi/nitro/RollupCreator"
 import type { PublicClientWithChain } from "@/types"
-import { isNonZeroAddress, scaleByPercentage } from "@/utils/helpers"
+import { isNativeTokenEth, scaleByPercentage } from "@/utils/helpers"
 import {
   type CreateRollupFunctionInputs,
   type CreateRollupGetRetryablesFeesParams,
@@ -13,14 +13,14 @@ import {
   type Address,
   type CallParameters,
   type Chain,
-  type EstimateGasParameters,
-  type Hex,
-  type PublicClient,
-  type Transport,
   decodeFunctionResult,
   encodeFunctionData,
+  type EstimateGasParameters,
+  type Hex,
   parseEther,
   parseGwei,
+  type PublicClient,
+  type Transport,
   zeroAddress
 } from "viem"
 
@@ -60,7 +60,7 @@ export async function createRollupPrepareTransactionRequest({
   rollupCreatorAddress,
   gasOverrides
 }: CreateRollupTxParams) {
-  if (isNonZeroAddress(params.nativeToken)) {
+  if (!isNativeTokenEth(params.nativeToken)) {
     if (
       (await fetchDecimals({ address: params.nativeToken, publicClient })) > 36
     ) {
@@ -130,7 +130,7 @@ async function createRollupGetCallValue(
   }
 
   // when using a custom fee token, the retryable tickets will be paid for in the custom fee token, so no callvalue is necessary
-  if (isNonZeroAddress(params.nativeToken)) {
+  if (!isNativeTokenEth(params.nativeToken)) {
     return BigInt(0)
   }
 
@@ -188,7 +188,7 @@ async function createRollupGetRetryablesFees<TChain extends Chain | undefined>(
     rollupCreatorAddress
   )
 
-  const isCustomGasToken = isNonZeroAddress(nativeToken)
+  const isCustomGasToken = !isNativeTokenEth(nativeToken)
   const inbox = isCustomGasToken ? erc20TemplateInbox : ethTemplateInbox
   const maxFeePerGas =
     maxFeePerGasForRetryables ?? createRollupDefaults.maxFeePerGasForRetryables

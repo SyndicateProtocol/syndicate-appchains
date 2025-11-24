@@ -1,8 +1,8 @@
 import { ArbOwnerABI } from "@/abi/nitro/ArbOwner"
 import { callArbOwnerOptionsSchema } from "@/cli/schema"
 import { addInitSubcommand } from "@/utils/addInitCommand"
+import { getAppchainClients, getSupportedChainClients } from "@/utils/clients"
 import { parseConfigAndOptions } from "@/utils/config"
-import { createClients } from "@/utils/createClients"
 import { exitWithError } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import type { AbiFunction, ExtractAbiFunctionNames } from "abitype"
@@ -103,11 +103,11 @@ export function callArbOwnerCommand(program: Command) {
           maxFeePerGas
         } = validatedOptions
 
-        const { settlementPublicClient, appchainPublicClient } =
-          await createClients({
-            settlementRpc,
-            appchainRpc
-          })
+        const [settlementPublicClient] =
+          await getSupportedChainClients(settlementRpc)
+        const [appchainPublicClient] = appchainRpc
+          ? await getAppchainClients(appchainRpc)
+          : [undefined]
 
         await generateCallArbOwnerTx({
           settlementPublicClient,

@@ -1,7 +1,11 @@
 import { appchainCreateTeeModuleOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import { createClients } from "@/utils/createClients"
+import {
+  getAppchainClients,
+  getSupportedChainClients,
+  getSupportedChainPublicClient
+} from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { deployWithdrawals } from "./features/deployWithdrawals"
 
@@ -61,21 +65,18 @@ export function createWithdrawalsContractsCommand(program: Command) {
         syndForkSequencingRpc
       } = validatedOptions
 
-      const {
+      const [
         settlementPublicClient,
-        sequencingPublicClient,
-        ethereumPublicClient,
-        ownerSettlementWalletClient,
-        deployerSettlementWalletClient,
-        appchainPublicClient
-      } = await createClients({
-        settlementRpc,
-        sequencingRpc,
-        ethereumRpc,
+        [deployerSettlementWalletClient, ownerSettlementWalletClient]
+      ] = await getSupportedChainClients(settlementRpc, [
         deployerPrivateKey,
-        ownerPrivateKey,
-        appchainRpc
-      })
+        ownerPrivateKey
+      ])
+      const sequencingPublicClient =
+        await getSupportedChainPublicClient(sequencingRpc)
+      const ethereumPublicClient =
+        await getSupportedChainPublicClient(ethereumRpc)
+      const [appchainPublicClient] = await getAppchainClients(appchainRpc)
 
       await deployWithdrawals({
         syndForkSequencingRpc,

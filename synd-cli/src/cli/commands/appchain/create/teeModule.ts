@@ -1,7 +1,12 @@
 import { appchainDeployTeeModuleOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import { createClients } from "@/utils/createClients"
+import {
+  getAppchainClients,
+  getSupportedChainClients,
+  getSupportedChainPublicClient
+} from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
+import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { deployTeeModule } from "./features/deployTeeModule"
 
@@ -51,19 +56,13 @@ export function createTeeModuleCommand(program: Command) {
         appchainRpc
       } = validatedOptions
 
-      const {
-        settlementPublicClient,
-        deployerSettlementWalletClient,
-        sequencingPublicClient,
-        ethereumPublicClient,
-        appchainPublicClient
-      } = await createClients({
-        settlementRpc,
-        sequencingRpc,
-        ethereumRpc,
-        deployerPrivateKey,
-        appchainRpc
-      })
+      const [settlementPublicClient, [deployerSettlementWalletClient]] =
+        await getSupportedChainClients(settlementRpc, [deployerPrivateKey])
+      const sequencingPublicClient =
+        await getSupportedChainPublicClient(sequencingRpc)
+      const ethereumPublicClient =
+        await getSupportedChainPublicClient(ethereumRpc)
+      const [appchainPublicClient] = await getAppchainClients(appchainRpc)
 
       const teeModuleAddress = await deployTeeModule({
         assertionPoster,
@@ -77,12 +76,14 @@ export function createTeeModuleCommand(program: Command) {
         syndForkSequencingRpc
       })
 
-      console.log(`\nTeeModule deployed at: ${teeModuleAddress}`)
-      console.log(
-        "\nNext steps:",
-        "\n1. Transfer AssertionPoster ownership to TeeModule",
-        "\n2. Set TeeModule DEFAULT_ADMIN_ROLE to the desired owner",
-        "\n3. Revoke DEFAULT_ADMIN_ROLE from deployer"
+      print("TeeModule deployed at", teeModuleAddress)
+      print(
+        "Next steps",
+        `
+        1. Transfer AssertionPoster ownership to TeeModule
+        2. Set TeeModule DEFAULT_ADMIN_ROLE to the desired owner
+        3. Revoke DEFAULT_ADMIN_ROLE from deployer
+        `
       )
     })
 }

@@ -1,8 +1,9 @@
 import { deploySequencingChain } from "@/cli/commands/appchain/create/foundation/deploySequencingChain"
 import { appchainCreateSequencingChainOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import { createClients } from "@/utils/createClients"
+import { getSupportedChainClients } from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
+import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 
@@ -34,19 +35,26 @@ export function createSequencingCommand(program: Command) {
         appchainCreateSequencingChainOptionsSchema
       )
 
-      const { id: chainId } = validatedOptions
       const {
+        id: chainId,
+        sequencingRpc,
+        ownerPrivateKey,
+        deployerPrivateKey
+      } = validatedOptions
+      const [
         sequencingPublicClient,
-        deployerSequencingWalletClient,
-        ownerSequencingWalletClient
-      } = await createClients(validatedOptions)
+        [deployerSequencingWalletClient, ownerSequencingWalletClient]
+      ] = await getSupportedChainClients(sequencingRpc, [
+        deployerPrivateKey,
+        ownerPrivateKey
+      ])
 
       const sequencerPrivateKey = generatePrivateKey()
       const sequencerAccount = privateKeyToAccount(sequencerPrivateKey)
 
-      console.log("Sequencer Address:", sequencerAccount.address)
-      console.log("Sequencer Private Key:", sequencerPrivateKey)
-      console.log("\n=Deploying Syndicate sequencing chain...\n")
+      print("Sequencer Address", sequencerAccount.address)
+      print("Sequencer Private Key", sequencerPrivateKey)
+      print("Deploying Syndicate sequencing chain...")
 
       const {
         sequencingContract,
@@ -61,10 +69,10 @@ export function createSequencingCommand(program: Command) {
         ownerSequencingWalletClient
       })
 
-      console.log("\nDeployed contracts:")
-      console.log(`  Sequencing Contract: ${sequencingContract}`)
-      console.log(`  Allowlist Sequencing Module: ${allowlistSequencingModule}`)
-      console.log(`  Require And Module: ${requireAndModule}`)
-      console.log(`  Deployed at Block: ${deployedAtBlock}`)
+      print("Deployed contracts:")
+      print("Sequencing Contract", sequencingContract)
+      print("Allowlist Sequencing Module", allowlistSequencingModule)
+      print("Require And Module", requireAndModule)
+      print("Deployed at Block", deployedAtBlock.toString())
     })
 }

@@ -1,9 +1,9 @@
-import { createClients } from "@/utils/createClients"
+import { addInitSubcommand } from "@/utils/addInitCommand"
+import { getAppchainClients, getSupportedChainClients } from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { formatEther, parseEther } from "viem"
 import { appchainHandoffOptionsSchema } from "../../../schema"
-import { parseConfigAndOptions } from "@/utils/config"
-import { addInitSubcommand } from "@/utils/addInitCommand"
 import { handoff } from "./handoff"
 
 export function handoffCommand(program: Command) {
@@ -30,16 +30,22 @@ export function handoffCommand(program: Command) {
         appchainHandoffOptionsSchema
       )
 
-      const { newOwner, synd } = validatedOptions
-
       const {
-        ownerAppchainWalletClient,
-        ownerSequencingWalletClient,
-        ownerSettlementWalletClient,
-        settlementPublicClient,
-        sequencingPublicClient,
-        appchainPublicClient
-      } = await createClients(validatedOptions)
+        newOwner,
+        synd,
+        appchainRpc,
+        sequencingRpc,
+        settlementRpc,
+        ownerPrivateKey
+      } = validatedOptions
+
+      const [sequencingPublicClient, [ownerSequencingWalletClient]] =
+        await getSupportedChainClients(sequencingRpc, [ownerPrivateKey])
+      const [settlementPublicClient, [ownerSettlementWalletClient]] =
+        await getSupportedChainClients(settlementRpc, [ownerPrivateKey])
+
+      const [appchainPublicClient, [ownerAppchainWalletClient]] =
+        await getAppchainClients(appchainRpc, [ownerPrivateKey])
 
       const balanceThreshold = parseEther("0.001")
       const [appchainBalance, sequencingBalance, settlementBalance] =

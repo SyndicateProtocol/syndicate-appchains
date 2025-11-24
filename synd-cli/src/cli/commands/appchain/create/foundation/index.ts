@@ -1,7 +1,7 @@
 import { appchainCreateFoundationOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import { createClients } from "@/utils/createClients"
+import { getSupportedChainClients } from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { foundation } from "./foundation"
 
@@ -59,19 +59,20 @@ export function createFoundationCommand(program: Command) {
         sequencingRpc
       } = validatedOptions
 
-      const {
-        deployerSettlementWalletClient,
-        deployerSequencingWalletClient,
-        ownerSettlementWalletClient,
-        ownerSequencingWalletClient,
+      const [
         settlementPublicClient,
-        sequencingPublicClient
-      } = await createClients({
-        settlementRpc,
-        sequencingRpc,
-        ownerPrivateKey,
-        deployerPrivateKey
-      })
+        [deployerSettlementWalletClient, ownerSettlementWalletClient]
+      ] = await getSupportedChainClients(settlementRpc, [
+        deployerPrivateKey,
+        ownerPrivateKey
+      ])
+      const [
+        sequencingPublicClient,
+        [deployerSequencingWalletClient, ownerSequencingWalletClient]
+      ] = await getSupportedChainClients(sequencingRpc, [
+        deployerPrivateKey,
+        ownerPrivateKey
+      ])
 
       await foundation({
         deployerSettlementWalletClient,

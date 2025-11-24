@@ -1,33 +1,72 @@
 import type { PublicClientWithChain } from "@/types"
 import {
+  type Chain,
   createPublicClient,
   createWalletClient,
   defineChain,
+  type Hex,
   hexToNumber,
-  http,
-  type Chain,
-  type Hex
+  http
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { getNativeCurrency, isNativeTokenEth } from "./helpers"
+import {
+  supportedEthereumChains,
+  supportedSequencingChains,
+  supportedSettlementChains
+} from "./constants"
 
-export async function getPublicClient(
-  rpcUrl: string,
-  supportedChains: Record<string, { chain: Chain }>
+export async function getAppchainClients(rpcUrl: string, pks: Array<Hex> = []) {
+  const chainId = await getChainIdFromRpc(rpcUrl)
+  const publicClient = createPublicClient({
+    chain: defineChain({
+      id: chainId,
+      name: `appchain: ${chainId}`,
+      nativeCurrency: {
+        name: "Ether",
+        symbol: "ETH",
+        decimals: 18
+      },
+      rpcUrls: {
+        default: { http: [rpcUrl] },
+        public: { http: [rpcUrl] }
+      }
+    }),
+    transport: http(rpcUrl)
+  })
+
+  const walletClients = pks.map((pk) =>
+    createWalletClient({
+      chain: publicClient.chain,
+      account: privateKeyToAccount(pk),
+      transport: http(publicClient.transport.url)
+    })
+  )
+  return [publicClient, walletClients] as const
+}
+
+export async function getSupportedChainClients(
+  rpc: string,
+  pks: Array<Hex> = []
 ) {
-  const chain = await getChainFromRpcUrl(rpcUrl, supportedChains)
+  const publicClient = await getSupportedChainPublicClient(rpc)
+  const walletClients = await Promise.all(
+    pks.map((pk) => getSupportedChainWalletClient(rpc, pk))
+  )
+  return [publicClient, walletClients] as const
+}
+
+export async function getSupportedChainPublicClient(
+  rpcUrl: string
+): Promise<PublicClientWithChain> {
+  const chain = await getSupportedChainFromRpcUrl(rpcUrl)
   return createPublicClient({
     chain,
     transport: http(rpcUrl)
   })
 }
 
-export async function getWalletClient(
-  rpcUrl: string,
-  supportedChains: Record<string, { chain: Chain }>,
-  privateKey: Hex
-) {
-  const chain = await getChainFromRpcUrl(rpcUrl, supportedChains)
+async function getSupportedChainWalletClient(rpcUrl: string, privateKey: Hex) {
+  const chain = await getSupportedChainFromRpcUrl(rpcUrl)
   return createWalletClient({
     chain,
     account: privateKeyToAccount(privateKey),
@@ -35,61 +74,18 @@ export async function getWalletClient(
   })
 }
 
-export async function getAppchainClient({
-  chainName,
-  nativeToken,
-  rpcUrl,
-  explorerUrl,
-  settlementPublicClient
-}: {
-  chainName?: string
-  nativeToken?: Hex
-  rpcUrl: string
-  explorerUrl?: string
-  settlementPublicClient: PublicClientWithChain
-}) {
+async function getSupportedChainFromRpcUrl<
+  _T extends Record<string, { chain: Chain }>
+>(rpcUrl: string): Promise<Chain> {
+  const chains = {
+    ...supportedEthereumChains,
+    ...supportedSequencingChains,
+    ...supportedSettlementChains
+  }
+  const supportedChainIds = Object.keys(chains)
   const chainId = await getChainIdFromRpc(rpcUrl)
-  const nativeCurrency =
-    nativeToken && !isNativeTokenEth(nativeToken)
-      ? await getNativeCurrency(settlementPublicClient, nativeToken)
-      : {
-          decimals: 18,
-          name: "Ether",
-          symbol: "ETH"
-        }
-  const name = chainName || `appchain: ${chainId}`
-  return createPublicClient({
-    chain: defineChain({
-      id: chainId,
-      name: name,
-      network: name,
-      nativeCurrency,
-      rpcUrls: {
-        default: { http: [rpcUrl] },
-        public: { http: [rpcUrl] }
-      },
-      blockExplorers: explorerUrl
-        ? {
-            default: {
-              name: `${name} Explorer`,
-              url: explorerUrl
-            }
-          }
-        : undefined
-    }),
-    transport: http(rpcUrl)
-  })
-}
-
-async function getChainFromRpcUrl<T extends Record<string, { chain: Chain }>>(
-  rpcUrl: string,
-  supportedChains: T
-): Promise<Chain> {
-  const chainId = await getChainIdFromRpc(rpcUrl)
-
-  const chainIdStr = chainId.toString()
-  if (chainIdStr in supportedChains) {
-    return supportedChains[chainIdStr].chain
+  if (supportedChainIds.includes(chainId.toString())) {
+    return chains[chainId].chain
   }
 
   throw new Error(
@@ -97,7 +93,7 @@ async function getChainFromRpcUrl<T extends Record<string, { chain: Chain }>>(
   )
 }
 
-export async function getChainIdFromRpc(rpcUrl: string) {
+async function getChainIdFromRpc(rpcUrl: string) {
   const res = await fetch(rpcUrl, {
     method: "POST",
     body: JSON.stringify({

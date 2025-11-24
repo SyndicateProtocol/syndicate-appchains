@@ -1,8 +1,11 @@
 import { appchainCreateFeaturesOptionsSchema } from "@/cli/schema"
-import { parseConfigAndOptions } from "@/utils/config"
 import { addInitSubcommand } from "@/utils/addInitCommand"
-import { getChainIdFromRpc } from "@/utils/clients"
-import { createClients } from "@/utils/createClients"
+import {
+  getAppchainClients,
+  getSupportedChainClients,
+  getSupportedChainPublicClient
+} from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { features } from "./features"
 
@@ -51,42 +54,45 @@ export function createFeaturesCommand(program: Command) {
       )
 
       const {
+        sequencingRpc,
+        settlementRpc,
+        deployerPrivateKey,
+        ownerPrivateKey,
         coreContracts,
-        appchainExplorer,
         chainName,
         sequencingContract,
-        syndForkSequencingRpc
+        syndForkSequencingRpc,
+        ethereumRpc,
+        appchainRpc
       } = validatedOptions
 
-      const {
-        appchainPublicClient,
-        deployerSequencingWalletClient,
-        ownerSettlementWalletClient,
-        deployerSettlementWalletClient,
-        settlementPublicClient,
-        deployerAppchainWalletClient,
-        sequencingPublicClient,
-        ethereumPublicClient
-      } = await createClients({
-        ...validatedOptions,
-        chainName,
-        nativeToken: coreContracts.nativeToken,
-        appchainExplorer
-      })
+      const [sequencingPublicClient, [deployerSequencingWalletClient]] =
+        await getSupportedChainClients(sequencingRpc, [deployerPrivateKey])
 
-      const chainId = await getChainIdFromRpc(validatedOptions.appchainRpc)
+      const [
+        settlementPublicClient,
+        [deployerSettlementWalletClient, ownerSettlementWalletClient]
+      ] = await getSupportedChainClients(settlementRpc, [
+        deployerPrivateKey,
+        ownerPrivateKey
+      ])
+
+      const ethereumPublicClient =
+        await getSupportedChainPublicClient(ethereumRpc)
+      const [appchainPublicClient, [deployerAppchainWalletClient]] =
+        await getAppchainClients(appchainRpc, [deployerPrivateKey])
 
       await features({
-        appchainPublicClient,
-        deployerSequencingWalletClient,
-        ownerSettlementWalletClient,
-        deployerSettlementWalletClient,
-        settlementPublicClient,
-        deployerAppchainWalletClient,
         sequencingPublicClient,
+        appchainPublicClient,
+        settlementPublicClient,
+        deployerSequencingWalletClient,
+        deployerSettlementWalletClient,
+        deployerAppchainWalletClient,
+        ownerSettlementWalletClient,
         ethereumPublicClient,
         coreContracts,
-        chainId,
+        chainId: appchainPublicClient.chain.id,
         chainName,
         sequencingContract,
         syndForkSequencingRpc

@@ -65,8 +65,4 @@ repos:
         language: system
         types: [cargo]
         pass_filenames: false
-      - id: biome-format
-        name: Biome format
-        entry: bash -c 'cd synd-cli && for f in "$@"; do file="${f#synd-cli/}"; bunx @biomejs/biome format --write "$file"; done && cd .. && git add "$@"' --
-        language: system
-        files: ^synd-cli/.*\.(ts|tsx|js|jsx|json)$
+

@@ -1,9 +1,11 @@
-import { getAppchainClient, getPublicClient } from "@/utils/clients"
-import { supportedSettlementChains } from "@/utils/constants"
+import { addInitSubcommand } from "@/utils/addInitCommand"
+import {
+  getAppchainClients,
+  getSupportedChainPublicClient
+} from "@/utils/clients"
+import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { appchainCheckTokenBridgeOptionsSchema } from "../../../schema"
-import { parseConfigAndOptions } from "@/utils/config"
-import { addInitSubcommand } from "@/utils/addInitCommand"
 import { checkTokenBridge } from "./checkTokenBridge"
 
 export function checkTokenBridgeCommand(program: Command) {
@@ -35,15 +37,9 @@ export function checkTokenBridgeCommand(program: Command) {
       const { settlementRpc, appchainRpc, rollup, createdAtHash } =
         validatedOptions
 
-      const settlementPublicClient = await getPublicClient(
-        settlementRpc,
-        supportedSettlementChains
-      )
-
-      const appchainPublicClient = await getAppchainClient({
-        settlementPublicClient: settlementPublicClient,
-        rpcUrl: appchainRpc
-      })
+      const settlementPublicClient =
+        await getSupportedChainPublicClient(settlementRpc)
+      const [appchainPublicClient] = await getAppchainClients(appchainRpc)
 
       await checkTokenBridge({
         rollup,
