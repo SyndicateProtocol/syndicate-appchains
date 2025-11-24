@@ -20,7 +20,7 @@ contract DeployPerformanceStaking is Script {
 
     uint256 public startingEpoch = 4;
 
-    address public seqChainAdmin = address(0x0000000000000000000000000000000000000000);
+    address public seqChainAdmin = address(0xccc32F51073B0B1EB15746f5a2b1EE76add65CCC);
 
     // Ethereum Contracts
     address public seqChainOutbox = address(0xf555Bc86D1C953414F676479Bf7C979b1A737E8C);
@@ -51,7 +51,7 @@ contract DeployPerformanceStaking is Script {
     function run() public {
         vm.startBroadcast();
 
-        useTestnetValues();
+        // useTestnetValues();
 
         if (block.chainid == seqChainID) {
             console2.log("Deploying Performance Staking Contracts on Syndicate...");
