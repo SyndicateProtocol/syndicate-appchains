@@ -1,3 +1,4 @@
+import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { createAssertionPosterCommand } from "./assertionPoster"
 import { createFeaturesCommand } from "./features"
@@ -11,7 +12,7 @@ export function createAppchainCommand(program: Command) {
     .command("create")
     .description("Create a new appchain")
     .action(async () => {
-      console.log("Use a subcommand to create an appchain")
+      print("Use a subcommand to create an appchain")
     })
   createFoundationCommand(createAppchainProgram)
   createFeaturesCommand(createAppchainProgram)

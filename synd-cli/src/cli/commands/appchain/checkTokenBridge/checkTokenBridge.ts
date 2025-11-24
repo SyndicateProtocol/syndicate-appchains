@@ -1,5 +1,6 @@
 import type { CheckTokenBridge, PublicClientWithChain } from "@/types"
 import { getTokenBridgeContracts } from "@/utils/getTokenBridgeContracts"
+import { print } from "@/utils/print"
 import { createTokenBridgePrepareTransactionReceipt } from "@arbitrum/orbit-sdk"
 import {
   type ArbitrumNetwork,
@@ -8,6 +9,7 @@ import {
 } from "@arbitrum/sdk"
 import type { JsonRpcProvider } from "@ethersproject/providers"
 import { providers } from "ethers"
+import { stringify } from "viem"
 
 export async function checkTokenBridge({
   rollup,
@@ -25,7 +27,7 @@ export async function checkTokenBridge({
   const transaction = await settlementPublicClient.getTransaction({
     hash: createdAtHash
   })
-  console.log("Bridge created at transaction:", transaction)
+  print("Bridge created at transaction", stringify(transaction, null, 2))
 
   const tokenBridgeCreatorAddress = transaction?.to
   if (!tokenBridgeCreatorAddress) {
@@ -38,16 +40,18 @@ export async function checkTokenBridge({
     })
   )
 
-  console.log("Waiting for retryable tickets to execute on the Orbit chain...")
+  print("Waiting for retryable tickets to execute on the Orbit chain...")
   const orbitChainRetryableReceipts = await txReceipt.waitForRetryables({
     orbitPublicClient: appchainPublicClient
   })
-  console.log("Retryables executed")
-  console.log(
-    `Transaction hash for first retryable is ${orbitChainRetryableReceipts[0].transactionHash}`
+  print("Retryables executed")
+  print(
+    "Transaction hash for first retryable",
+    orbitChainRetryableReceipts[0].transactionHash
   )
-  console.log(
-    `Transaction hash for second retryable is ${orbitChainRetryableReceipts[1].transactionHash}`
+  print(
+    "Transaction hash for second retryable",
+    orbitChainRetryableReceipts[1].transactionHash
   )
 
   // fetching the TokenBridge contracts
@@ -56,8 +60,8 @@ export async function checkTokenBridge({
     parentChainPublicClient: settlementPublicClient,
     tokenBridgeCreatorAddressOverride: tokenBridgeCreatorAddress
   })
-  console.log("TokenBridge contracts fetched")
-  console.log(tokenBridgeContracts)
+  print("TokenBridge contracts fetched")
+  print(stringify(tokenBridgeContracts, null, 2))
 }
 
 export const registerNewNetwork = async (

@@ -2,6 +2,7 @@ import { appchainDeployAssertionPosterOptionsSchema } from "@/cli/schema"
 import { addInitSubcommand } from "@/utils/addInitCommand"
 import { getSupportedChainClients } from "@/utils/clients"
 import { parseConfigAndOptions } from "@/utils/config"
+import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { deployAssertionPoster } from "./features/deployAssertionPoster"
 
@@ -57,11 +58,11 @@ export function createAssertionPosterCommand(program: Command) {
         ownerSettlementWalletClient
       })
 
-      console.log(`\nAssertionPoster deployed at: ${assertionPosterAddress}`)
-      console.log(
-        "\nNext steps:",
-        "\n1. Deploy TeeModule contract",
-        "\n2. Transfer AssertionPoster ownership to TeeModule"
-      )
+      print("AssertionPoster deployed at", assertionPosterAddress)
+      print(`
+        Next steps:
+        1. Deploy TeeModule contract
+        2. Transfer AssertionPoster ownership to TeeModule
+        `)
     })
 }

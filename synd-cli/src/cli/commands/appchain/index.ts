@@ -1,3 +1,4 @@
+import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { arbOwnerCommand } from "./arbOwner"
 import { checkTokenBridgeCommand } from "./checkTokenBridge/"
@@ -10,7 +11,7 @@ export function appchainCommand(program: Command) {
     .command("appchain")
     .description("Manage appchains")
     .action(async () => {
-      console.log("Managing appchains...")
+      print("Managing appchains...")
     })
   createAppchainCommand(appchainProgram)
   handoffCommand(appchainProgram)

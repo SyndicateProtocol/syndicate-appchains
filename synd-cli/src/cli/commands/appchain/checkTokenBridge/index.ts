@@ -1,3 +1,4 @@
+import { appchainCheckTokenBridgeOptionsSchema } from "@/cli/schema"
 import { addInitSubcommand } from "@/utils/addInitCommand"
 import {
   getAppchainClients,
@@ -5,7 +6,6 @@ import {
 } from "@/utils/clients"
 import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
-import { appchainCheckTokenBridgeOptionsSchema } from "../../../schema"
 import { checkTokenBridge } from "./checkTokenBridge"
 
 export function checkTokenBridgeCommand(program: Command) {

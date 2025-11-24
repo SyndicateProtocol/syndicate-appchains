@@ -1,7 +1,7 @@
 import { formatEther } from "viem"
 
 import type { TransferToSelf } from "@/types"
-import { print } from "../../../../utils/print"
+import { print } from "@/utils/print"
 
 export async function transferToSelf({
   appchainPublicClient,

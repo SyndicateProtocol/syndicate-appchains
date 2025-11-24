@@ -1,6 +1,6 @@
+import { getChainExplorerUrl } from "@/utils/helpers"
+import { print } from "@/utils/print"
 import type { Account, Chain, Transport, WalletClient } from "viem"
-import { getChainExplorerUrl } from "../../../../../utils/helpers"
-import { print } from "../../../../../utils/print"
 
 export function pollEmptyTxs(
   walletClient: WalletClient<Transport, Chain, Account>

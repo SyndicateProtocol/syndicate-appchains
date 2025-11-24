@@ -1,9 +1,9 @@
+import { appchainHandoffOptionsSchema } from "@/cli/schema"
 import { addInitSubcommand } from "@/utils/addInitCommand"
 import { getAppchainClients, getSupportedChainClients } from "@/utils/clients"
 import { parseConfigAndOptions } from "@/utils/config"
 import type { Command } from "@commander-js/extra-typings"
 import { formatEther, parseEther } from "viem"
-import { appchainHandoffOptionsSchema } from "../../../schema"
 import { handoff } from "./handoff"
 
 export function handoffCommand(program: Command) {

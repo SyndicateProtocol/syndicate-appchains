@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import type { ZodObject, ZodRawShape, ZodTypeAny } from "zod"
-import { exitWithError } from "./print"
+import { exitWithError, print } from "./print"
 
 const CORE_CONTRACTS = {
   rollup: "0x0000000000000000000000000000000000000000",
@@ -144,11 +144,11 @@ export function createInitCommand(
     // Write the file
     writeFileSync(absolutePath, output, "utf-8")
 
-    console.log(`✅ Created config file: ${outputPath}`)
-    console.log(`\n📝 Next steps:`)
-    console.log(`   1. Edit the file with your values`)
-    console.log(
-      `   2. Run: bun run synd-cli ${commandName.replace(/-/g, " ")} --config ${outputPath}`
+    print(`✅ Created config file: ${outputPath}`)
+    print(`📝 Next steps:`)
+    print(`1. Edit the file with your values`)
+    print(
+      `2. Run: bun run synd-cli ${commandName.replace(/-/g, " ")} --config ${outputPath}`
     )
   }
 }
