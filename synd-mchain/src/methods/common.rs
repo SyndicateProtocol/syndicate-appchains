@@ -1,5 +1,6 @@
 //! Shared functions and constants for the `synd-mchain` RPC server methods
 
+use crate::{db::Block, methods::eth_methods::L1_BLOCK_NUM_HARDFORK_TS};
 use alloy::primitives::{address, Address, FixedBytes, U256};
 use jsonrpsee::{
     server::SubscriptionSink,
@@ -19,29 +20,34 @@ pub fn err(message: &'static str) -> ErrorObjectOwned {
 }
 
 /// Helper function to create a mock log object
-pub fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
+pub fn create_log(
+    batch_count: u64,
+    offset: u64,
+    data: alloy::primitives::LogData,
+) -> alloy::rpc::types::Log {
     alloy::rpc::types::Log {
         inner: alloy::primitives::Log { address: APPCHAIN_CONTRACT, data },
         transaction_hash: Some(FixedBytes::ZERO),
-        block_number: Some(block_num),
-        block_hash: Some(U256::from(block_num).into()),
+        block_number: Some(batch_count + offset),
+        block_hash: Some(U256::from(batch_count).into()),
         ..Default::default()
     }
 }
 
 /// Helper function to create a mock header object
-pub fn create_header(
-    block_num: u64,
-    l1_block_num: u64,
-    timestamp: u64,
-) -> alloy::rpc::types::Header {
+pub fn create_header(batch_count: u64, offset: u64, block: &Block) -> alloy::rpc::types::Header {
+    let l1_block_number = if block.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+        block.slot.seq_block_number
+    } else {
+        block.slot.set_block_number
+    };
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
-            number: block_num,
+            number: batch_count + offset,
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
-            mix_hash: U256::from(l1_block_num)
+            mix_hash: U256::from(l1_block_number)
                 .checked_shl(64)
                 .unwrap()
                 .checked_add(U256::from(1))
@@ -49,11 +55,11 @@ pub fn create_header(
                 .checked_shl(64)
                 .unwrap()
                 .into(),
-            timestamp,
+            timestamp: block.timestamp,
             difficulty: U256::ONE,
             ..Default::default()
         },
-        hash: U256::from(block_num).into(),
+        hash: U256::from(batch_count).into(),
         ..Default::default()
     }
 }
@@ -78,12 +84,12 @@ pub fn appchain_config(chain_id: u64) -> String {
             "berlinBlock": 0,
             "londonBlock": 0,
             "clique": {{
-            "period": 0,
-            "epoch": 0
+                "period": 0,
+                "epoch": 0
             }},
             "arbitrum": {{
-            "EnableArbOS": true,
-            "Syndicate": true
+                "EnableArbOS": true,
+                "Syndicate": true
             }}
         }}"#
     );
@@ -96,7 +102,7 @@ pub fn appchain_config(chain_id: u64) -> String {
 #[derive(Debug)]
 pub struct Context {
     /// The finalized block number
-    pub finalized_block: u64,
+    pub finalized_batch_count: u64,
     /// The pending timestamps
     pub pending_ts: VecDeque<u64>,
     /// The subscriptions

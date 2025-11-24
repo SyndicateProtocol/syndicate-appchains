@@ -7775,6 +7775,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-migration-cli"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-rlp",
+ "clap",
+ "eyre",
+ "rlp 0.6.1",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "shared",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synd-slotter"
 version = "0.1.0"
 dependencies = [
@@ -7985,6 +8002,7 @@ dependencies = [
  "synd-chain-ingestor",
  "synd-maestro",
  "synd-mchain",
+ "synd-migration-cli",
  "test-utils",
  "tokio",
  "tracing",

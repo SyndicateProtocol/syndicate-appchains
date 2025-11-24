@@ -91,9 +91,8 @@ fn override_with_onchain_config(
     config
 }
 
-/// Fetches chain config if it exists
-pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
-    let config = config.clone();
+/// Fetches chain config if it exists and extends the passed config with any missing values
+pub async fn with_onchain_config(config: TranslatorConfig) -> TranslatorConfig {
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => {

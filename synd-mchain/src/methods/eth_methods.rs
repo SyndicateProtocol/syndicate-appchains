@@ -32,7 +32,7 @@ use std::{
 };
 
 /// hardfork timestamp
-pub const HARDFORK_TS: u64 = 1764565200;
+pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1764565200;
 
 /// `eth_subscribe`
 #[allow(clippy::unwrap_used)]
@@ -88,18 +88,21 @@ pub fn eth_get_logs(
             Some(alloy::rpc::types::ValueOrArray::Value(i)) => i,
             _ => return Err(err("missing topic1")),
         };
-        let ind = u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
-        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(ind + 1).into()) {
+        let batch_seq_num =
+            u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
+        let batch_count = batch_seq_num + 1;
+        if f.block_option != FilterBlockOption::AtBlockHash(U256::from(batch_count).into()) {
             return Err(err("block hash and batch index mismatch"));
         }
-        let block = db.get_block(ind + 1)?;
+        let block = db.get_block(batch_count)?;
         if block.batch.is_empty() {
             return Err(err("batch is empty - SequencerBatchData event does not exist"));
         }
         return Ok(vec![create_log(
-            ind + 1,
+            batch_count,
+            db.get_migration_offset(),
             ISequencerInbox::SequencerBatchData {
-                batchSequenceNumber: U256::from(ind),
+                batchSequenceNumber: U256::from(batch_seq_num),
                 data: block.batch,
             }
             .encode_log_data(),
@@ -118,13 +121,18 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IBridge::MessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
+                // don't include initmsg in events
+                continue;
+            }
             let mut before_acc = block.before_message_acc;
-            for (j, (msg, acc)) in block.messages.iter().enumerate() {
+            for (msg_idx, (msg, acc)) in block.messages.iter().enumerate() {
                 events.push(create_log(
-                    i,
+                    batch_count,
+                    offset,
                     IBridge::MessageDelivered {
-                        messageIndex: U256::from(block.before_message_count + j as u64),
+                        messageIndex: U256::from(block.before_message_count + msg_idx as u64),
                         beforeInboxAcc: before_acc,
                         inbox: APPCHAIN_CONTRACT,
                         kind: msg.kind,
@@ -141,11 +149,16 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&ISequencerInbox::SequencerBatchDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
+                // don't include initmsg in events
+                continue;
+            }
             events.push(create_log(
-                i,
+                batch_count,
+                offset,
                 ISequencerInbox::SequencerBatchDelivered {
-                    batchSequenceNumber: U256::from(i - 1),
+                    batchSequenceNumber: U256::from(batch_count - 1),
                     beforeAcc: block.before_batch_acc,
                     afterAcc: block.after_batch_acc,
                     delayedAcc: block.after_message_acc(),
@@ -168,12 +181,17 @@ pub fn eth_get_logs(
     }
     if f.topics[0].matches(&IInbox::InboxMessageDelivered::SIGNATURE_HASH) {
         for i in from_block..to_block + 1 {
-            let block = db.get_block(i)?;
-            for (j, (msg, _)) in block.messages.iter().enumerate() {
+            let (block, batch_count, offset) = db.get_block_with_offset(i)?;
+            if block.timestamp == 0 && from_block != to_block && offset > 0 {
+                // don't include initmsg in events
+                continue;
+            }
+            for (msg_idx, (msg, _)) in block.messages.iter().enumerate() {
                 events.push(create_log(
-                    i,
+                    batch_count,
+                    offset,
                     IInbox::InboxMessageDelivered {
-                        messageNum: U256::from(block.before_message_count + j as u64),
+                        messageNum: U256::from(block.before_message_count + msg_idx as u64),
                         data: msg.data.clone(),
                     }
                     .encode_log_data(),
@@ -193,13 +211,8 @@ pub fn eth_get_block_by_hash(
     let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
     let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
     let block = db.get_block(number)?;
-    let l1_block_number = if block.timestamp < HARDFORK_TS {
-        block.slot.seq_block_number
-    } else {
-        block.slot.set_block_number
-    };
     Ok(alloy::rpc::types::Block {
-        header: create_header(number, l1_block_number, block.timestamp),
+        header: create_header(number, db.get_migration_offset(), &block),
         ..Default::default()
     })
 }
@@ -224,20 +237,20 @@ pub fn eth_get_block_by_number(
                     break;
                 }
                 ts = *block_ts;
-                data.finalized_block += 1;
+                data.finalized_batch_count += 1;
                 data.pending_ts.pop_front();
             }
             if ts > 0 {
-                metrics.record_finalized_block(data.finalized_block, ts);
+                metrics.record_finalized_block(data.finalized_batch_count, ts);
             }
 
-            data.finalized_block
+            data.finalized_batch_count
         }
         _ => return Err(format!("invalid tag: {tag}")).map_err(to_err),
     };
     let block = db.get_block(number).unwrap();
     Ok(alloy::rpc::types::Block {
-        header: create_header(number, block.slot.seq_block_number, block.timestamp),
+        header: create_header(number, db.get_migration_offset(), &block),
         ..Default::default()
     })
 }
@@ -320,7 +333,11 @@ mod tests {
         (
             TestDB::new(),
             MchainMetrics::new(&mut MetricsState::default().registry),
-            Mutex::new(Context { finalized_block: 0, pending_ts: VecDeque::new(), subs: vec![] }),
+            Mutex::new(Context {
+                finalized_batch_count: 0,
+                pending_ts: VecDeque::new(),
+                subs: vec![],
+            }),
         )
     }
 

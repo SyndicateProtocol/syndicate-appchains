@@ -22,7 +22,7 @@ use contract_bindings::synd::i_bridge::IBridge::MessageDelivered;
 use eyre::Result;
 use shared::types::{BlockBuilder, DelayedMsgsData, PartialBlock};
 use std::collections::HashMap;
-use synd_mchain::{db::DelayedMessage, methods::eth_methods::HARDFORK_TS};
+use synd_mchain::{db::DelayedMessage, methods::eth_methods::L1_BLOCK_NUM_HARDFORK_TS};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -143,8 +143,11 @@ impl ArbitrumAdapter {
                 .map(|x|x.1).collect::<Vec<_>>()
         );
 
-        let block_number =
-            if block.block_ref.timestamp < HARDFORK_TS { block.block_ref.timestamp } else { 0 };
+        let block_number = if block.block_ref.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+            block.block_ref.timestamp
+        } else {
+            0
+        };
 
         Ok((
             mb_transactions.len() as u64,

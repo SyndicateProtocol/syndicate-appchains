@@ -1,7 +1,7 @@
 //! The `synd-mchain` database
 
 use alloy::{
-    primitives::{keccak256, Address, Bytes, FixedBytes, U256},
+    primitives::{keccak256, Address, Bytes, FixedBytes, B256, U256},
     sol_types::SolValue as _,
 };
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
@@ -9,6 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tracing::{debug, trace};
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -87,7 +88,7 @@ pub struct MBlock {
 ///
 /// Note that the block hash does not affect derived block hashes and therefore
 /// this implementation should be fully compatible with existing reth `MockChains`.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Block {
     /// block epoch timestamp in seconds
     pub timestamp: u64,
@@ -142,10 +143,12 @@ pub enum DBKey {
     Block(u64),
     /// State of the chain at the latest head
     State,
-    /// Message accumulator with message number
+    /// Message accumulator with message number (used for fast lookup by seqNum in `eth_call`)
     MessageAcc(u64),
     /// DB schema version
     Version,
+    /// Offset for the initial migration settlement start block number
+    MigrationOffset,
 }
 
 impl fmt::Display for DBKey {
@@ -155,6 +158,7 @@ impl fmt::Display for DBKey {
             Self::State => write!(f, "s"),
             Self::MessageAcc(num) => write!(f, "m{num}"),
             Self::Version => write!(f, "v"),
+            Self::MigrationOffset => write!(f, "o"),
         }
     }
 }
@@ -171,6 +175,7 @@ pub trait ArbitrumDB {
     /// Gets the block associated with the given key
     fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
         let state = self.get_state();
+        trace!("get_block: key: {key}, state.batch_count: {}", state.batch_count);
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
             .map_or_else(
                 || Err(to_err(format!("could not find block {key}"))),
@@ -181,8 +186,20 @@ pub trait ArbitrumDB {
                 },
             )
     }
+
+    /// gets the block associated with the given key using the migration offset
+    fn get_block_with_offset(&self, key: u64) -> Result<(Block, u64, u64), ErrorObjectOwned> {
+        let offset = self.get_migration_offset();
+        let batch_count = if key >= offset {
+            key - offset
+        } else {
+            return Err(to_err(format!("key {key} is less than offset {offset}")))
+        };
+        self.get_block(batch_count).map(|block| (block, batch_count, offset))
+    }
     /// Puts the block associated with the given key
     fn put_block(&self, key: u64, value: &Block) {
+        debug!("put_block: {key:?}, {value:?}");
         self.put(
             DBKey::Block(key).to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
@@ -205,10 +222,11 @@ pub trait ArbitrumDB {
                 },
             )
     }
-    /// Puts the message accumulator associated with the given key
-    fn put_message_acc(&self, key: u64, value: &FixedBytes<32>) {
+    /// Puts the message accumulator associated with the given sequence number
+    fn put_message_acc(&self, sequence_number: u64, value: &FixedBytes<32>) {
+        debug!("put_message_acc: {sequence_number:?}, {value:?}");
         self.put(
-            DBKey::MessageAcc(key).to_string(),
+            DBKey::MessageAcc(sequence_number).to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
     }
@@ -224,10 +242,28 @@ pub trait ArbitrumDB {
     }
     /// Puts the state of the chain
     fn put_state(&self, value: &State) {
+        debug!("put_state: {value:?}");
         self.put(
             DBKey::State.to_string(),
             bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
         );
+    }
+
+    /// Puts the offset for the initial migration
+    fn put_migration_offset(&self, value: u64) {
+        assert!(self.get_migration_offset() == 0, "offset is already set");
+        self.put(
+            DBKey::MigrationOffset.to_string(),
+            bincode::serde::encode_to_vec(value, bincode::config::standard()).unwrap(),
+        );
+        debug!("put_migration_offset: {value}");
+    }
+
+    /// Gets the offset for the initial migration
+    fn get_migration_offset(&self) -> u64 {
+        self.get(DBKey::MigrationOffset.to_string()).map_or(0, |x| {
+            bincode::serde::decode_from_slice(&x, bincode::config::standard()).unwrap().0
+        })
     }
     /// Checks the version of the chain
     fn check_version(&self) {
@@ -253,14 +289,24 @@ pub trait ArbitrumDB {
             }
         }
     }
+
+    /// Adds a regular batch to the chain (non migration)
+    fn add_batch(&self, mblock: MBlock) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
+        self.add_batch_base(mblock, false)
+    }
+
     /// Adds a new batch to the chain
     /// Returns the block number if a new block is added
-    fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
+    fn add_batch_base(
+        &self,
+        mblock: MBlock,
+        is_migration: bool,
+    ) -> Result<Option<(u64, u64, Block)>, ErrorObjectOwned> {
         let state = self.get_state();
         if state.batch_count == 0 && mblock.payload.is_none() {
             return Err(to_err("invalid first batch: must contain a payload"));
         }
-        if state.batch_count > 0 {
+        if state.batch_count > 0 && !is_migration {
             if mblock.timestamp < state.timestamp {
                 return Err(to_err(format!(
                     "invalid batch: timestamp cannot go backwards: {} < {}",
@@ -312,13 +358,15 @@ pub trait ArbitrumDB {
             messages: messages.iter().map(|x| (x.to_owned(), FixedBytes::ZERO)).collect(),
             after_batch_acc: Default::default(),
         };
-        let mut before_inbox_acc = block.before_message_acc;
+        let mut inbox_acc = block.before_message_acc;
+        let offset = self.get_migration_offset();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
+            let l1_block_num = block.slot.seq_block_number;
             let message_hash = keccak256(
                 (
                     [msg.kind],
                     msg.sender,
-                    block.slot.seq_block_number,
+                    l1_block_num,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,
@@ -326,9 +374,9 @@ pub trait ArbitrumDB {
                 )
                     .abi_encode_packed(),
             );
-            before_inbox_acc = keccak256((before_inbox_acc, message_hash).abi_encode_packed());
-            *acc = before_inbox_acc;
-            self.put_message_acc(block.before_message_count + i as u64, &before_inbox_acc);
+            inbox_acc = keccak256((inbox_acc, message_hash).abi_encode_packed());
+            *acc = inbox_acc;
+            self.put_message_acc(block.before_message_count + i as u64, &inbox_acc);
         }
         let data_hash = keccak256(
             (
@@ -344,19 +392,96 @@ pub trait ArbitrumDB {
         block.after_batch_acc = keccak256(
             (block.before_batch_acc, data_hash, block.after_message_acc()).abi_encode_packed(),
         );
-        let block_number = state.batch_count + 1;
-        self.put_block(block_number, &block);
+        let batch_count = state.batch_count + 1;
+        self.put_block(batch_count, &block);
         // update the state last - incomplete blocks can be ignored / overwritten
         self.put_state(&State {
-            batch_count: block_number,
+            batch_count,
             batch_acc: block.after_batch_acc,
             message_count: block.after_message_count(),
             message_acc: block.after_message_acc(),
             timestamp: block.timestamp,
-            slot: block.slot,
+            slot: block.slot.clone(),
         });
-        Ok(Some(block_number))
+        Ok(Some((batch_count, offset, block)))
     }
+
+    /// Applies a custom batch with appchain migration information
+    /// NOTE: The offset is the difference between the initial settlement block and the batch
+    /// count. We use `settlement_start_block` as the block number for mchain blocks, that is
+    /// because the migrated nitro state expects blocks to be after the last seen parent block
+    /// Because mchain is designed so that block number = batch count we need to save the offset
+    /// in order to get the correct block from a given batch count.
+    fn appchain_migration(&self, params: MigrationParams) -> eyre::Result<()> {
+        let MigrationParams {
+            settlement_start_block,
+            batch_acc,
+            batch_count,
+            delayed_msgs_acc,
+            delayed_msgs_count,
+        } = params;
+
+        assert!((batch_count <= settlement_start_block), "batch count: {batch_count} higher than start settlement block: {settlement_start_block}");
+        let offset = settlement_start_block - batch_count;
+
+        // copied init block so it is found in the first migrated block (settlement_start_block)
+        let mut init_block = self.get_block(1).unwrap();
+        // hack so the the acc matches when querying by seqNum
+        init_block.after_batch_acc = batch_acc;
+        self.put_block(batch_count, &init_block);
+
+        self.put_migration_offset(offset);
+
+        debug!("appchain_migration: batch_count: {batch_count}, offset: {offset}, settlement_start_block: {settlement_start_block}, batch_acc: {batch_acc}, delayed_msgs_acc: {delayed_msgs_acc} ");
+
+        //prepare the state so add_batch is able to add an empty batch
+        self.put_message_acc(delayed_msgs_count - 1, &delayed_msgs_acc);
+        self.put_state(&State {
+            batch_count,
+            batch_acc,
+            message_count: delayed_msgs_count,
+            message_acc: delayed_msgs_acc,
+            timestamp: 0u64,
+            slot: Slot {
+                seq_block_number: 0u64,
+                seq_block_hash: B256::ZERO,
+                set_block_number: 0u64,
+                set_block_hash: B256::ZERO,
+            },
+        });
+
+        // create dummy batch
+        self.add_batch_base(
+            MBlock {
+                timestamp: 1,
+                slot: Slot {
+                    seq_block_number: 0u64,
+                    seq_block_hash: B256::ZERO,
+                    set_block_number: 0u64,
+                    set_block_hash: B256::ZERO,
+                },
+                payload: Some(Default::default()),
+            },
+            true,
+        )?;
+
+        Ok(())
+    }
+}
+
+/// params for an appchain migration
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct MigrationParams {
+    /// The initial settlement block number at point of migration
+    pub settlement_start_block: u64,
+    /// The batch accumulator at point of migration
+    pub batch_acc: B256,
+    /// The batch count at point of migration
+    pub batch_count: u64,
+    /// The delayed message accumulator at point of migration
+    pub delayed_msgs_acc: B256,
+    /// The delayed message count at point of migration
+    pub delayed_msgs_count: u64,
 }
 
 pub(crate) fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {

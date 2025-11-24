@@ -12,7 +12,6 @@ on:
       - completed
     branches:
       - main
-      - staging
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -144,6 +143,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -162,7 +163,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: v1.3.5
+          version: stable
 
       - name: Install SP1 toolchain
         run: |
@@ -183,13 +184,13 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Run all tests with nextest (excluding e2e withdrawals)
+      - name: Run all tests with nextest (excluding e2e withdrawals and migration)
         run: |
           # sets debug logs for all syndicate services and info for everything else
           RUST_LOG="common=debug,shared=debug,synd_batch_sequencer=debug,synd_block_builder=debug,synd_chain_ingestor=debug,synd_maestro=debug,synd_mchain=debug,synd_slotter=debug,synd_tee_attestation_zk_proofs_aws_nitro=debug,synd_tee_attestation_zk_proofs_sp1_script=debug,synd_tee_attestation_zk_proofs_submitter=debug,synd_translator=debug,test_framework=debug,test_utils=debug,info" \
           RUST_LOG_DISABLE_JSON="true" \
           RUST_LOG_DISABLE_TELEMETRY="true" \
-          cargo build && cargo nextest run --workspace --fail-fast -E 'not test(e2e_tee_withdrawal)'
+          cargo build && cargo nextest run --workspace --fail-fast -E 'not test(e2e_tee_withdrawal) and not test(e2e_migration)'
 
       # Needs to be the last job step
       - name: Notify Slack on Failure

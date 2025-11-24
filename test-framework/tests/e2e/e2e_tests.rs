@@ -13,12 +13,12 @@ use eyre::Result;
 use std::time::Duration;
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
 use synd_chain_ingestor::client::{IngestorProviderConfig, IngestorProviderImpl};
-use synd_mchain::client::Provider as _;
+use synd_mchain::client::MchainProvider as _;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     test_components::{TestComponents, SETTLEMENT_CHAIN_ID},
 };
-use test_utils::{chain_info::test_account1, preloaded_config::ContractVersion, wait_until};
+use test_utils::{chain_info::test_account1, nitro_chain::ArbContractVersion, wait_until};
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");
@@ -331,19 +331,19 @@ async fn e2e_contract_tx() -> Result<()> {
 }
 
 #[tokio::test]
-async fn e2e_deposit_300() -> Result<()> {
-    e2e_deposit_base(ContractVersion::V300).await
+async fn e2e_deposit_311() -> Result<()> {
+    e2e_deposit_base(ArbContractVersion::V311).await
 }
 
 #[tokio::test]
 async fn e2e_deposit_213() -> Result<()> {
-    e2e_deposit_base(ContractVersion::V213).await
+    e2e_deposit_base(ArbContractVersion::V213).await
 }
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the `synd-translator` and show up on the appchain.
-async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
+async fn e2e_deposit_base(version: ArbContractVersion) -> Result<()> {
     // Sequencer fees go to the zero address
     TestComponents::run(
         &ConfigurationOptions {
@@ -485,7 +485,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 async fn e2e_settlement_reorg() -> Result<()> {
     TestComponents::run(
         &ConfigurationOptions {
-            base_chains_type: BaseChainsType::PreLoaded(ContractVersion::V300),
+            base_chains_type: BaseChainsType::PreLoaded(ArbContractVersion::V311),
             ..Default::default()
         },
         |components| async move {
@@ -647,13 +647,11 @@ sol! {
     }
 }
 
-// TODO(ENG-2205): fix this test
-#[ignore]
 #[tokio::test]
 async fn e2e_sequencing_reorg() -> Result<()> {
     TestComponents::run(
         &ConfigurationOptions {
-            base_chains_type: BaseChainsType::PreLoaded(ContractVersion::V300),
+            base_chains_type: BaseChainsType::PreLoaded(ArbContractVersion::V311),
             ..Default::default()
         },
         |components| async move {
