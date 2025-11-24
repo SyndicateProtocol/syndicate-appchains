@@ -31,9 +31,6 @@ use std::{
     time::UNIX_EPOCH,
 };
 
-/// hardfork timestamp
-pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1764565200;
-
 /// `eth_subscribe`
 #[allow(clippy::unwrap_used)]
 pub async fn eth_subscribe(

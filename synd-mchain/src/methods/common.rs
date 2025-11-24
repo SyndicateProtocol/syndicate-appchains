@@ -1,6 +1,6 @@
 //! Shared functions and constants for the `synd-mchain` RPC server methods
 
-use crate::{db::Block, methods::eth_methods::L1_BLOCK_NUM_HARDFORK_TS};
+use crate::db::Block;
 use alloy::primitives::{address, Address, FixedBytes, U256};
 use jsonrpsee::{
     server::SubscriptionSink,
@@ -36,18 +36,13 @@ pub fn create_log(
 
 /// Helper function to create a mock header object
 pub fn create_header(batch_count: u64, offset: u64, block: &Block) -> alloy::rpc::types::Header {
-    let l1_block_number = if block.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
-        block.slot.seq_block_number
-    } else {
-        block.slot.set_block_number
-    };
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
             number: batch_count + offset,
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
-            mix_hash: U256::from(l1_block_number)
+            mix_hash: U256::from(block.l1_block_number())
                 .checked_shl(64)
                 .unwrap()
                 .checked_add(U256::from(1))

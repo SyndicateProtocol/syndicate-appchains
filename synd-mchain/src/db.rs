@@ -110,6 +110,10 @@ pub struct Block {
     pub slot: Slot,
 }
 
+/// timestamp for the hardfork where L1 block number changes from being derived from the seq chain
+/// to the set chain
+pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1764565200;
+
 impl Block {
     /// The delayed message accumulator
     pub fn after_message_acc(&self) -> FixedBytes<32> {
@@ -118,6 +122,15 @@ impl Block {
     /// The delayed message count
     pub const fn after_message_count(&self) -> u64 {
         self.before_message_count + self.messages.len() as u64
+    }
+
+    /// l1 block number for this mchain block
+    pub const fn l1_block_number(&self) -> u64 {
+        if self.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+            self.slot.seq_block_number
+        } else {
+            self.slot.set_block_number
+        }
     }
 }
 
@@ -360,13 +373,13 @@ pub trait ArbitrumDB {
         };
         let mut inbox_acc = block.before_message_acc;
         let offset = self.get_migration_offset();
+        let l1_block_number = block.l1_block_number();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
-            let l1_block_num = block.slot.seq_block_number;
             let message_hash = keccak256(
                 (
                     [msg.kind],
                     msg.sender,
-                    l1_block_num,
+                    l1_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,

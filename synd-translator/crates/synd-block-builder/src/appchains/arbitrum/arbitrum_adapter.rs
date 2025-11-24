@@ -22,7 +22,7 @@ use contract_bindings::synd::i_bridge::IBridge::MessageDelivered;
 use eyre::Result;
 use shared::types::{BlockBuilder, DelayedMsgsData, PartialBlock};
 use std::collections::HashMap;
-use synd_mchain::{db::DelayedMessage, methods::eth_methods::L1_BLOCK_NUM_HARDFORK_TS};
+use synd_mchain::db::{DelayedMessage, L1_BLOCK_NUM_HARDFORK_TS};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -143,9 +143,10 @@ impl ArbitrumAdapter {
                 .map(|x|x.1).collect::<Vec<_>>()
         );
 
-        let block_number = if block.block_ref.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
-            block.block_ref.timestamp
+        let l1_block_number = if block.block_ref.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+            block.block_ref.number
         } else {
+            // TODO
             0
         };
 
@@ -153,7 +154,7 @@ impl ArbitrumAdapter {
             mb_transactions.len() as u64,
             self.build_batch_txn(
                 mb_transactions.into_iter().map(|x| x.0).collect(),
-                block_number,
+                l1_block_number,
                 block.block_ref.timestamp,
             )?,
         ))
@@ -252,7 +253,7 @@ impl ArbitrumAdapter {
     fn build_batch_txn(
         &self,
         txs: Vec<Bytes>,
-        mchain_block_number: u64,
+        l1_block_number: u64,
         mchain_timestamp: u64,
     ) -> Result<Bytes> {
         debug!("Sequenced transactions: {:?}", txs);
@@ -271,7 +272,7 @@ impl ArbitrumAdapter {
             if block.len() >= TX_PER_BLOCK || (!block.is_empty() && size > MAX_L2_MESSAGE_SIZE) {
                 messages.push(BatchMessage::L2(L1IncomingMessage {
                     header: L1IncomingMessageHeader {
-                        block_number: mchain_block_number,
+                        block_number: l1_block_number,
                         timestamp: mchain_timestamp,
                     },
                     l2_msg: block,
@@ -287,7 +288,7 @@ impl ArbitrumAdapter {
         if !block.is_empty() {
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
-                    block_number: mchain_block_number,
+                    block_number: l1_block_number,
                     timestamp: mchain_timestamp,
                 },
                 l2_msg: block,
