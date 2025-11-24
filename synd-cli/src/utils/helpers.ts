@@ -2,11 +2,11 @@ import type { ChainNativeCurrency, GetChainsResponse } from "@/types"
 import {
   type Address,
   type Chain,
+  type Hex,
+  type PublicClient,
   erc20Abi,
   getAddress,
-  type Hex,
   parseAbiItem,
-  type PublicClient,
   zeroAddress
 } from "viem"
 

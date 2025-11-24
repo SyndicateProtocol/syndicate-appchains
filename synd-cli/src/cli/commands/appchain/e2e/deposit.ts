@@ -1,7 +1,7 @@
 import type { Deposit } from "@/types"
 import { print } from "@/utils/print"
 import { sleep } from "bun"
-import { formatEther, type Hex, parseAbiItem } from "viem"
+import { type Hex, formatEther, parseAbiItem } from "viem"
 
 export async function deposit({
   settlementPublicClient,

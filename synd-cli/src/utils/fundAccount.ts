@@ -1,12 +1,12 @@
 import {
+  http,
   type Account,
   type Address,
   type Chain,
-  createPublicClient,
-  formatEther,
-  http,
   type Transport,
-  type WalletClient
+  type WalletClient,
+  createPublicClient,
+  formatEther
 } from "viem"
 import { print } from "./print"
 

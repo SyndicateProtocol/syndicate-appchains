@@ -1,6 +1,6 @@
-import type { synd } from "@/cli/schema"
 import fs from "node:fs/promises"
 import path from "node:path"
+import type { synd } from "@/cli/schema"
 import { stringify } from "viem"
 import type z from "zod"
 

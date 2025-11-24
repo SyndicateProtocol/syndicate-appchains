@@ -2,14 +2,14 @@ import { createTokenBridgeFetchTokenBridgeContracts } from "@arbitrum/orbit-sdk"
 import { tokenBridgeCreatorABI } from "@arbitrum/orbit-sdk/contracts/TokenBridgeCreator/v1.2.js"
 import {
   type Chain,
-  decodeEventLog,
-  getAbiItem,
-  getEventSelector,
   type Hex,
   type Log,
   type PublicClient,
   type TransactionReceipt,
-  type Transport
+  type Transport,
+  decodeEventLog,
+  getAbiItem,
+  getEventSelector
 } from "viem"
 
 export async function getTokenBridgeContracts({

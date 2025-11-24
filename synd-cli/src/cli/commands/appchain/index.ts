@@ -13,6 +13,7 @@ export function appchainCommand(program: Command) {
     .action(async () => {
       print("Managing appchains...")
     })
+
   createAppchainCommand(appchainProgram)
   handoffCommand(appchainProgram)
   arbOwnerCommand(appchainProgram)

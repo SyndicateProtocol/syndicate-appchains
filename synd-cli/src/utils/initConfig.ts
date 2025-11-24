@@ -145,8 +145,8 @@ export function createInitCommand(
     writeFileSync(absolutePath, output, "utf-8")
 
     print(`✅ Created config file: ${outputPath}`)
-    print(`📝 Next steps:`)
-    print(`1. Edit the file with your values`)
+    print("📝 Next steps")
+    print("1. Edit the file with your values")
     print(
       `2. Run: bun run synd-cli ${commandName.replace(/-/g, " ")} --config ${outputPath}`
     )

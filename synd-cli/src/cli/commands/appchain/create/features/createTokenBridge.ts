@@ -87,7 +87,7 @@ export async function createTokenBridge<
         })
 
       print(
-        `Tokens approved in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
+        `Tokens approved in ${getChainExplorerUrl(parentChainPublicClient.chain)}/tx/${
           approvalTxReceipt.transactionHash
         }`
       )
@@ -109,7 +109,7 @@ export async function createTokenBridge<
   })
 
   // sign and send the transaction
-  print(`🔎  Deploying the non-native token bridge...`)
+  print("🔎  Deploying the non-native token bridge...")
   const txHash = await parentChainPublicClient.sendRawTransaction({
     serializedTransaction: await account.signTransaction(txRequest)
   })
@@ -126,13 +126,13 @@ export async function createTokenBridge<
   // get the transaction receipt after waiting for the transaction to complete
   const txReceipt = createTokenBridgePrepareTransactionReceipt(receipt)
   print(
-    `🔎  Token bridge deployed in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
+    `🔎  Token bridge deployed in ${getChainExplorerUrl(parentChainPublicClient.chain)}/tx/${
       txReceipt.transactionHash
     }`
   )
 
   // wait for retryables to execute
-  print(`🔎  Waiting for retryable tickets to execute on the appchain...`)
+  print("🔎  Waiting for retryable tickets to execute on the appchain...")
   const orbitChainRetryableReceipts = await txReceipt.waitForRetryables({
     // @ts-expect-error (todo: fix viem type issue)
     orbitPublicClient: orbitChainPublicClient
@@ -186,7 +186,7 @@ export async function createTokenBridge<
       )
 
     print(
-      `🔎  Weth gateway set in ${getChainExplorerUrl(parentChainPublicClient.chain!)}/tx/${
+      `🔎  Weth gateway set in ${getChainExplorerUrl(parentChainPublicClient.chain)}/tx/${
         setWethGatewayTxReceipt.transactionHash
       }`
     )

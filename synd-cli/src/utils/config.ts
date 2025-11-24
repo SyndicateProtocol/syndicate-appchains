@@ -1,6 +1,6 @@
-import { handleSchemaErrors } from "@/cli/schema"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { handleSchemaErrors } from "@/cli/schema"
 import type { ZodSchema } from "zod"
 import { exitWithError } from "./print"
 

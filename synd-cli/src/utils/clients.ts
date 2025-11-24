@@ -1,12 +1,12 @@
 import type { PublicClientWithChain } from "@/types"
 import {
+  http,
   type Chain,
+  type Hex,
   createPublicClient,
   createWalletClient,
   defineChain,
-  type Hex,
-  hexToNumber,
-  http
+  hexToNumber
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import {

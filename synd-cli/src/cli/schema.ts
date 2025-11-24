@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { getAddress, type Hex, zeroAddress } from "viem"
+import { type Hex, getAddress, zeroAddress } from "viem"
 import { z } from "zod"
 import { exitWithError } from "../utils/print"
 
@@ -206,7 +206,7 @@ export const appchainCreateFeaturesOptionsSchema = z
             return JSON.parse(val)
           } catch {
             throw new Error(
-              `Invalid core-contracts: not a valid JSON string or file path`
+              "Invalid core-contracts: not a valid JSON string or file path"
             )
           }
         }),
@@ -302,7 +302,7 @@ export const appchainHandoffOptionsSchema = z
             return JSON.parse(val)
           } catch {
             throw new Error(
-              `Invalid synd: not a valid JSON string or file path`
+              "Invalid synd: not a valid JSON string or file path"
             )
           }
         }),
