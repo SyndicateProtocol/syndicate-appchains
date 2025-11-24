@@ -72,5 +72,3 @@ repos:
         types: [text]
         files: "^synd-cli/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?|css|svelte|vue|astro|graphql|gql)$"
         pass_filenames: false
-
-
