@@ -20,6 +20,9 @@
       "rev": "278fdbc39089fa86330f0c23f0a05aee61972c84"
     }
   },
+  "lib/nitro-contracts-v311": {
+    "rev": "11a59629c472e16644c9f536cdb8a91b00685f32"
+  },
   "lib/openzeppelin-contracts": {
     "rev": "acd4ff74de833399287ed6b31b4debf6b2b35527"
   },

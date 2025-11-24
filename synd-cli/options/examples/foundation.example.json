@@ -1,0 +1,12 @@
+{
+  "settlement-rpc": "https://sepolia.base.org",
+  "sequencing-rpc": "https://rpc.testnet.syndicate.io",
+  "ethereum-rpc": "https://sepolia.drpc.org",
+  "appchain-rpc": "http://localhost:8449",
+  "appchain-explorer": "https://explorer.example.com",
+  "id": 123456,
+  "name": "my-appchain",
+  "deployer-private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+  "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "native-token": "0x0000000000000000000000000000000000000000"
+}
