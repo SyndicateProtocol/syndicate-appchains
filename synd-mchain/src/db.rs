@@ -112,7 +112,8 @@ pub struct Block {
 
 /// timestamp for the hardfork where L1 block number changes from being derived from the seq chain
 /// to the set chain
-pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1764565200;
+/// 5 Jan 2026
+pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1767571200;
 
 impl Block {
     /// The delayed message accumulator

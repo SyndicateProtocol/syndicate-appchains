@@ -35,7 +35,7 @@ pub type DelayedMsgsData = HashMap<U256, Bytes>;
 #[async_trait]
 pub trait BlockBuilder<T>: Send {
     /// Process a single slot
-    fn build_block(&self, block: &PartialBlock, msgs_data: DelayedMsgsData) -> eyre::Result<T>;
+    fn build_block(&self, block: PartialBlock, msgs_data: DelayedMsgsData) -> eyre::Result<T>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]

@@ -13,6 +13,7 @@ alloy               = { workspace = true }
 common              = { workspace = true }
 prometheus-client   = { workspace = true }
 shared              = { workspace = true }
+synd-block-builder  = { workspace = true }
 synd-chain-ingestor = { workspace = true }
 synd-mchain         = { workspace = true }
 thiserror           = { workspace = true }
@@ -20,9 +21,11 @@ tokio               = { workspace = true, features = ["macros", "rt", "sync", "t
 tracing             = { workspace = true }
 
 [dev-dependencies]
-async-trait = { workspace = true }
-ctor        = { workspace = true }
-eyre        = { workspace = true }
+alloy             = { workspace = true, features = ["sol-types"] }
+async-trait       = { workspace = true }
+contract-bindings = { workspace = true }
+ctor              = { workspace = true }
+eyre              = { workspace = true }
 
 [lints]
 workspace = true

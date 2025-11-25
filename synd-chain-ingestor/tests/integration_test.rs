@@ -2,7 +2,7 @@
 
 use common::types::SequencingBlock;
 use shared::types::{BlockBuilder, PartialBlock};
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use synd_chain_ingestor::{
     client::{BlockStreamT, IngestorProvider, IngestorProviderConfig, IngestorProviderImpl},
     eth_client::EthClient,
@@ -28,7 +28,7 @@ mod tests {
     impl BlockBuilder<SequencingBlock> for MockBlockBuilder {
         fn build_block(
             &self,
-            block: &PartialBlock,
+            block: PartialBlock,
             _msgs_data: DelayedMsgsData,
         ) -> eyre::Result<SequencingBlock> {
             Ok(SequencingBlock {
@@ -127,9 +127,8 @@ mod tests {
         )
         .await;
 
-        let mut block_stream = client
-            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, None)
-            .await?;
+        let mut block_stream =
+            client.get_blocks(start_block, vec![], MockBlockBuilder, eth_client, None).await?;
 
         for _ in 0..post_init_blocks {
             mine_block(&anvil.provider, 10).await?;
@@ -184,9 +183,8 @@ mod tests {
         )
         .await;
 
-        let mut block_stream = client
-            .get_blocks(start_block, vec![], Arc::new(MockBlockBuilder), eth_client, None)
-            .await?;
+        let mut block_stream =
+            client.get_blocks(start_block, vec![], MockBlockBuilder, eth_client, None).await?;
 
         for _ in 0..post_init_blocks {
             mine_block(&anvil.provider, 10).await?;

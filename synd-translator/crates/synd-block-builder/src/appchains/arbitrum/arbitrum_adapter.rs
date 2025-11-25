@@ -9,12 +9,12 @@ use crate::{
         arbitrum::batch::{
             Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader, MAX_L2_MESSAGE_SIZE,
         },
-        shared::{RollupAdapter, SequencingTransactionParser},
+        shared::{sequencing_transaction_parser::get_event_transactions, RollupAdapter},
     },
     config::BlockBuilderConfig,
 };
 use alloy::{
-    primitives::{Address, Bytes, Log, U256},
+    primitives::{Address, Bytes, Log, TxHash, U256},
     sol_types::SolEvent as _,
 };
 use common::types::{SequencingBlock, SettlementBlock};
@@ -22,9 +22,9 @@ use contract_bindings::synd::i_bridge::IBridge::MessageDelivered;
 use eyre::Result;
 use shared::types::{BlockBuilder, DelayedMsgsData, PartialBlock};
 use std::collections::HashMap;
-use synd_mchain::db::{DelayedMessage, L1_BLOCK_NUM_HARDFORK_TS};
+use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, trace};
 
 // Limit the number of tx per a block so that they have enough gas to be included most of the time.
 // Each tx can use 320k gas on average given the default block gas limit of 32 million.
@@ -95,8 +95,8 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    /// Transaction parser for sequencing chain
-    pub transaction_parser: SequencingTransactionParser,
+    /// sequencing contract
+    pub sequencing_contract_address: Address,
 
     /// Settlement chain address
     pub bridge_address: Address,
@@ -106,151 +106,16 @@ pub struct ArbitrumAdapter {
 }
 
 impl RollupAdapter for ArbitrumAdapter {
-    fn transaction_parser(&self) -> &SequencingTransactionParser {
-        &self.transaction_parser
-    }
-}
-
-impl ArbitrumAdapter {
-    /// Creates a new Arbitrum block builder.
-    ///
-    /// # Arguments
-    /// - `config`: The configuration for the block builder.
-    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
-    pub const fn new(config: &BlockBuilderConfig) -> Self {
-        Self {
-            transaction_parser: SequencingTransactionParser::new(
-                config.sequencing_contract_address.unwrap(),
-            ),
-            bridge_address: config.arbitrum_bridge_address.unwrap(),
-            inbox_address: config.arbitrum_inbox_address.unwrap(),
-        }
-    }
-
-    /// Builds a batch from a sequencing block
-    pub fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
-        let mb_transactions = self.parse_block_to_mbtxs(block);
-
-        if mb_transactions.is_empty() {
-            return Ok((0, Default::default()));
-        }
-
-        info!(
-            slot = %block.block_ref.number,
-            "Processing sequencer transactions: {:?}",
-            mb_transactions
-                .iter()
-                .map(|x|x.1).collect::<Vec<_>>()
-        );
-
-        let l1_block_number = if block.block_ref.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
-            block.block_ref.number
-        } else {
-            // TODO
-            0
-        };
-
-        Ok((
-            mb_transactions.len() as u64,
-            self.build_batch_txn(
-                mb_transactions.into_iter().map(|x| x.0).collect(),
-                l1_block_number,
-                block.block_ref.timestamp,
-            )?,
-        ))
-    }
-
-    /// Processes settlement chain receipts into delayed messages
-    pub fn process_delayed_messages(
-        &self,
-        block: &PartialBlock,
-        msgs_data: DelayedMsgsData,
-    ) -> Result<Vec<DelayedMessage>> {
-        // Process all bridge logs in all receipts
-        let delayed_messages = block.logs.iter().filter(|log| {
-            log.address == self.bridge_address &&
-                log.topics()[0] == MessageDelivered::SIGNATURE_HASH
-        });
-
-        trace!("Delayed message data: {:?}", msgs_data);
-        trace!("Delayed messages: {:?}", delayed_messages);
-
-        let delayed_msg_txns = delayed_messages
-            .filter_map(|msg_log| {
-                match self.delayed_message_to_mchain_txn(msg_log, &msgs_data) {
-                    Ok(txn) => Some(txn),
-                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
-                        L1MessageType::Initialize,
-                    )) => {
-                        error!("Ignoring init message: the rollup is already initialized");
-                        None
-                    }
-                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(e)) => {
-                        // replace ignored messages with a dummy message to burn the nonce
-                        error!("Replacing ignored delayed message with an empty block: {}", e);
-                        Some(DelayedMessage {
-                            kind: L1MessageType::EndOfBlock as u8,
-                            sender: Address::ZERO,
-                            data: Default::default(),
-                            base_fee_l1: U256::ZERO,
-                        })
-                    }
-                    Err(e) => {
-                        panic!("Fatal error: {e}")
-                    }
-                }
-            })
-            .collect();
-
-        // TODO(SEQ-851): compute & log delayed message tx hashes
-
-        Ok(delayed_msg_txns)
-    }
-
-    /// Sequencer log addresses used for building batches
-    pub fn sequencer_addresses(&self) -> Vec<Address> {
-        vec![self.transaction_parser.sequencing_contract_address]
-    }
-
-    /// Settlement log addresses used for building delayed messages
-    pub fn settlement_addresses(&self) -> Vec<Address> {
-        let mut addrs = vec![self.bridge_address, self.inbox_address];
-        addrs.dedup();
-        addrs
-    }
-
-    fn delayed_message_to_mchain_txn(
-        &self,
-        log: &Log,
-        message_data: &HashMap<U256, Bytes>,
-    ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
-        let msg = MessageDelivered::decode_raw_log_validate(log.topics(), &log.data.data)
-            .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
-
-        let kind = L1MessageType::from_u8_panic(msg.kind);
-
-        if msg.kind == L1MessageType::Initialize as u8 && msg.messageIndex != U256::ZERO {
-            return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex))
-        }
-
-        if Self::should_ignore_delayed_message(&kind) {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
-        }
-
-        Ok(DelayedMessage {
-            kind: msg.kind,
-            sender: msg.sender,
-            #[allow(clippy::unwrap_used)]
-            data: message_data.get(&msg.messageIndex).unwrap().clone(),
-            base_fee_l1: msg.baseFeeL1,
-        })
+    fn get_event_transactions(&self, eth_log: &Log) -> Result<Vec<(Bytes, TxHash)>> {
+        get_event_transactions(eth_log, &self.sequencing_contract_address)
+            .map_err(|e| eyre::eyre!("{}", e))
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
     /// note: this must mirror the logic in the enclave go code
     /// for building batches.
     #[allow(clippy::cognitive_complexity)]
-    fn build_batch_txn(
+    fn build_batch_bytes(
         &self,
         txs: Vec<Bytes>,
         l1_block_number: u64,
@@ -303,6 +168,107 @@ impl ArbitrumAdapter {
 
         Ok(encoded_batch)
     }
+}
+
+impl ArbitrumAdapter {
+    /// Creates a new Arbitrum block builder.
+    ///
+    /// # Arguments
+    /// - `config`: The configuration for the block builder.
+    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
+    pub const fn new(config: &BlockBuilderConfig) -> Self {
+        Self {
+            sequencing_contract_address: config.sequencing_contract_address.unwrap(),
+            bridge_address: config.arbitrum_bridge_address.unwrap(),
+            inbox_address: config.arbitrum_inbox_address.unwrap(),
+        }
+    }
+
+    /// Processes settlement chain receipts into delayed messages
+    pub fn process_delayed_messages(
+        &self,
+        block: &PartialBlock,
+        msgs_data: DelayedMsgsData,
+    ) -> Result<Vec<DelayedMessage>> {
+        // Process all bridge logs in all receipts
+        let delayed_messages = block.logs.iter().filter(|log| {
+            log.address == self.bridge_address &&
+                log.topics()[0] == MessageDelivered::SIGNATURE_HASH
+        });
+
+        trace!("Delayed message data: {:?}", msgs_data);
+        trace!("Delayed messages: {:?}", delayed_messages);
+
+        let delayed_msg_txns = delayed_messages
+            .filter_map(|msg_log| {
+                match self.delayed_message_to_mchain_txn(msg_log, &msgs_data) {
+                    Ok(txn) => Some(txn),
+                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
+                        L1MessageType::Initialize,
+                    )) => {
+                        error!("Ignoring init message: the rollup is already initialized");
+                        None
+                    }
+                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(e)) => {
+                        // replace ignored messages with a dummy message to burn the nonce
+                        error!("Replacing ignored delayed message with an empty block: {}", e);
+                        Some(DelayedMessage {
+                            kind: L1MessageType::EndOfBlock as u8,
+                            sender: Address::ZERO,
+                            data: Default::default(),
+                            base_fee_l1: U256::ZERO,
+                        })
+                    }
+                    Err(e) => {
+                        panic!("Fatal error: {e}")
+                    }
+                }
+            })
+            .collect();
+
+        // TODO(SEQ-851): compute & log delayed message tx hashes
+
+        Ok(delayed_msg_txns)
+    }
+
+    /// Sequencer log addresses used for building batches
+    pub fn sequencer_addresses(&self) -> Vec<Address> {
+        vec![self.sequencing_contract_address]
+    }
+
+    /// Settlement log addresses used for building delayed messages
+    pub fn settlement_addresses(&self) -> Vec<Address> {
+        let mut addrs = vec![self.bridge_address, self.inbox_address];
+        addrs.dedup();
+        addrs
+    }
+
+    fn delayed_message_to_mchain_txn(
+        &self,
+        log: &Log,
+        message_data: &HashMap<U256, Bytes>,
+    ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
+        let msg = MessageDelivered::decode_raw_log_validate(log.topics(), &log.data.data)
+            .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
+
+        let kind = L1MessageType::from_u8_panic(msg.kind);
+
+        if msg.kind == L1MessageType::Initialize as u8 && msg.messageIndex != U256::ZERO {
+            return Err(ArbitrumBlockBuilderError::UnexpectedInitializeMessage(msg.messageIndex))
+        }
+
+        if Self::should_ignore_delayed_message(&kind) {
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
+        }
+
+        Ok(DelayedMessage {
+            kind: msg.kind,
+            sender: msg.sender,
+            #[allow(clippy::unwrap_used)]
+            data: message_data.get(&msg.messageIndex).unwrap().clone(),
+            base_fee_l1: msg.baseFeeL1,
+        })
+    }
 
     /// Should ignore delayed message. Ignores `Initialize` & `BatchPostingReport` message types.
     pub fn should_ignore_delayed_message(kind: &L1MessageType) -> bool {
@@ -320,33 +286,27 @@ impl ArbitrumAdapter {
 impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
     fn build_block(
         &self,
-        block: &PartialBlock,
+        block: PartialBlock,
         msgs_data: DelayedMsgsData,
     ) -> Result<SequencingBlock> {
         assert!(
             msgs_data.is_empty(),
             "delayed messages found on sequencing block: {block:?}, {msgs_data:?}"
         );
-        let (tx_count, batch) = self.build_batch(block)?;
-        Ok(SequencingBlock {
-            block_ref: block.block_ref.clone(),
-            parent_hash: block.parent_hash,
-            tx_count,
-            batch,
-        })
+        Ok(block)
     }
 }
 
 impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
     fn build_block(
         &self,
-        block: &PartialBlock,
+        block: PartialBlock,
         msgs_data: DelayedMsgsData,
     ) -> Result<SettlementBlock> {
         Ok(SettlementBlock {
             block_ref: block.block_ref.clone(),
             parent_hash: block.parent_hash,
-            messages: self.process_delayed_messages(block, msgs_data)?,
+            messages: self.process_delayed_messages(&block, msgs_data)?,
         })
     }
 }
@@ -354,16 +314,8 @@ impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::appchains::shared::sequencing_transaction_parser::L2MessageKind;
-    use alloy::{
-        eips::Encodable2718,
-        network::{EthereumWallet, TransactionBuilder as _},
-        primitives::{hex, keccak256, FixedBytes},
-        rpc::types::TransactionRequest,
-        signers::local::PrivateKeySigner,
-    };
+    use alloy::primitives::{hex, keccak256, FixedBytes};
     use assert_matches::assert_matches;
-    use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
     use std::str::FromStr;
 
     fn test_config() -> BlockBuilderConfig {
@@ -382,85 +334,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_tx() {
-        let sequencing_contract_address = test_config().sequencing_contract_address.unwrap();
-        let tx = TransactionRequest::default()
-            .with_to(Address::ZERO)
-            .with_nonce(0)
-            .with_gas_limit(0)
-            .with_max_fee_per_gas(0)
-            .with_max_priority_fee_per_gas(0)
-            .build(&EthereumWallet::from(PrivateKeySigner::random()))
-            .await
-            .unwrap();
-        let mut encoded_tx = tx.encoded_2718();
-        encoded_tx.splice(0..0, vec![L2MessageKind::SignedTx as u8]);
-        let block = PartialBlock {
-            logs: vec![
-                // empty tx
-                Log {
-                    address: sequencing_contract_address,
-                    data: TransactionProcessed {
-                        sender: Default::default(),
-                        data: Default::default(),
-                    }
-                    .encode_log_data(),
-                },
-                // invalid txs
-                Log {
-                    address: sequencing_contract_address,
-                    data: TransactionProcessed {
-                        sender: Default::default(),
-                        data: vec![L2MessageKind::SignedTx as u8].into(),
-                    }
-                    .encode_log_data(),
-                },
-                Log {
-                    address: sequencing_contract_address,
-                    data: TransactionProcessed {
-                        sender: Default::default(),
-                        data: vec![L2MessageKind::SignedTx as u8, 0].into(),
-                    }
-                    .encode_log_data(),
-                },
-                // valid tx
-                Log {
-                    address: sequencing_contract_address,
-                    data: TransactionProcessed {
-                        sender: Default::default(),
-                        data: encoded_tx.clone().into(),
-                    }
-                    .encode_log_data(),
-                },
-            ],
-            ..Default::default()
-        };
-        // parse mbtxs
-        let txs = ArbitrumAdapter::new(&test_config()).parse_block_to_mbtxs(&block);
-        assert_eq!(txs, vec![(encoded_tx.into(), *tx.hash())])
-    }
-
-    #[test]
-    fn test_new_builder() {
-        let dummy_contract_addr = Address::from_str("0x1234000000000000000000000000000000000000")
-            .expect("Invalid address format");
-        let config = BlockBuilderConfig {
-            sequencing_contract_address: Some(dummy_contract_addr),
-            arbitrum_bridge_address: Some(dummy_contract_addr),
-            arbitrum_inbox_address: Some(dummy_contract_addr),
-            ..Default::default()
-        };
-
-        let builder = ArbitrumAdapter::new(&config);
-        let parser = builder.transaction_parser();
-        assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
-    }
-
-    #[tokio::test]
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumAdapter::new(&test_config());
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0).unwrap();
+        let batch = builder.build_batch_bytes(txs, 0, 0).unwrap();
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![]);
@@ -476,7 +353,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0).unwrap();
+        let batch = builder.build_batch_bytes(txs.clone(), 0, 0).unwrap();
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
