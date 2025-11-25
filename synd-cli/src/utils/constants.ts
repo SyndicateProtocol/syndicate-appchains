@@ -92,18 +92,18 @@ export const supportedSettlementChains: SupportedSettlementChains = {
   },
   [base.id]: {
     chain: base,
-    // @note TODO: update
-    rollupCreator: "0x",
+    rollupCreator: "0x73F8C5FE5B64D25f17DEa75fAc50F39Eacb0a793",
     tokenBridgeCreator: "0x882bCF9413885EFDAD307FD9fa369CC670304740",
     arbConfigManager: "0x65e6D336E311C92D1F19C66CfE68Ec6bE5b4f50B",
     teeKeyManager: "0x9CF9FF139C09Df70BD94b31ff935DFD648e0fa54"
   }
+  // @note TODO: to support mainnet as the settlement chain we need to deploy the TeeKeyManager to mainnet
   // [mainnet.id]: {
   // chain: mainnet,
   // rollupCreatorAddress: "0x1AEdB6C4F5332a08251545066c686AD251c90bA2",
   // tokenBridgeCreatorAddress: "0x5f8aeF00194334B3033E2Ed97c48eCAeDcEFDCaE",
   // arbConfigManagerAddress: "0xec2ba05a9cFFcb86e3225F7A046bA9124419397C",
-  // teeKeyManagerAddress: "0x0000000000000000000000000000000000000000", // @note TODO: to support mainnet as the settlement chain we need to deploy the TeeKeyManager to mainnet
+  // teeKeyManagerAddress: "0x0000000000000000000000000000000000000000",
   // },
 }
 
