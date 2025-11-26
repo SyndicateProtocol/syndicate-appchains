@@ -73,7 +73,7 @@ export async function deployWithdrawals({
     supportedSettlementChains[settlementPublicClient.chain.id].teeKeyManager
 
   const attestationDocVerifier = await settlementPublicClient.readContract({
-    address: teeModule,
+    address: teeKeyManager,
     abi: teeKeyManagerABI,
     functionName: "attestationDocVerifier"
   })
