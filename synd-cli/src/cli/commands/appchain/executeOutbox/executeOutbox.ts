@@ -9,9 +9,6 @@ import {
 import { JsonRpcProvider } from "@ethersproject/providers"
 import { Wallet } from "ethers"
 
-// child chain tx           : 0x5e9125f319ff7fb0d78249fc55e7d8aa952c3b8f53abb15eb5750476c6d4ec7e
-// parent chain redemption  : 0x48171248f411868ef6e631c45c7b17819ae6901ddb4a5fd0658e9e106c710243
-
 export async function executeOutbox({
   hash,
   appchainRpc,
