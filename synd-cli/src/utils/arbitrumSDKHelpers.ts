@@ -6,17 +6,17 @@ import {
 } from "@arbitrum/sdk"
 import type { JsonRpcProvider } from "@ethersproject/providers"
 import { StaticJsonRpcProvider } from "@ethersproject/providers"
+import type { Hex } from "viem"
 
 export const registerNetworkInArbSDK = async (
   parentProvider: JsonRpcProvider,
   childProvider: JsonRpcProvider,
-  rollupAddress: string,
-  isTestnet: boolean
+  rollup: Hex,
+  isTestnet = false
 ): Promise<ArbitrumNetwork> => {
   const chainId = (await childProvider.getNetwork()).chainId
   const { parentChainId, ethBridge, confirmPeriodBlocks } =
-    await getArbitrumNetworkInformationFromRollup(rollupAddress, parentProvider)
-
+    await getArbitrumNetworkInformationFromRollup(rollup, parentProvider)
   const arbitrumNetwork: ArbitrumNetwork = {
     name: String(`${chainId}-arbitrum-network`),
     chainId,
@@ -29,6 +29,7 @@ export const registerNetworkInArbSDK = async (
 
   return registerCustomArbitrumNetwork(arbitrumNetwork)
 }
+
 export function publicClientToProvider(publicClient: PublicClientWithChain) {
   const { chain } = publicClient
 

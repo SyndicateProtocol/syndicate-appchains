@@ -256,6 +256,19 @@ export const appchainCheckRetryableOptionsSchema = z
   })
   .strict()
 
+export const appchainExecuteOutboxOptionsSchema = z
+  .object({
+    settlementRpc: z.url("Invalid settlement chain RPC URL"),
+    appchainRpc: z.url("Invalid appchain RPC URL"),
+    rollup: ethAddressSchema,
+    privateKey: privateKeySchema("account to execute the outbox message"),
+    hash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash")
+      .transform((val) => val as Hex)
+  })
+  .strict()
+
 export const appchainDeployTeeModuleOptionsSchema = z
   .object({
     deployerPrivateKey: privateKeySchema("deployer"),
