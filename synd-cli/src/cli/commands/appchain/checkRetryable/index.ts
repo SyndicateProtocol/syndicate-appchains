@@ -40,9 +40,9 @@ export function checkRetryableCommand(program: Command) {
       const [appchainPublicClient] = await getAppchainClients(appchainRpc)
 
       await checkRetryable({
-        parentTxHash: hash,
-        parentPublicClient: settlementPublicClient,
-        childPublicClient: appchainPublicClient,
+        hash,
+        settlementPublicClient,
+        appchainPublicClient,
         rollup
       })
     })

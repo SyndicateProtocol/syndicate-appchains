@@ -422,8 +422,8 @@ export interface CheckTokenBridge {
 }
 
 export interface CheckRetryable {
-  parentTxHash: Hex
-  parentPublicClient: PublicClientWithChain
-  childPublicClient: PublicClientWithChain
+  hash: Hex
+  settlementPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
   rollup: Hex
 }

@@ -11,39 +11,38 @@ import {
 import type { JsonRpcProvider } from "@ethersproject/providers"
 
 export async function checkRetryable({
-  parentTxHash,
-  parentPublicClient,
-  childPublicClient,
+  hash,
+  settlementPublicClient,
+  appchainPublicClient,
   rollup
 }: CheckRetryable) {
-  const parentProvider: JsonRpcProvider =
-    publicClientToProvider(parentPublicClient)
-  const childProvider: JsonRpcProvider =
-    publicClientToProvider(childPublicClient)
+  const settlementChainProvider: JsonRpcProvider = publicClientToProvider(
+    settlementPublicClient
+  )
+  const appchainProvider: JsonRpcProvider =
+    publicClientToProvider(appchainPublicClient)
 
   await registerNetworkInArbSDK(
-    parentProvider,
-    childProvider,
+    settlementChainProvider,
+    appchainProvider,
     rollup,
-    childPublicClient.chain.testnet ?? false
+    appchainPublicClient.chain.testnet ?? false
   )
 
-  print(`Checking retryable tickets for parent tx: ${parentTxHash}`)
+  print(`Checking retryable tickets for settlement chain tx: ${hash}`)
 
-  // Get the parent transaction receipt
-  const parentReceipt = await parentProvider.getTransactionReceipt(parentTxHash)
+  const parentReceipt =
+    await settlementChainProvider.getTransactionReceipt(hash)
   if (!parentReceipt) {
-    throw new Error(`Transaction receipt not found for hash: ${parentTxHash}`)
+    throw new Error(`Transaction receipt not found for hash: ${hash}`)
   }
 
-  print(`Parent tx found in block ${parentReceipt.blockNumber}`)
+  print(`Settlement chain tx found in block ${parentReceipt.blockNumber}`)
 
-  // Wrap it in ParentTransactionReceipt
   const parentTxReceipt = new ParentTransactionReceipt(parentReceipt)
 
-  // Get ParentToChildMessages from the receipt
   const parentToChildMessages =
-    await parentTxReceipt.getParentToChildMessages(childProvider)
+    await parentTxReceipt.getParentToChildMessages(appchainProvider)
 
   print(`Found ${parentToChildMessages.length} retryable ticket(s)`)
 
@@ -63,8 +62,8 @@ export async function checkRetryable({
     if (status === ParentToChildMessageStatus.REDEEMED) {
       const result = await message.waitForStatus()
       if ("childTxReceipt" in result) {
-        print(`Child chain tx hash: ${result.childTxReceipt.transactionHash}`)
-        print(`Child chain block: ${result.childTxReceipt.blockNumber}`)
+        print(`Appchain tx hash: ${result.childTxReceipt.transactionHash}`)
+        print(`Appchain block: ${result.childTxReceipt.blockNumber}`)
       }
     }
   }
