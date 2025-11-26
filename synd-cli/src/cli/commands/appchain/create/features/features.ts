@@ -135,7 +135,7 @@ export async function features({
         ownerSettlementWalletClient.account.address,
         parseEther("0.001")
       )
-      await sleep(1000)
+      await sleep(3000)
     }
   }
 
