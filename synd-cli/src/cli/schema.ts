@@ -244,6 +244,18 @@ export const appchainCheckTokenBridgeOptionsSchema = z
   })
   .strict()
 
+export const appchainCheckRetryableOptionsSchema = z
+  .object({
+    settlementRpc: z.url("Invalid settlement chain RPC URL"),
+    appchainRpc: z.url("Invalid appchain RPC URL"),
+    rollup: ethAddressSchema,
+    hash: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash")
+      .transform((val) => val as Hex)
+  })
+  .strict()
+
 export const appchainDeployTeeModuleOptionsSchema = z
   .object({
     deployerPrivateKey: privateKeySchema("deployer"),

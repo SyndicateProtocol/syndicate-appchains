@@ -420,3 +420,10 @@ export interface CheckTokenBridge {
   settlementPublicClient: PublicClientWithChain
   createdAtHash: Hex
 }
+
+export interface CheckRetryable {
+  parentTxHash: Hex
+  parentPublicClient: PublicClientWithChain
+  childPublicClient: PublicClientWithChain
+  rollup: Hex
+}
