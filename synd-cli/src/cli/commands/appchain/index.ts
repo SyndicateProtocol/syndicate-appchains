@@ -1,6 +1,7 @@
 import { print } from "@/utils/print"
 import type { Command } from "@commander-js/extra-typings"
 import { arbOwnerCommand } from "./arbOwner"
+import { checkRetryableCommand } from "./checkRetryable"
 import { checkTokenBridgeCommand } from "./checkTokenBridge/"
 import { createAppchainCommand } from "./create"
 import { e2eCommand } from "./e2e"
@@ -18,5 +19,6 @@ export function appchainCommand(program: Command) {
   handoffCommand(appchainProgram)
   arbOwnerCommand(appchainProgram)
   checkTokenBridgeCommand(appchainProgram)
+  checkRetryableCommand(appchainProgram)
   e2eCommand(appchainProgram)
 }

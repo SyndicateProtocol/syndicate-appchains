@@ -26,6 +26,6 @@
     }
   },
   "files": {
-    "ignore": ["node_modules", "dist", ".gitignore", ".next"]
+    "ignore": ["node_modules", "dist", ".gitignore", ".next", "src/dev"]
   }
 }

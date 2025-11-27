@@ -420,3 +420,19 @@ export interface CheckTokenBridge {
   settlementPublicClient: PublicClientWithChain
   createdAtHash: Hex
 }
+
+export interface CheckRetryable {
+  hash: Hex
+  settlementPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
+  rollup: Hex
+}
+
+export interface EnsureOwnerBalance {
+  ownerWalletClient: WalletClient<Transport, Chain, Account>
+  deployerWalletClient: WalletClient<Transport, Chain, Account>
+  publicClient: PublicClientWithChain
+  nativeTokenAddress: Hex
+  nativeTokenSymbol: string
+  estimatedCostOfRetryables: bigint
+}

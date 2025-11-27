@@ -3,18 +3,14 @@ import { supportedSettlementChains } from "@/utils/constants"
 import { upsertToEoaSecrets, upsertToSyndObject } from "@/utils/fs"
 import { fundAccount } from "@/utils/fundAccount"
 import { generateBridgeConfig } from "@/utils/generateBridgeConfig"
-import {
-  getChainRpcUrl,
-  getNativeCurrency,
-  isNativeTokenEth
-} from "@/utils/helpers"
+import { getChainRpcUrl, getNativeCurrency } from "@/utils/helpers"
 import { print } from "@/utils/print"
-import { sleep } from "bun"
-import { erc20Abi, formatEther, parseEther, parseUnits } from "viem"
+import { parseEther } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { createTokenBridge } from "./createTokenBridge"
 import { canDeployMulticall3, deployMulticall3 } from "./deployMulticall3"
 import { deployWithdrawals } from "./deployWithdrawals"
+import { ensureOwnerBalance } from "./ensureOwnerBalance"
 import { pollEmptyTxs } from "./pollEmptyTxs"
 
 export async function features({
@@ -51,7 +47,7 @@ export async function features({
   print("Rollup", coreContracts.rollup)
   print(
     "Native Token",
-    isNativeTokenEth(coreContracts.nativeToken)
+    nativeCurrency.symbol === "ETH"
       ? "ETH"
       : `${coreContracts.nativeToken} (${nativeCurrency?.symbol})`
   )
@@ -70,74 +66,14 @@ export async function features({
   print("🔎 Creating token bridge")
 
   // Owner must have a balance of native token to pay for retryables
-  const estimatedCostOfRetryables = parseEther("0.015")
-  if (isNativeTokenEth(coreContracts.nativeToken)) {
-    const balance = await settlementPublicClient.getBalance({
-      address: ownerSettlementWalletClient.account.address
-    })
-    if (balance < estimatedCostOfRetryables) {
-      print("---------------------------------------------------------")
-      print("                    Insufficient Balance                    ")
-      print("⚠️  Owner does not have enough balance for retryables ⚠️")
-      print("---------------------------------------------------------")
-      print("Owner", ownerSettlementWalletClient.account.address)
-      print("Owner Balance", `${formatEther(balance)} ETH`)
-      print("Required Balance", `${formatEther(estimatedCostOfRetryables)} ETH`)
-      print("Deployer", deployerSettlementWalletClient.account.address)
-      print("---------------------------------------------------------")
-
-      const fundResponse = prompt(
-        "Do you want to fund the owner from the deployer? (y/n)"
-      )
-      const fundConfirmation = ["y", "yes"]
-      if (
-        !fundResponse ||
-        !fundConfirmation.includes(fundResponse.toLowerCase())
-      ) {
-        throw new Error(
-          `🚫 Owner does not have balance of native token on settlement chain. Owner balance: ${formatEther(balance)} ETH, estimated cost of retryables: ${formatEther(estimatedCostOfRetryables)} ETH`
-        )
-      }
-
-      print("💰  Funding owner from deployer...")
-      await fundAccount(
-        deployerSettlementWalletClient,
-        ownerSettlementWalletClient.account.address,
-        estimatedCostOfRetryables
-      )
-      await sleep(1000)
-      print("✅  Owner funded successfully")
-    }
-  } else {
-    const nativeTokenBalance = await settlementPublicClient.readContract({
-      address: coreContracts.nativeToken,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [ownerSettlementWalletClient.account.address]
-    })
-    const tokenDecimals = settlementPublicClient.chain.nativeCurrency.decimals
-    const convertedBalance =
-      parseUnits(nativeTokenBalance.toString(), tokenDecimals) *
-      BigInt(10 ** (18 - tokenDecimals))
-    if (convertedBalance <= estimatedCostOfRetryables) {
-      throw new Error(
-        `🚫 Owner does not have balance of ${nativeCurrency.symbol} (${coreContracts.nativeToken}) on the settlement chain. Owner balance: ${formatEther(convertedBalance)} ${nativeCurrency.symbol}, estimated cost of retryables: ${formatEther(estimatedCostOfRetryables)} ${nativeCurrency.symbol}`
-      )
-    }
-
-    // Fund owner for gas fees
-    const ethBalance = await settlementPublicClient.getBalance({
-      address: ownerSettlementWalletClient.account.address
-    })
-    if (ethBalance < parseEther("0.001")) {
-      await fundAccount(
-        deployerSettlementWalletClient,
-        ownerSettlementWalletClient.account.address,
-        parseEther("0.001")
-      )
-      await sleep(1000)
-    }
-  }
+  await ensureOwnerBalance({
+    ownerWalletClient: ownerSettlementWalletClient,
+    deployerWalletClient: deployerSettlementWalletClient,
+    publicClient: settlementPublicClient,
+    nativeTokenAddress: coreContracts.nativeToken,
+    nativeTokenSymbol: nativeCurrency.symbol,
+    estimatedCostOfRetryables: parseEther("0.015")
+  })
 
   const interval = pollEmptyTxs(deployerSequencingWalletClient)
   const { tokenBridgeContracts } = await createTokenBridge({
