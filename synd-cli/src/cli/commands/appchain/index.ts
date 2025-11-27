@@ -5,6 +5,7 @@ import { checkRetryableCommand } from "./checkRetryable"
 import { checkTokenBridgeCommand } from "./checkTokenBridge/"
 import { createAppchainCommand } from "./create"
 import { e2eCommand } from "./e2e"
+import { executeOutboxCommand } from "./executeOutbox"
 import { handoffCommand } from "./handoff"
 
 export function appchainCommand(program: Command) {
@@ -20,5 +21,6 @@ export function appchainCommand(program: Command) {
   arbOwnerCommand(appchainProgram)
   checkTokenBridgeCommand(appchainProgram)
   checkRetryableCommand(appchainProgram)
+  executeOutboxCommand(appchainProgram)
   e2eCommand(appchainProgram)
 }

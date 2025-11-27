@@ -5,6 +5,7 @@
       "name": "create-chain",
       "dependencies": {
         "@arbitrum/orbit-sdk": "^0.23.3",
+        "@arbitrum/sdk": "^4.0.4",
         "@commander-js/extra-typings": "^14.0.0",
         "abitype": "^1.1.1",
         "commander": "^14.0.2",

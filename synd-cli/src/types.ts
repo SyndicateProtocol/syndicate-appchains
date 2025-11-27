@@ -428,6 +428,14 @@ export interface CheckRetryable {
   rollup: Hex
 }
 
+export interface ExecuteOutbox {
+  hash: Hex
+  appchainRpc: string
+  settlementRpc: string
+  privateKey: Hex
+  rollup: Hex
+}
+
 export interface EnsureOwnerBalance {
   ownerWalletClient: WalletClient<Transport, Chain, Account>
   deployerWalletClient: WalletClient<Transport, Chain, Account>

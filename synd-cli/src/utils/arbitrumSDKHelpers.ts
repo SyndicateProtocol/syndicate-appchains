@@ -29,6 +29,7 @@ export const registerNetworkInArbSDK = async (
 
   return registerCustomArbitrumNetwork(arbitrumNetwork)
 }
+
 export function publicClientToProvider(publicClient: PublicClientWithChain) {
   const { chain } = publicClient
 
