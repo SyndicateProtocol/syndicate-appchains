@@ -9,7 +9,7 @@ import {
 import { JsonRpcProvider } from "@ethersproject/providers"
 import { Wallet } from "ethers"
 
-// Inspirte by Arbitrum Tutorials outbox execute:
+// Inspired by Arbitrum Tutorials outbox execute:
 // https://github.com/OffchainLabs/arbitrum-tutorials/blob/7314f499d5cc7c2084fedff0f7effed68c065b93/packages/outbox-execute/scripts/exec.js
 export async function executeOutbox({
   hash,
