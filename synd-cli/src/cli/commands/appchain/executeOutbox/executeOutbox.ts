@@ -9,6 +9,8 @@ import {
 import { JsonRpcProvider } from "@ethersproject/providers"
 import { Wallet } from "ethers"
 
+// Inspirte by Arbitrum Tutorials outbox execute:
+// https://github.com/OffchainLabs/arbitrum-tutorials/blob/7314f499d5cc7c2084fedff0f7effed68c065b93/packages/outbox-execute/scripts/exec.js
 export async function executeOutbox({
   hash,
   appchainRpc,
@@ -38,10 +40,8 @@ export async function executeOutbox({
   print(`Appchain tx found in block ${receipt.blockNumber}`)
   const transactionReceipt = new ChildTransactionReceipt(receipt)
 
-  /**
-   * Note that in principle, a single transaction could trigger any number of outgoing messages; the common case will be there's only one.
-   * For the sake of this script, we assume there's only one, so we just grab the first one.
-   */
+  // Note that in principle, a single transaction could trigger any number of outgoing messages; the common case will be there's only one.
+  // For the sake of this script, we assume there's only one, so we just grab the first one.
   const messages =
     await transactionReceipt.getChildToParentMessages(settlementWallet)
   if (messages.length === 0) {
