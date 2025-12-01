@@ -239,8 +239,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    seq_chain_info.provider.get_balance(test_account1().address).await?
-                        >= parse_ether("10")?,
+                    seq_chain_info.provider.get_balance(test_account1().address).await? >=
+                        parse_ether("10")?,
                     Duration::from_secs(10)
                 );
 
@@ -380,8 +380,8 @@ impl TestComponents {
 
                 // wait until those funds arrive on the sequencing chain
                 wait_until!(
-                    set_chain_info.provider.get_balance(test_account1().address).await?
-                        >= parse_ether("10")?,
+                    set_chain_info.provider.get_balance(test_account1().address).await? >=
+                        parse_ether("10")?,
                     Duration::from_secs(10)
                 );
                 settlement_deployment = Some(set_deployment);
