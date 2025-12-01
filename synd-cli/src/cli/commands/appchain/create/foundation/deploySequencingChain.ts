@@ -118,7 +118,7 @@ async function createRequireAndModule(input: any) {
   return zeroAddress
 }
 
-async function createSyndicateSequencingChain(requireAndModuleAddress: Hex) {
+async function createSyndicateSequencingChain(input: any) {
   // const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
   //   await getFoundationConfig()
 
