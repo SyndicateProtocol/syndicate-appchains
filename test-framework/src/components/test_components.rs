@@ -157,9 +157,10 @@ impl TestComponents {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let info = start_anvil(1).await?;
-                // avoid "latest L1 block is old" error log from nitro
-                let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
-                info.provider.evm_mine(Some(MineOptions::Timestamp(Some(now)))).await?;
+                let timestamp = options.initial_l1_timestamp.unwrap_or_else(|| {
+                    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
+                });
+                info.provider.evm_mine(Some(MineOptions::Timestamp(Some(timestamp)))).await?;
                 info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
                 info.provider.anvil_set_block_timestamp_interval(1).await?;
                 Some(info)

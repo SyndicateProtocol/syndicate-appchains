@@ -25,6 +25,7 @@ use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
+use synd_mchain::db::L1_BLOCK_NUM_HARDFORK_TS;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     proposer::ProposerConfig,
@@ -35,6 +36,7 @@ use test_utils::{
     docker::{launch_enclave_server, start_component},
     nitro_chain::{
         apply_l1_to_l2_alias, execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams,
+        NitroBlock,
     },
     port_manager::PortManager,
     wait_until,
@@ -67,7 +69,7 @@ sol! {
     function number() return uint256;
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::large_stack_frames)]
 async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Result<()> {
     let close_challenge_interval = Duration::from_secs(1);
     let settlement_delay = 2;
@@ -77,6 +79,8 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             rollup_owner: test_account1().address,
             settlement_delay,
             close_challenge_interval,
+            // 1h before hardfork timestamp 
+            // initial_l1_timestamp: Some(L1_BLOCK_NUM_HARDFORK_TS - 3600),
             ..Default::default()
         },
         |components| async move {
@@ -642,6 +646,99 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             // - assert l1_block_num on the rollup matches the expected value
             // - make a new withdrawal
             // - assert the new withdrawal passes
+
+
+            // Progress L1 timestamp to be after L1_BLOCK_NUM_HARDFORK_TS
+            assert!(
+            l1_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap().header.timestamp < L1_BLOCK_NUM_HARDFORK_TS );
+
+            // Progress time to just after the hardfork
+            l1_provider
+                .evm_mine(Some(MineOptions::Options {
+                    timestamp: Some(L1_BLOCK_NUM_HARDFORK_TS + 10),
+                    blocks: Some(1),
+                }))
+                .await?;
+
+            // Get the current settlement chain block number to verify later
+            let settlement_block_before = components
+                .settlement_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap()
+                .header
+                .number;
+
+            ///  TODO breaking here... continue
+
+            // Sequence a transaction
+            let tx_receipt = components
+                .sequence_tx(b"test_tx_after_hardfork", 0, true)
+                .await?
+                .unwrap();
+
+            // Get the appchain block and verify l1_block_number
+            let block: NitroBlock = components
+                .appchain_provider
+                .raw_request(
+                    "eth_getBlockByHash".into(),
+                    (tx_receipt.block_hash.unwrap(), false),
+                )
+                .await?;
+
+            // After hardfork, l1_block_number should come from settlement chain
+            assert!(
+                block.l1_block_number >= U256::from(settlement_block_before),
+                "l1_block_number should be from settlement chain after hardfork. Expected >= {}, got {}",
+                settlement_block_before,
+                block.l1_block_number
+            );
+
+            // Make a new withdrawal
+            let withdrawal_value = parse_ether("0.05")?;
+            let to_address = address!("0x0000000000000000000000000000000000000003");
+            let tx =
+                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                    .await?;
+
+            let receipt = components.sequence_tx(tx.encoded_2718().as_slice(), 0, true).await?;
+            let appchain_block_hash_to_prove = receipt.unwrap().block_hash.unwrap();
+
+            // Wait for the withdrawal root to be posted
+            wait_until!(
+                rollup_core
+                    .NodeConfirmed_filter()
+                    .query()
+                    .await?
+                    .iter()
+                    .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
+                Duration::from_secs(20 * 60)
+            );
+
+            // Execute the withdrawal
+            execute_withdrawal(ExecuteWithdrawalParams {
+                to_address,
+                withdrawal_value,
+                appchain_block_hash_to_prove,
+                bridge_address: components.appchain_deployment.bridge,
+                settlement_provider: &components.settlement_provider,
+                appchain_provider: &components.appchain_provider,
+                l2_sender: components.appchain_provider.default_signer_address(),
+                send_root_size: 3, // We've made 3 withdrawals total now
+                withdrawal_position: 0,
+            })
+            .await;
+
+            // Assert the withdrawal passed
+            let balance_after = components.settlement_provider.get_balance(to_address).await?;
+            assert_eq!(balance_after, withdrawal_value);
+
+            // Final cleanup
+            proposer_instance.kill();
+            enclave_server_instance.kill();
 
             Ok(())
         },

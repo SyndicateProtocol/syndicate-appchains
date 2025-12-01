@@ -81,7 +81,7 @@ pub async fn run(
         } else if delayed_msgs.is_empty() {
             0
         } else {
-            set_block.block_ref.number
+            set_block.block_ref.number - 1
         };
 
         let (tx_count, sequenced_batch) =
@@ -547,9 +547,19 @@ mod tests {
             let set_block_num = 2000;
             let set_timestamp = timestamp - settlement_delay + 1;
 
+            // Create a delayed message for settlement blocks to ensure l1_block_number uses
+            // set_block.block_ref.number after hardfork (not 0).
+            // Must be in a settlement block with timestamp <= slot_end_ts to be processed.
+            let delayed_msg = DelayedMessage {
+                kind: 0,
+                sender: Address::ZERO,
+                data: Bytes::from("test_message"),
+                base_fee_l1: U256::from(1000),
+            };
+
             let seq_blocks = vec![create_seq_block(seq_block_num, timestamp, vec![dummy.clone()])];
             let set_blocks = vec![
-                create_set_block(set_block_num, timestamp - settlement_delay, vec![]),
+                create_set_block(set_block_num, timestamp - settlement_delay, vec![delayed_msg]),
                 create_set_block(set_block_num + 1, set_timestamp, vec![]),
             ];
 
@@ -573,11 +583,10 @@ mod tests {
             let (block_num, ts) =
                 extract_batch_headers(&blocks[0].payload.as_ref().unwrap().batch_data)?;
 
-            let (expected_block, expected_ts) = if expected_is_settlement {
-                (set_block_num + 1, set_timestamp)
-            } else {
-                (seq_block_num, timestamp)
-            };
+            // After hardfork, block number comes from settlement chain (when delayed_msgs present),
+            // but timestamp always comes from sequencing chain
+            let expected_block = if expected_is_settlement { set_block_num } else { seq_block_num };
+            let expected_ts = timestamp;
 
             assert_eq!(block_num, expected_block, "{}: wrong block number", test_name);
             assert_eq!(ts, expected_ts, "{}: wrong timestamp", test_name);

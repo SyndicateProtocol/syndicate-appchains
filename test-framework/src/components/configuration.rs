@@ -40,6 +40,7 @@ pub struct ConfigurationOptions {
     pub maestro_finalization_duration: Option<Duration>,
     pub maestro_finalization_checker_interval: Option<Duration>,
     pub close_challenge_interval: Duration,
+    pub initial_l1_timestamp: Option<u64>,
 }
 
 impl Default for ConfigurationOptions {
@@ -59,6 +60,7 @@ impl Default for ConfigurationOptions {
             maestro_finalization_duration: None,
             maestro_finalization_checker_interval: None,
             close_challenge_interval: Duration::from_secs(1),
+            initial_l1_timestamp: None,
         }
     }
 }

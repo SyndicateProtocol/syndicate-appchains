@@ -372,6 +372,7 @@ pub async fn launch_nitro_node(args: NitroNodeArgs) -> Result<ChainInfo> {
             .arg("--execution.tx-pre-checker.strictness=20")
             .arg("--ensure-rollup-deployment=false")
             .arg("--init.validate-genesis-assertion=false")
+            .arg("--execution.sequencer.max-acceptable-timestamp-delta=8760h") // 1 year
             .arg(format!(
                 "--chain.info-json={}",
                 nitro_chain_info_json(NitroChainInfoArgs {
