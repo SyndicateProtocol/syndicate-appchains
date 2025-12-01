@@ -31,13 +31,14 @@ contract DeployPerformanceStaking is Script {
 
     // Commons Contracts
     uint256 public settlementChainID = baseChainID;
-    address public commonsAdmin = address(0x0000000000000000000000000000000000000000);
+    address public commonsAdmin = address(0x03F8b8f48a3F22109bf1F4b54b54d0fdc96E7A67);
     address public staking = address(0xF9637B60f27AF139FC46EAa655cFBbe4E731BCdF);
     address public basePool = address(0x71cF8bf70Bb4f5ba8e4B4588bacB5ee108f3Ed10);
 
     // Filled in after deployment
-    address public gasAggregatorDeployment = address(0x0000000000000000000000000000000000000000);
-    address public blockHashSenderDeployment = address(0x0000000000000000000000000000000000000000);
+    address public gasAggregatorDeployment = address(0x1aCc3a26FCB9751D5E3b698D009b9C944eb98F9e);
+    address public blockHashSenderDeployment = address(0xD77Aa8b1743326Baeb548357f8334df911A4E58f);
+    address public gasArchiveDeployment = address(0xAb5390d3708C78e84b82de12D3e07d94145a3C0b);
     address public splitterDeployment = address(0x0000000000000000000000000000000000000000);
 
 
@@ -61,7 +62,8 @@ contract DeployPerformanceStaking is Script {
             deployBase();
         } else if (block.chainid == commonsChainID) {
             console2.log("Deploying Performance Staking Contracts on Commons...");
-            deployCommons();
+            // deployCommons();
+            deployCommonsPools();
         } else if (block.chainid == 1) {
             actionsOnMainnet();
         } else {
@@ -97,9 +99,8 @@ contract DeployPerformanceStaking is Script {
         // Filled in after deployment
         gasAggregatorDeployment = address(0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d);
         blockHashSenderDeployment = address(0x28F62871025e78a4a7C03c7287425b2eDE304E3A);
+        gasArchiveDeployment = address(0x9D01b45D73fb63442509F3Ed757e176174811949);
         splitterDeployment = address(0x0000000000000000000000000000000000000000);
-
-        // GasArchive: 0x9D01b45D73fb63442509F3Ed757e176174811949
     }
 
     function actionsOnMainnet() public {
@@ -156,19 +157,7 @@ contract DeployPerformanceStaking is Script {
 
         bytes memory initData = abi.encodeCall(GasArchive.initialize, (startingEpoch));
         GasArchive gasArchive = GasArchive(address(new ERC1967Proxy(address(gasArchiveImpl), initData)));
-        console2.log("GasArchive proxy deployed to:", address(gasArchive));
-
-        EmissionsReceiver emissionsReceiver = new EmissionsReceiver();
-        console2.log("EmissionsReceiver deployed to:", address(emissionsReceiver));
-
-        PerformancePool performancePool = new PerformancePool(commonsAdmin, staking, address(gasArchive));
-        console2.log("PerformancePool deployed to:", address(performancePool));
-
-        AppchainPool appchainPool = new AppchainPool(commonsAdmin, staking, address(gasArchive), address(emissionsReceiver));
-        console2.log("AppchainPool deployed to:", address(appchainPool));
-
-        Splitter splitter = new Splitter(basePool, address(performancePool), address(appchainPool));
-        console2.log("Splitter deployed to:", address(splitter));   
+        console2.log("GasArchive proxy deployed to:", address(gasArchive)); 
 
         console2.log("=== Setup ===");
 
@@ -179,6 +168,38 @@ contract DeployPerformanceStaking is Script {
 
         gasArchive.transferOwnership(commonsAdmin);
         console2.log("Gas Archive ownership transferred to admin");
+    }
+
+    function deployCommonsPools() public {
+        require(gasArchiveDeployment != address(0), "GasArchive deployment not set");
+        require(commonsAdmin != address(0), "CommonsAdmin not set");
+        console2.log("Deploying Commons (Part 2)...");
+
+        EmissionsReceiver emissionsReceiver = new EmissionsReceiver();
+        console2.log("EmissionsReceiver deployed to:", address(emissionsReceiver));
+
+        PerformancePool performancePool = new PerformancePool(commonsAdmin, staking, gasArchiveDeployment);
+        console2.log("PerformancePool deployed to:", address(performancePool));
+
+        AppchainPool appchainPool = new AppchainPool(commonsAdmin, staking, gasArchiveDeployment, address(emissionsReceiver));
+        console2.log("AppchainPool deployed to:", address(appchainPool));
+
+        Splitter splitter = new Splitter(basePool, address(performancePool), address(appchainPool));
+        console2.log("Splitter deployed to:", address(splitter));
+
+        console2.log("===  Add emission receivers ===");
+
+        if (commonsChainID == 510003) {
+            // Only setup mainnet chains if we are on commons
+            revert("TODO: Add mainnet chain emissions receivers");
+            emissionsReceiver.setAppchainEmissionsReceiver(510003, address(0x0000000000000000000000000000000000000000)); // Commons
+            emissionsReceiver.setAppchainEmissionsReceiver(63829, address(0x0000000000000000000000000000000000000000)); // CMMT
+            emissionsReceiver.setAppchainEmissionsReceiver(510525, address(0x0000000000000000000000000000000000000000)); // Clankermon
+            emissionsReceiver.setAppchainEmissionsReceiver(574014, address(0x0000000000000000000000000000000000000000)); // Stadium
+        }
+
+
+        console2.log("===  Transfer Ownership ===");
 
         emissionsReceiver.transferOwnership(commonsAdmin);
         console2.log("EmissionsReceiver ownership transferred to admin");
