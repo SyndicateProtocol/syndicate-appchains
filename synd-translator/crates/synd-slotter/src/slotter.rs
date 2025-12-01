@@ -76,12 +76,16 @@ pub async fn run(
             metrics.update_chain_timestamp_lag(set_block.block_ref.timestamp, Chain::Settlement);
         }
 
-        let l1_block = if timestamp < L1_BLOCK_NUM_HARDFORK_TS {
-            &seq_block.block_ref
+        let l1_block_number = if timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+            seq_block.block_ref.number
+        } else if delayed_msgs.is_empty() {
+            0
         } else {
-            &set_block.block_ref
+            set_block.block_ref.number
         };
-        let (tx_count, sequenced_batch) = build_batch(&seq_block, &rollup_adapter, l1_block)?;
+
+        let (tx_count, sequenced_batch) =
+            build_batch(&seq_block, &rollup_adapter, l1_block_number, timestamp)?;
 
         if tx_count > 0 || !delayed_msgs.is_empty() {
             mblock.payload = Some(ArbitrumBatch::new(sequenced_batch, delayed_msgs));
@@ -134,7 +138,7 @@ mod tests {
     use alloy::{
         eips::Encodable2718,
         network::{EthereumWallet, TransactionBuilder},
-        primitives::{address, Address, Bytes, FixedBytes, Log, TxHash, U256},
+        primitives::{address, Address, Bytes, FixedBytes, Log, U256},
         rpc::types::TransactionRequest,
         signers::local::PrivateKeySigner,
         sol_types::SolEvent,
@@ -487,6 +491,97 @@ mod tests {
         // Slot should have payload because of delayed messages
         let payload = blocks[0].payload.as_ref().unwrap();
         assert_eq!(payload.delayed_messages.len(), 2);
+
+        Ok(())
+    }
+
+    /// Helper to extract L1 block number and timestamp from batch headers
+    fn extract_batch_headers(batch_data: &Bytes) -> eyre::Result<(u64, u64)> {
+        use alloy::rlp::{Decodable, Header as RlpHeader};
+
+        let mut decompressed = Vec::new();
+        brotli::BrotliDecompress(&mut &batch_data[1..], &mut decompressed)?;
+
+        let mut buf = &decompressed[..];
+        let mut header_block_number = 0;
+        let mut header_timestamp = 0;
+
+        while !buf.is_empty() {
+            let header = RlpHeader::decode(&mut buf)?;
+            let segment_data = &buf[..header.payload_length];
+            buf = &buf[header.payload_length..];
+
+            if !segment_data.is_empty() {
+                match segment_data[0] {
+                    4 => {
+                        // BatchSegmentKind::AdvanceL1BlockNumber
+                        let mut segment_buf = &segment_data[1..];
+                        header_block_number += u64::decode(&mut segment_buf)?;
+                    }
+                    3 => {
+                        // BatchSegmentKind::AdvanceTimestamp
+                        let mut segment_buf = &segment_data[1..];
+                        header_timestamp += u64::decode(&mut segment_buf)?;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok((header_block_number, header_timestamp))
+    }
+
+    #[tokio::test]
+    async fn test_hardfork_timestamp_changes_batch_header_source() -> eyre::Result<()> {
+        let settlement_delay = 10;
+        let dummy = dummy_tx().await;
+
+        // Test before and after hardfork
+        for (test_name, timestamp, expected_is_settlement) in [
+            ("before_hardfork", L1_BLOCK_NUM_HARDFORK_TS - 1, false),
+            ("after_hardfork", L1_BLOCK_NUM_HARDFORK_TS, true),
+        ] {
+            let mchain_provider = MockMchainProvider::new(1);
+            let metrics = SlotterMetrics::new(&mut Registry::default());
+
+            let seq_block_num = 1000;
+            let set_block_num = 2000;
+            let set_timestamp = timestamp - settlement_delay + 1;
+
+            let seq_blocks = vec![create_seq_block(seq_block_num, timestamp, vec![dummy.clone()])];
+            let set_blocks = vec![
+                create_set_block(set_block_num, timestamp - settlement_delay, vec![]),
+                create_set_block(set_block_num + 1, set_timestamp, vec![]),
+            ];
+
+            let mchain_clone = mchain_provider.clone();
+            let handle = tokio::spawn(async move {
+                let _ = run(
+                    settlement_delay,
+                    TestBlockStream::new(seq_blocks),
+                    TestBlockStream::new(set_blocks),
+                    create_rollup_adapter(),
+                    &mchain_clone,
+                    &metrics,
+                )
+                .await;
+            });
+
+            mchain_provider.wait_for_blocks().await;
+            drop(handle);
+
+            let blocks = mchain_provider.get_blocks();
+            let (block_num, ts) =
+                extract_batch_headers(&blocks[0].payload.as_ref().unwrap().batch_data)?;
+
+            let (expected_block, expected_ts) = if expected_is_settlement {
+                (set_block_num + 1, set_timestamp)
+            } else {
+                (seq_block_num, timestamp)
+            };
+
+            assert_eq!(block_num, expected_block, "{}: wrong block number", test_name);
+            assert_eq!(ts, expected_ts, "{}: wrong timestamp", test_name);
+        }
 
         Ok(())
     }

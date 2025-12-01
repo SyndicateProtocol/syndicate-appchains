@@ -25,7 +25,7 @@ use jsonrpsee::RpcModule;
 #[cfg(not(test))]
 use std::time::SystemTime;
 use std::{collections::VecDeque, sync::Mutex, time::UNIX_EPOCH};
-use tracing::error;
+use tracing::{error, info};
 
 // 000b00800203 corresponds to a batch containing a single delayed message
 const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("000b00800203"));
@@ -60,6 +60,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
         if let Some(migration_params) = migration_params {
+            info!("applying migration: {migration_params:?}");
             db.appchain_migration(migration_params).unwrap();
             finalized_batch_count = db.get_state().batch_count;
         }

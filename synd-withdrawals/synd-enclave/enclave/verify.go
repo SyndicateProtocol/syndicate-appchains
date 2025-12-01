@@ -6,6 +6,7 @@ package enclave
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/triedb"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
+	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/offchainlabs/nitro/arbos"
 	"github.com/offchainlabs/nitro/arbos/arbosState"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
@@ -67,11 +69,13 @@ func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uin
 	return msg, nil
 }
 
+const L1_BLOCK_NUM_HARDFORK_TS = 1767571200
+
 func Verify(
 	ctx context.Context,
 	data wavmio.ValidationInput,
 	processor interface {
-		ProcessBlock(*types.Block, types.Receipts) error
+		ProcessBlock(seqBlock *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error
 	},
 ) (_ *execution.MessageResult, err error) {
 	if data.BlockHash == (common.Hash{}) {
@@ -154,22 +158,22 @@ func Verify(
 
 		chainContext := wavmio.WavmChainContext{ChainConfig: chainConfig, Wavm: wavm}
 
-		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.NewMessageRecordingContext([]rawdb.WasmTarget{rawdb.LocalTarget()}))
+		seq_block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.NewMessageRecordingContext([]rawdb.WasmTarget{rawdb.LocalTarget()}))
 		if err != nil {
 			return nil, err
 		}
-		if block.NumberU64() != header.Number.Uint64()+1 {
-			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", block.NumberU64(), header.Number.Uint64()+1)
+		if seq_block.NumberU64() != header.Number.Uint64()+1 {
+			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", seq_block.NumberU64(), header.Number.Uint64()+1)
 		}
 
-		header = block.Header()
+		header = seq_block.Header()
 		bytes, err := rlp.EncodeToBytes(header)
 		if err != nil {
 			return nil, fmt.Errorf("error RLP encoding header: %v", err)
 		}
 		wavm.Preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(bytes)] = bytes
 
-		result, err := statedb.Commit(block.NumberU64(), true, false)
+		result, err := statedb.Commit(seq_block.NumberU64(), true, false)
 		if err != nil {
 			return nil, err
 		}
@@ -177,8 +181,25 @@ func Verify(
 			return nil, fmt.Errorf("bad commit root hash expected %v, got %v", header.Root, result)
 		}
 
+		// NOTE: l1BlockNum hardfork logic must match slotter.rs
+		l1BlockNum := uint64(0)
+		if seq_block.Time() < L1_BLOCK_NUM_HARDFORK_TS {
+			l1BlockNum = seq_block.NumberU64()
+		} else {
+			// Get settlement block number from latest delayed message if available
+			if len(data.Messages) > 0 {
+				lastMsg := data.Messages[len(data.Messages)-1]
+				if len(lastMsg) < teetypes.DelayedMessageBlockNumberOffset+8 {
+					return nil, errors.New("delayed message too short to contain block number")
+				}
+				l1BlockNum = binary.BigEndian.Uint64(
+					lastMsg[teetypes.DelayedMessageBlockNumberOffset : teetypes.DelayedMessageBlockNumberOffset+8],
+				)
+			}
+		}
+
 		if processor != nil {
-			if err := processor.ProcessBlock(block, receipts); err != nil {
+			if err := processor.ProcessBlock(seq_block, receipts, l1BlockNum, seq_block.Time()); err != nil {
 				return nil, err
 			}
 		}

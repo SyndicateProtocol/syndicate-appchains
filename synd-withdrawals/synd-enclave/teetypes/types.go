@@ -29,10 +29,11 @@ var (
 
 // field offsets into the serialized arbostypes.L1IncomingMessage struct
 const (
-	DelayedMessageSenderOffset    = 13
-	DelayedMessageTimestampOffset = 41
-	DelayedMessageRequestIdOffset = 49
-	DelayedMessageDataOffset      = 113
+	DelayedMessageSenderOffset      = 13
+	DelayedMessageBlockNumberOffset = 33
+	DelayedMessageTimestampOffset   = 41
+	DelayedMessageRequestIdOffset   = 49
+	DelayedMessageDataOffset        = 113
 )
 
 // Wrapper around the teemodule.TeeTrustedInput to define the Hash method

@@ -23,6 +23,7 @@ tracing             = { workspace = true }
 [dev-dependencies]
 alloy             = { workspace = true, features = ["sol-types"] }
 async-trait       = { workspace = true }
+brotli            = { workspace = true }
 contract-bindings = { workspace = true }
 ctor              = { workspace = true }
 eyre              = { workspace = true }

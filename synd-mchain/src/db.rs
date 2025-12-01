@@ -9,7 +9,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -478,6 +478,7 @@ pub trait ArbitrumDB {
             },
             true,
         )?;
+        info!("migration applied: {params:?}");
 
         Ok(())
     }

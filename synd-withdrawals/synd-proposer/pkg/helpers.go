@@ -432,6 +432,8 @@ func GetDelayedMessages(
 				return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block by hash")
 			}
 
+			// TODO revisit this
+
 			// Override the block number with the L1 block number
 			// It is used during contract execution in nitro rollups
 			l1BlockNum := types.DeserializeHeaderExtraInformation(block.Header()).L1BlockNumber

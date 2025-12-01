@@ -636,6 +636,13 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             proposer_instance.kill();
             enclave_server_instance.kill();
 
+            // TODO
+            // - progress timestamp to be after L1_BLOCK_NUM_HARDFORK_TS
+            // - sequence a tx
+            // - assert l1_block_num on the rollup matches the expected value
+            // - make a new withdrawal
+            // - assert the new withdrawal passes
+
             Ok(())
         },
     )

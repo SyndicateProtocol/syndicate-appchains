@@ -413,7 +413,7 @@ func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
 	if _, ok := allowedMsgs[msg[0]]; !ok {
 		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
-	if ts >= HARDFORK_TS {
+	if ts >= L1_BLOCK_NUM_HARDFORK_TS {
 		blockNum = binary.BigEndian.Uint64(msg[33:41])
 	}
 	if msg[0] == arbostypes.L1MessageType_BatchPostingReport {
@@ -459,10 +459,6 @@ func parseAppBatches(input *teetypes.VerifyAppchainInput) ([][]byte, error) {
 	if len(input.DelayedMessages) == 0 {
 		return nil, errors.New("must include at least one delayed message")
 	}
-
-	fmt.Println("input.DelayedMessage length", len(input.DelayedMessages))
-	// fmt.Println("input.DelayedMessages", input.DelayedMessages)
-	fmt.Println("input.StartDelayedMessagesAccumulator", input.StartDelayedMessagesAccumulator)
 
 	// verify delayed messages
 	startIndex, err := validateDelayedMessages(input.DelayedMessages)

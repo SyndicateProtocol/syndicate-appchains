@@ -2,7 +2,7 @@
 
 use crate::slotter::SlotterError;
 use alloy::primitives::{Bytes, TxHash};
-use shared::types::{BlockRef, PartialBlock};
+use shared::types::PartialBlock;
 use synd_block_builder::appchains::shared::RollupAdapter;
 use tracing::{info, warn};
 
@@ -10,27 +10,24 @@ use tracing::{info, warn};
 pub fn build_batch(
     seq_block: &PartialBlock,
     rollup_adapter: &impl RollupAdapter,
-    l1_block: &BlockRef,
+    l1_block_number: u64,
+    timestamp: u64,
 ) -> Result<(u64, Bytes), SlotterError> {
-    let mb_transactions = parse_block_to_txs(seq_block, rollup_adapter);
+    let txs = parse_block_to_txs(seq_block, rollup_adapter);
 
-    if mb_transactions.is_empty() {
+    if txs.is_empty() {
         return Ok((0, Default::default()));
     }
 
     info!(
         slot = seq_block.block_ref.number,
         "Processing sequencer transactions: {:?}",
-        mb_transactions.iter().map(|x| x.1).collect::<Vec<_>>()
+        txs.iter().map(|x| x.1).collect::<Vec<_>>()
     );
     Ok((
-        mb_transactions.len() as u64,
+        txs.len() as u64,
         rollup_adapter
-            .build_batch_bytes(
-                mb_transactions.into_iter().map(|x| x.0).collect(),
-                l1_block.number,
-                l1_block.timestamp,
-            )
+            .build_batch_bytes(txs.into_iter().map(|x| x.0).collect(), l1_block_number, timestamp)
             .map_err(|e| SlotterError::BuildBatchError(e.to_string()))?,
     ))
 }
