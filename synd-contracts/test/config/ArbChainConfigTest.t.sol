@@ -504,100 +504,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
         vm.stopPrank();
 
         ArbChainConfig config = ArbChainConfig(configAddress);
-        assertEq(config.version(), "1.0.0", "Initial version should be 1.0.0");
-    }
-
-    function testUpdateVersionInArbChainConfig() public {
-        ArbConfigManager manager = _createArbConfigManager();
-
-        vm.startPrank(owner);
-        address configAddress = manager.createArbChainConfig(
-            owner,
-            CHAIN_ID + 2000,
-            SEQUENCING_CHAIN_ID,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            appchainOwner,
-            DEFAULT_WS_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
-        );
-        vm.stopPrank();
-
-        ArbChainConfig config = ArbChainConfig(configAddress);
-
-        vm.prank(owner);
-        config.updateVersion("1.2.0");
-
-        assertEq(config.version(), "1.2.0", "Version should be updated to 1.2.0");
-    }
-
-    function testUpdateVersionOnlyOwner() public {
-        ArbConfigManager manager = _createArbConfigManager();
-
-        vm.startPrank(owner);
-        address configAddress = manager.createArbChainConfig(
-            owner,
-            CHAIN_ID + 3000,
-            SEQUENCING_CHAIN_ID,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            appchainOwner,
-            DEFAULT_WS_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
-        );
-        vm.stopPrank();
-
-        ArbChainConfig config = ArbChainConfig(configAddress);
-        address nonOwner = address(999);
-
-        vm.prank(nonOwner);
-        vm.expectRevert(); // OpenZeppelin's Ownable error
-        config.updateVersion("1.1.0");
-    }
-
-    function testVersionPersistsAfterConfigUpdates() public {
-        ArbConfigManager manager = _createArbConfigManager();
-
-        vm.startPrank(owner);
-        address configAddress = manager.createArbChainConfig(
-            owner,
-            CHAIN_ID + 4000,
-            SEQUENCING_CHAIN_ID,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            appchainOwner,
-            DEFAULT_WS_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
-        );
-        vm.stopPrank();
-
-        ArbChainConfig config = ArbChainConfig(configAddress);
-
-        // Update version
-        vm.prank(owner);
-        config.updateVersion("2.1.0");
-
-        // Perform other operations
-        vm.prank(owner);
-        config.updateDefaultSequencingChainWsRpcUrl("wss://new-url.com");
-
-        vm.prank(owner);
-        config.updateAppchainBlockExplorerUrl("https://new-explorer.com");
-
-        // Version should still be the same
-        assertEq(config.version(), "2.1.0", "Version should persist after config updates");
+        assertEq(config.VERSION(), 1000000, "Initial version should be 1.0.0");
     }
 
     function testVersionInManagerCreatedConfig() public {
@@ -621,6 +528,6 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
         vm.stopPrank();
 
         ArbChainConfig config = ArbChainConfig(configAddress);
-        assertEq(config.version(), "1.0.0", "Manager-created config should have initial version");
+        assertEq(config.VERSION(), 1000000, "Manager-created config should have initial version");
     }
 }

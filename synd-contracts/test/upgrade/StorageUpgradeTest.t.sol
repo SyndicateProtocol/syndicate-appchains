@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {SyndicateSequencingChainTestingUpgradeability} from
-    "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
+import {
+    SyndicateSequencingChainTestingUpgradeability
+} from "./helpers/SyndicateSequencingChainTestingUpgradeability.sol";
 
 /// @title StorageUpgradeTest
 /// @notice Comprehensive test for storage layout safety during contract upgrades
@@ -57,8 +58,7 @@ contract StorageUpgradeTest is Test {
 
         // Capture original storage state
         OriginalStorageData memory originalData = OriginalStorageData({
-            appchainId: syndicateV1.appchainId(),
-            permissionModule: address(syndicateV1.permissionRequirementModule())
+            appchainId: syndicateV1.appchainId(), permissionModule: address(syndicateV1.permissionRequirementModule())
         });
 
         // Deploy V2 implementation

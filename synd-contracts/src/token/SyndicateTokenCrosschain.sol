@@ -407,13 +407,7 @@ contract SyndicateTokenCrosschain is SyndicateToken, IERC7802, IBridgeRateLimite
     /// @notice Check if contract supports an interface
     /// @param interfaceId Interface identifier to check
     /// @return true if interface is supported
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(AccessControl, IERC165)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, IERC165) returns (bool) {
         return interfaceId == type(IERC7802).interfaceId || interfaceId == type(IBridgeRateLimiter).interfaceId
             || super.supportsInterface(interfaceId);
     }

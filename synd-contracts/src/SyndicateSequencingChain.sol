@@ -139,10 +139,7 @@ contract SyndicateSequencingChain is
     /// @param admin The address to be set as the contract owner (receives DEFAULT_ADMIN_ROLE)
     /// @param _permissionRequirementModule The address of the permission requirement module or address(0) to allow all transactions
     /// @param _appchainId The unique identifier for the application chain this contract sequences for (must not be 0)
-    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId)
-        external
-        initializer
-    {
+    function initialize(address admin, address _permissionRequirementModule, uint256 _appchainId) external initializer {
         if (admin == address(0)) revert ZeroAddress();
         require(_appchainId != 0, "App chain ID cannot be 0");
         __SequencingModuleChecker_init(admin, _permissionRequirementModule);
@@ -201,9 +198,8 @@ contract SyndicateSequencingChain is
     /// @dev Each transaction in the array must be non-empty. This function delegates processing to the configured gas meter contract for each transaction.
     /// @param data An array of transaction data to process (must not be empty).
     function processTransactionsBulk(bytes[] calldata data) external {
-        GasMeter(gasMeter).meterCall(
-            abi.encodeCall(SyndicateSequencingChain._processTransactionsBulk, (msg.sender, data))
-        );
+        GasMeter(gasMeter)
+            .meterCall(abi.encodeCall(SyndicateSequencingChain._processTransactionsBulk, (msg.sender, data)));
     }
 
     /// @notice Processes multiple signed transactions in bulk for gas efficiency

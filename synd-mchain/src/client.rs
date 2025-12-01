@@ -2,14 +2,13 @@
 
 use crate::db::{MBlock, Slot};
 use alloy::eips::BlockNumberOrTag;
-pub use jsonrpsee::core::{traits::ToRpcParams, ClientError};
-use jsonrpsee::{
-    core::{async_trait, client::ClientT as _},
+pub use jsonrpsee::{
+    core::{async_trait, client::ClientT as _, traits::ToRpcParams, ClientError},
     ws_client::{WsClient, WsClientBuilder},
 };
 pub use serde::de::DeserializeOwned;
 use shared::{tracing::SpanKind, types::BlockRef};
-use tracing::{info, instrument};
+use tracing::{debug, instrument, warn};
 
 /// Known state of the `synd-mchain`
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -23,7 +22,7 @@ pub struct KnownState {
 /// The trait for the provider of the synd-mchain
 #[async_trait]
 #[allow(clippy::unwrap_used)]
-pub trait Provider: Send + Sync {
+pub trait MchainProvider: Send + Sync {
     /// Sends a request to the provider with the given method and parameters
     /// Returns the deserialized response of type T
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
@@ -61,6 +60,12 @@ pub trait Provider: Send + Sync {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
 
+    /// Gets the offset for the initial migration
+    #[instrument(skip(self), err, fields(otel.kind = ?SpanKind::Client))]
+    async fn get_migration_offset(&self) -> eyre::Result<u64> {
+        Ok(self.request::<_, u64>("mchain_getMigrationOffset", [(); 0]).await?)
+    }
+
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
@@ -92,10 +97,7 @@ pub trait Provider: Send + Sync {
             let mchain_block_before = self.get_block_number().await;
             self.rollback_to_block(mchain_block_number).await?;
             let mchain_block_after = self.get_block_number().await;
-            info!(
-                "reconciliation complete: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
-                mchain_block_before, safe_state, mchain_block_after
-            );
+            warn!("rolled back to block {mchain_block_number:?}, before: {mchain_block_before:?}, after: {mchain_block_after:?}, safe_state: {safe_state:?}",);
         }
         Ok(safe_state)
     }
@@ -109,7 +111,7 @@ pub trait Provider: Send + Sync {
         sequencing_client: &impl synd_chain_ingestor::client::IngestorProvider,
         settlement_client: &impl synd_chain_ingestor::client::IngestorProvider,
     ) -> (Option<KnownState>, Option<u64>) {
-        info!("getting safe state");
+        debug!("getting safe state");
         let mut current_block = BlockNumberOrTag::Pending;
         loop {
             #[allow(clippy::unwrap_used)]
@@ -121,11 +123,9 @@ pub trait Provider: Send + Sync {
 
             if slot.seq_block_number == 0 {
                 assert_eq!(slot, Default::default());
-                assert_eq!(mchain_block_number, if not_pending { 1 } else { 2 });
                 return (None, not_pending.then_some(mchain_block_number));
             }
 
-            info!("checking slot {:?}", slot);
             let mut state = KnownState {
                 sequencing_block: BlockRef {
                     number: slot.seq_block_number,
@@ -142,9 +142,8 @@ pub trait Provider: Send + Sync {
                 validate_block_add_timestamp(sequencing_client, &mut state.sequencing_block).await;
             let set_valid =
                 validate_block_add_timestamp(settlement_client, &mut state.settlement_block).await;
-            info!("seq valid: {}, set valid: {}", seq_valid, set_valid);
             if seq_valid && set_valid {
-                info!("found safe state {:?} current block {:?}", state, current_block);
+                debug!("found safe state {:?}, current block {:?}", state, current_block);
                 return (Some(state), not_pending.then_some(mchain_block_number));
             }
             current_block = BlockNumberOrTag::Number(mchain_block_number - 1);
@@ -178,7 +177,7 @@ impl MProvider {
 }
 
 #[async_trait]
-impl Provider for MProvider {
+impl MchainProvider for MProvider {
     async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
         &self,
         method: &'static str,
@@ -190,7 +189,7 @@ impl Provider for MProvider {
 
 #[cfg(test)]
 mod tests {
-    use super::Provider;
+    use super::MchainProvider;
     use crate::{
         client::{validate_block_add_timestamp, KnownState},
         db::{tests::TestDB, ArbitrumBatch, ArbitrumDB, DelayedMessage, MBlock, Slot},
@@ -218,7 +217,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl<X: Send + Sync> Provider for RpcModule<X> {
+    impl<X: Send + Sync> MchainProvider for RpcModule<X> {
         async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             method: &'static str,
@@ -244,9 +243,9 @@ mod tests {
         }
     }
 
-    async fn setup() -> eyre::Result<(impl Provider, Arc<TestDB>)> {
+    async fn setup() -> eyre::Result<(impl MchainProvider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
-        let mchain = start_mchain(10, 60, db.clone(), MchainMetrics::default());
+        let mchain = start_mchain(10, 60, None, None, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
     }
 
@@ -255,7 +254,7 @@ mod tests {
         async fn get_finalized_block(&self) -> u64;
     }
 
-    impl<T: Provider> TestProvider for T {
+    impl<T: MchainProvider> TestProvider for T {
         async fn get_finalized_block(&self) -> u64 {
             let block: alloy::rpc::types::Block = self
                 .request("eth_getBlockByNumber", (BlockNumberOrTag::Finalized, false))

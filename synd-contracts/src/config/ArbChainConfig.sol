@@ -8,6 +8,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
  * @dev Configuration contract for settlement chain parameters
  */
 contract ArbChainConfig is Initializable {
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
     // Events
     //#olympix-ignore-missing-events-assertion
     event DefaultSequencingChainWsRpcUrlUpdated(string newWsRpcUrl);
@@ -15,6 +16,17 @@ contract ArbChainConfig is Initializable {
     event AppchainBlockExplorerUrlUpdated(string newUrl);
     //#olympix-ignore-missing-events-assertion
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    //#olympix-ignore-missing-events-assertion
+    event Migration(
+        uint256 setStartBlock,
+        uint256 seqStartBlock,
+        uint256 indexed batchAcc,
+        uint256 batchCount,
+        uint256 indexed delayedMsgsAcc,
+        uint256 delayedMsgsCount,
+        uint256 indexed appchainBlockHash,
+        bytes genesisConfig
+    );
 
     address public owner;
 
@@ -27,6 +39,7 @@ contract ArbChainConfig is Initializable {
     uint256 public CHAIN_ID;
     uint256 public SEQUENCING_CHAIN_ID;
     uint256 public SETTLEMENT_DELAY;
+    // NOTE: SET/SEQ start blocks can be changed in the event of a migration
     uint256 public SETTLEMENT_START_BLOCK;
     uint256 public SEQUENCING_START_BLOCK;
 
@@ -35,8 +48,13 @@ contract ArbChainConfig is Initializable {
     string public DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
 
-    /// @notice Version of the ArbChainConfig contract (updatable during upgrades)
-    string public version;
+    // Migration-only data
+    uint256 public MIGRATED_BATCH_ACC;
+    uint256 public MIGRATED_BATCH_COUNT;
+    uint256 public MIGRATED_DELAYED_MSGS_ACC;
+    uint256 public MIGRATED_DELAYED_MSGS_COUNT;
+    uint256 public MIGRATED_APPCHAIN_BLOCK_HASH;
+    bytes public MIGRATED_GENESIS_CONFIG;
 
     /**
      * @dev Constructor for the implementation contract
@@ -95,9 +113,6 @@ contract ArbChainConfig is Initializable {
         SEQUENCING_CONTRACT_ADDRESS = sequencingContractAddress;
         SEQUENCING_START_BLOCK = sequencingStartBlock;
 
-        // Set initial version
-        version = "1.0.0";
-
         // Set mutable configuration parameters
         INITIAL_APPCHAIN_OWNER = initialAppchainOwner;
         DEFAULT_SEQUENCING_CHAIN_WS_RPC_URL = sequencingChainWsRpcUrl;
@@ -113,6 +128,36 @@ contract ArbChainConfig is Initializable {
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller is not the owner");
         _;
+    }
+
+    function migration(
+        uint256 _setStartBlock,
+        uint256 _seqStartBlock,
+        uint256 _batchAcc,
+        uint256 _batchCount,
+        uint256 _delayedMsgsAcc,
+        uint256 _delayedMsgsCount,
+        uint256 _appchainBlockHash,
+        bytes calldata _genesisConfig
+    ) external onlyOwner {
+        SETTLEMENT_START_BLOCK = _setStartBlock;
+        SEQUENCING_START_BLOCK = _seqStartBlock;
+        MIGRATED_BATCH_ACC = _batchAcc;
+        MIGRATED_BATCH_COUNT = _batchCount;
+        MIGRATED_DELAYED_MSGS_ACC = _delayedMsgsAcc;
+        MIGRATED_DELAYED_MSGS_COUNT = _delayedMsgsCount;
+        MIGRATED_APPCHAIN_BLOCK_HASH = _appchainBlockHash;
+        MIGRATED_GENESIS_CONFIG = _genesisConfig;
+        emit Migration(
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_START_BLOCK,
+            MIGRATED_BATCH_ACC,
+            MIGRATED_BATCH_COUNT,
+            MIGRATED_DELAYED_MSGS_ACC,
+            MIGRATED_DELAYED_MSGS_COUNT,
+            MIGRATED_APPCHAIN_BLOCK_HASH,
+            MIGRATED_GENESIS_CONFIG
+        );
     }
 
     /**
@@ -155,13 +200,5 @@ contract ArbChainConfig is Initializable {
         address oldOwner = owner;
         owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
-    }
-
-    /**
-     * @dev Updates the contract version (owner only, typically called during upgrades)
-     * @param newVersion The new version string (e.g., "1.1.0")
-     */
-    function updateVersion(string calldata newVersion) external onlyOwner {
-        version = newVersion;
     }
 }

@@ -1,0 +1,121 @@
+name: Publish synd-cli Binaries
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag version (e.g., v1.2.3, v0.10.15-dev.1)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build synd-cli executables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          cd synd-cli
+          bun install --frozen-lockfile
+
+      - name: Build Linux x64
+        run: |
+          cd synd-cli
+          bun build --compile --minify --sourcemap --bytecode \
+            --target=bun-linux-x64 \
+            ./src/cli/index.ts \
+            --outfile synd-cli-linux-x64
+
+      - name: Build Linux ARM64
+        run: |
+          cd synd-cli
+          bun build --compile --minify --sourcemap --bytecode \
+            --target=bun-linux-arm64 \
+            ./src/cli/index.ts \
+            --outfile synd-cli-linux-arm64
+
+      - name: Build macOS x64
+        run: |
+          cd synd-cli
+          bun build --compile --minify --sourcemap --bytecode \
+            --target=bun-darwin-x64 \
+            ./src/cli/index.ts \
+            --outfile synd-cli-darwin-x64
+
+      - name: Build macOS ARM64
+        run: |
+          cd synd-cli
+          bun build --compile --minify --sourcemap --bytecode \
+            --target=bun-darwin-arm64 \
+            ./src/cli/index.ts \
+            --outfile synd-cli-darwin-arm64
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: synd-cli-binaries
+          path: |
+            synd-cli/synd-cli-linux-x64
+            synd-cli/synd-cli-linux-arm64
+            synd-cli/synd-cli-darwin-x64
+            synd-cli/synd-cli-darwin-arm64
+          retention-days: 1
+
+  publish-release:
+    name: Attach binaries to GitHub release
+    permissions:
+      contents: write
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag_name }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: synd-cli-binaries
+
+      - name: Rename artifacts with version
+        run: |
+          mv synd-cli/synd-cli-linux-x64 synd-cli-linux-x64-${{ env.TAG_NAME }}
+          mv synd-cli/synd-cli-linux-arm64 synd-cli-linux-arm64-${{ env.TAG_NAME }}
+          mv synd-cli/synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
+          mv synd-cli/synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+
+      - name: Attach binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            synd-cli-linux-x64-${{ env.TAG_NAME }}
+            synd-cli-linux-arm64-${{ env.TAG_NAME }}
+            synd-cli-darwin-x64-${{ env.TAG_NAME }}
+            synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+
+  notify-failure:
+    name: Notify on failure
+    permissions: {}
+    if: always() && (needs.build.result == 'failure' || needs.publish-release.result == 'failure')
+    needs: [build, publish-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack on Failure
+        uses: rtCamp/action-slack-notify@v2
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          color: danger
+          message: ":x: `${{github.workflow}}` failed. View failure information here: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+          title: "*${{github.workflow}}* failed"

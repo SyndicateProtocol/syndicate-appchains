@@ -1,7 +1,0 @@
-{
-  "settlementRpcUrl": "<SETTLEMENT_RPC_URL>",
-  "l3RpcUrl": "<SYNDICATE_L3_RPC_URL>",
-  "inboxAddress": "<SYNDICATE_INBOX_ADDRESS>",
-  "privateKey": "<YOUR_PRIVATE_KEY>",
-  "toAddress": "<YOUR_ADDRESS>",
-}

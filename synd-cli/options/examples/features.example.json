@@ -1,0 +1,26 @@
+{
+  "settlement-rpc": "https://sepolia.base.org",
+  "sequencing-rpc": "https://rpc.testnet.syndicate.io",
+  "ethereum-rpc": "https://sepolia.drpc.org",
+  "synd-fork-sequencing-rpc": "http://localhost:8545",
+  "appchain-rpc": "http://localhost:8449",
+  "appchain-explorer": "https://explorer.example.com",
+  "owner-private-key": "0x0000000000000000000000000000000000000000000000000000000000000002",
+  "deployer-private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+  "chain-name": "my-appchain",
+  "sequencing-contract": "0x0000000000000000000000000000000000000000",
+  "core-contracts": {
+    "rollup": "0x0000000000000000000000000000000000000000",
+    "inbox": "0x0000000000000000000000000000000000000000",
+    "nativeToken": "0x0000000000000000000000000000000000000000",
+    "outbox": "0x0000000000000000000000000000000000000000",
+    "rollupEventInbox": "0x0000000000000000000000000000000000000000",
+    "challengeManager": "0x0000000000000000000000000000000000000000",
+    "adminProxy": "0x0000000000000000000000000000000000000000",
+    "sequencerInbox": "0x0000000000000000000000000000000000000000",
+    "bridge": "0x0000000000000000000000000000000000000000",
+    "upgradeExecutor": "0x0000000000000000000000000000000000000000",
+    "validatorWalletCreator": "0x0000000000000000000000000000000000000000",
+    "deployedAtBlockNumber": 0
+  }
+}

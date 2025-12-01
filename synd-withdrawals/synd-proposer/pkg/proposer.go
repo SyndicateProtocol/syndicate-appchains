@@ -231,10 +231,18 @@ func (p *Proposer) pollingLoop(ctx context.Context) {
 			submissionTimer := metrics.NewTimer()
 
 			keyAddress := crypto.PubkeyToAddress(p.Config.PrivateKey.PublicKey)
+
+			opts := p.makeTransactOptsCopy(ctx)
+
+			gasFeeCapWithBuffer := p.estimateGasFeeCapWithBuffer(ctx, *p.PendingAssertion, p.PendingSignature, keyAddress, 2)
+			if gasFeeCapWithBuffer != nil {
+				opts.GasFeeCap = gasFeeCapWithBuffer
+			}
+
 			// estimate gas returns an error immediately if it reverts with the maximum gas limit, see
 			// https://github.com/ethereum/go-ethereum/blob/d4a3bf1b23e3972fb82e085c0e29fe2c4647ed5c/eth/gasestimator/gasestimator.go#L125C1-L127C1
 			// for more info.
-			transaction, err := p.TeeModule.SubmitAssertion(p.makeTransactOptsCopy(ctx), *p.PendingAssertion, p.PendingSignature, keyAddress)
+			transaction, err := p.TeeModule.SubmitAssertion(opts, *p.PendingAssertion, p.PendingSignature, keyAddress)
 			if err != nil {
 				if strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) && strings.Contains(err.Error(), "assertion already exists") {
 					log.Debug().Msgf("Submit assertion reverted with error: %v", err)
@@ -585,6 +593,49 @@ func (p *Proposer) handleEnclaveCall(output interface{}, method string, input in
 	}
 
 	return nil
+}
+
+// estimateGasFeeCapWithBuffer estimates the gas fee cap for the SubmitAssertion transaction without sending it,
+// and multiplies it by the `bufferFactor` to handle volatile gas conditions.
+// Returns `nil` if estimation fails
+func (p *Proposer) estimateGasFeeCapWithBuffer(
+	ctx context.Context,
+	assertion teemodule.PendingAssertion,
+	signature []byte,
+	keyAddress common.Address,
+	bufferFactor int64,
+) *big.Int {
+	opts := p.makeTransactOptsCopy(ctx)
+	opts.NoSend = true
+
+	tx, err := p.TeeModule.SubmitAssertion(opts, assertion, signature, keyAddress)
+	if err != nil {
+		log.Debug().Err(err).Msg("Gas estimation failed, will use default estimation")
+		return nil
+	}
+
+	if tx == nil || tx.GasFeeCap() == nil {
+		log.Debug().Msg("Gas estimation returned nil transaction or estimate, will use default estimation")
+		return nil
+	}
+
+	estimatedGasFeeCap := tx.GasFeeCap()
+	bufferedGasFeeCap := new(big.Int).Mul(estimatedGasFeeCap, big.NewInt(bufferFactor))
+
+	maxFeePerGas := big.NewInt(p.Config.MaxFeePerGas)
+	if bufferedGasFeeCap.Cmp(maxFeePerGas) > 0 {
+		// Configured max is exceeded. Return the max instead to still attempt the transaction
+		bufferedGasFeeCap = maxFeePerGas
+	}
+
+	log.Debug().
+		Str("estimatedGasFeeCap", estimatedGasFeeCap.String()).
+		Int64("bufferFactor", bufferFactor).
+		Str("bufferedGasFeeCap", bufferedGasFeeCap.String()).
+		Int64("MaxFeePerGas", p.Config.MaxFeePerGas).
+		Msg("Gas estimation with buffer applied")
+
+	return bufferedGasFeeCap
 }
 
 // makeTransactOptsCopy creates a new TransactOpts with a fresh context and nonce

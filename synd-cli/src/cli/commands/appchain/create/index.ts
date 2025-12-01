@@ -1,0 +1,23 @@
+import { print } from "@/utils/print"
+import type { Command } from "@commander-js/extra-typings"
+import { createAssertionPosterCommand } from "./assertionPoster"
+import { createFeaturesCommand } from "./features"
+import { createFoundationCommand } from "./foundation"
+import { createSequencingCommand } from "./sequencing"
+import { createTeeModuleCommand } from "./teeModule"
+import { createWithdrawalsContractsCommand } from "./withdrawals"
+
+export function createAppchainCommand(program: Command) {
+  const createAppchainProgram = program
+    .command("create")
+    .description("Create a new appchain")
+    .action(async () => {
+      print("Use a subcommand to create an appchain")
+    })
+  createFoundationCommand(createAppchainProgram)
+  createFeaturesCommand(createAppchainProgram)
+  createSequencingCommand(createAppchainProgram)
+  createWithdrawalsContractsCommand(createAppchainProgram)
+  createAssertionPosterCommand(createAppchainProgram)
+  createTeeModuleCommand(createAppchainProgram)
+}

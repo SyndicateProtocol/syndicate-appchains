@@ -70,6 +70,7 @@ broadcast/
 /broadcast/**/dry-run/
 documentation/local/heaptrack_output/
 documentation/local/chains/
+documentation/local/data/
 
 
 # Claude
@@ -87,7 +88,9 @@ run.sh
 
 .ignore
 
-create-chain/*.config.json
-!create-chain/*.config.json.example
-create-chain/node_modules
-create-chain/*.tsbuildinfo
+synd-cli/options/*
+!synd-cli/options/examples
+synd-cli/node_modules
+synd-cli/*.tsbuildinfo
+synd-cli/src/dev
+synd-cli/appchains

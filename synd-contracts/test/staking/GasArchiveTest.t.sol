@@ -39,6 +39,7 @@ contract GasArchiveTest is Test {
     bytes32 public constant TEST_SEQ_BLOCK_HASH = keccak256("seq_block");
 
     event EpochCompleted(uint256 indexed epoch);
+    event ChainSubmitted(uint256 indexed epoch, uint256 indexed chainID);
     event EpochExpectedChainsUpdated(uint256 indexed epoch, uint256[] chainIds);
     event GasAggregatorAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event LastKnownBlockHashesUpdated(bytes32 ethBlockHash, bytes32 settlementBlockHash, uint256 settlementBlockNumber);
@@ -240,7 +241,9 @@ contract GasArchiveTest is Test {
 
         // Now submit for chain2 - this should complete the epoch
         gasArchive.setEpochDataHashForTesting(newEpoch, chain2, keccak256(abi.encode(appchainIds, gasUsageAmounts)));
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit(true, true, true, true);
+        emit ChainSubmitted(newEpoch, chain2);
+        vm.expectEmit(true, true, true, true);
         emit EpochCompleted(newEpoch);
         gasArchive.submitEpochPreImageData(chain2, appchainIds, gasUsageAmounts);
 
