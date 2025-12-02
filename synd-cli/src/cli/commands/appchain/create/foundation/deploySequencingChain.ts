@@ -14,6 +14,7 @@ import type {
   RegisterAllowlistSequencingModuleOnRequireAllModule,
   TransferPermissionModuleOwnership
 } from "@/types"
+import { supportedSequencingChains } from "@/utils/constants"
 import { getChainExplorerUrl } from "@/utils/helpers"
 import { print } from "@/utils/print"
 import { zeroAddress } from "viem"
@@ -63,7 +64,8 @@ export async function deploySequencingChain({
     requireAndModule,
     ethereumPublicClient,
     deployerEthereumWalletClient,
-    chainId
+    chainId,
+    sequencingChainId: sequencingPublicClient.chain.id
   })
 
   return {
@@ -102,9 +104,13 @@ async function createSyndicateSequencingChain({
   chainId,
   requireAndModule,
   ethereumPublicClient,
-  deployerEthereumWalletClient
+  deployerEthereumWalletClient,
+  sequencingChainId
 }: CreateSyndicateSequencingChain) {
   // @note TODO: Deploy SyndicateSequencingChain
+  const _implementationAddress =
+    supportedSequencingChains[sequencingChainId]
+      .sequencingChainImplementationAddress
   return zeroAddress
 }
 

@@ -94,6 +94,8 @@ export type SupportedSequencingChains = Record<
   {
     bridge: Hex
     chain: Chain
+    // Implementation of the SyndicateSequencingChain contract on the Sequencing Chain
+    sequencingChainImplementationAddress: Hex
   }
 >
 
@@ -184,6 +186,7 @@ export interface CreateSyndicateSequencingChain {
   deployerEthereumWalletClient: PrivateKeyWalletAccount
   ethereumPublicClient: PublicClientWithChain
   chainId: number
+  sequencingChainId: number
 }
 
 export interface DeployAndSetupAllowlistSequencingModule {
