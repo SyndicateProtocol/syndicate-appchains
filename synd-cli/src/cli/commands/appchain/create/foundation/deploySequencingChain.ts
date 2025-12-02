@@ -1,4 +1,4 @@
-import {type Hex, zeroAddress } from "viem"
+import { zeroAddress } from "viem"
 
 import {
   allowlistSequencingModuleABI,
@@ -72,7 +72,7 @@ export async function deploySequencingChain({
   }
 }
 
-async function createRequireAndModule(input: any) {
+async function createRequireAndModule(input: unknown) {
   // const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
   //   await getFoundationConfig()
 
@@ -118,7 +118,7 @@ async function createRequireAndModule(input: any) {
   return zeroAddress
 }
 
-async function createSyndicateSequencingChain(input: any) {
+async function createSyndicateSequencingChain(input: unknown) {
   // const { chainId, sequencingPublicClient, deployerSequencingWalletClient } =
   //   await getFoundationConfig()
 
