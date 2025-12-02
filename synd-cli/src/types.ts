@@ -187,6 +187,7 @@ export interface CreateSyndicateSequencingChain {
   ethereumPublicClient: PublicClientWithChain
   chainId: number
   sequencingChainId: number
+  owner: Hex
 }
 
 export interface DeployAndSetupAllowlistSequencingModule {

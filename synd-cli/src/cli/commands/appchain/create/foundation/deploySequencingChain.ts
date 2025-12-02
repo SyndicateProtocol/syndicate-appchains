@@ -65,7 +65,8 @@ export async function deploySequencingChain({
     ethereumPublicClient,
     deployerEthereumWalletClient,
     chainId,
-    sequencingChainId: sequencingPublicClient.chain.id
+    sequencingChainId: sequencingPublicClient.chain.id,
+    owner: ownerSequencingWalletClient.account.address
   })
 
   return {
@@ -105,12 +106,15 @@ async function createSyndicateSequencingChain({
   requireAndModule,
   ethereumPublicClient,
   deployerEthereumWalletClient,
-  sequencingChainId
+  sequencingChainId,
+  owner
 }: CreateSyndicateSequencingChain) {
   // @note TODO: Deploy SyndicateSequencingChain
+  // predict sequencing chain address & deploy via Forwarder on Mainnet
   const _implementationAddress =
     supportedSequencingChains[sequencingChainId].sequencingChainImplementation
-  return zeroAddress
+  const sequencingChainAddress = zeroAddress
+  return sequencingChainAddress
 }
 
 async function deployAndSetupAllowlistSequencingModule({
