@@ -109,8 +109,7 @@ async function createSyndicateSequencingChain({
 }: CreateSyndicateSequencingChain) {
   // @note TODO: Deploy SyndicateSequencingChain
   const _implementationAddress =
-    supportedSequencingChains[sequencingChainId]
-      .sequencingChainImplementationAddress
+    supportedSequencingChains[sequencingChainId].sequencingChainImplementation
   return zeroAddress
 }
 

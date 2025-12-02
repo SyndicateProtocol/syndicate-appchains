@@ -94,8 +94,8 @@ export type SupportedSequencingChains = Record<
   {
     bridge: Hex
     chain: Chain
-    // Implementation of the SyndicateSequencingChain contract on the Sequencing Chain
-    sequencingChainImplementationAddress: Hex
+    // Implementation address of the SyndicateSequencingChain contract on the Sequencing Chain
+    sequencingChainImplementation: Hex
   }
 >
 
