@@ -296,6 +296,7 @@ export const appchainDeployAssertionPosterOptionsSchema = z
 export const appchainCreateSequencingChainOptionsSchema = z
   .object({
     sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
+    ethereumRpc: z.url("Invalid ethereum chain RPC URL"),
     ownerPrivateKey: privateKeySchema("owner"),
     deployerPrivateKey: privateKeySchema("deployer"),
     id: chainIdSchema

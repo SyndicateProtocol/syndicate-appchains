@@ -121,7 +121,8 @@ export interface Foundation {
   ownerSequencingWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   sequencingPublicClient: PublicClientWithChain
-  ethereumChainRpcUrl: string
+  ethereumPublicClient: PublicClientWithChain
+  ethereumDeployerWalletClient: PrivateKeyWalletAccount
   deployerSequencingWalletClient: WalletClient<
     Transport,
     Chain,
@@ -171,6 +172,7 @@ export interface DeploySequencingChain {
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   ownerSequencingWalletClient: PrivateKeyWalletAccount
+  ethereumDeployerWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateRequireAndModule {
@@ -199,8 +201,7 @@ export interface RegisterAllowlistSequencingModuleOnRequireAllModule {
   sequencingPublicClient: PublicClientWithChain
 }
 
-export interface TransferAllContractsOwnershipParams {
-  sequencingContract: Hex
+export interface TransferPermissionModuleOwnership {
   allowlistSequencingModule: Hex
   requireAndModule: Hex
   deployerSequencingWalletClient: PrivateKeyWalletAccount

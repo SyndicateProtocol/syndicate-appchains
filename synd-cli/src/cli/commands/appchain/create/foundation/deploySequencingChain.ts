@@ -5,12 +5,11 @@ import {
   allowlistSequencingModuleBytecode
 } from "@/abi/synd/AllowlistSequencingModule"
 import { requireAndModuleABI } from "@/abi/synd/RequireAndModule"
-import { syndicateSequencingChainABI } from "@/abi/synd/SyndicateSequencingChain"
 import type {
   DeployAndSetupAllowlistSequencingModule,
   DeploySequencingChain,
   RegisterAllowlistSequencingModuleOnRequireAllModule,
-  TransferAllContractsOwnershipParams
+  TransferPermissionModuleOwnership
 } from "@/types"
 import { getChainExplorerUrl } from "@/utils/helpers"
 import { print } from "@/utils/print"
@@ -20,7 +19,8 @@ export async function deploySequencingChain({
   chainId,
   sequencingPublicClient,
   deployerSequencingWalletClient,
-  ownerSequencingWalletClient
+  ownerSequencingWalletClient,
+  ethereumDeployerWalletClient
 }: DeploySequencingChain) {
   // 1. Create RequireAndModule
   const requireAndModule = await createRequireAndModule({
@@ -37,16 +37,7 @@ export async function deploySequencingChain({
       deployerSequencingWalletClient
     })
 
-  // 3. Create SyndicateSequencingChain
-  const { sequencingContract, deployedAtBlock } =
-    await createSyndicateSequencingChain({
-      requireAndModule,
-      sequencingPublicClient,
-      deployerSequencingWalletClient,
-      chainId
-    })
-
-  // 4. Register AllowlistSequencingModule on RequireAllModule
+  // 3. Register AllowlistSequencingModule on RequireAllModule
   await registerAllowlistSequencingModuleOnRequireAllModule({
     requireAndModule,
     allowlistSequencingModule,
@@ -54,15 +45,24 @@ export async function deploySequencingChain({
     sequencingPublicClient
   })
 
-  // 5. Transfer ownership of all contracts to owner account
-  await transferAllContractsOwnership({
-    sequencingContract,
+  // 4. Transfer ownership permission modules
+  await transferPermissonModuleOwnership({
     allowlistSequencingModule,
     requireAndModule,
     deployerSequencingWalletClient,
     sequencingPublicClient,
     ownerSequencingWalletClient
   })
+
+  // 5. Create SyndicateSequencingChain
+  const { sequencingContract, deployedAtBlock } =
+    await createSyndicateSequencingChain({
+      requireAndModule,
+      sequencingPublicClient,
+      deployerSequencingWalletClient,
+      chainId,
+      ethereumDeployerWalletClient
+    })
 
   return {
     sequencingContract,
@@ -245,32 +245,13 @@ async function registerAllowlistSequencingModuleOnRequireAllModule({
   )
 }
 
-async function transferAllContractsOwnership({
-  sequencingContract,
+async function transferPermissonModuleOwnership({
   allowlistSequencingModule,
   requireAndModule,
   deployerSequencingWalletClient,
   sequencingPublicClient,
   ownerSequencingWalletClient
-}: TransferAllContractsOwnershipParams) {
-  const transferOwnershipTxHash =
-    await deployerSequencingWalletClient.writeContract({
-      address: sequencingContract,
-      abi: syndicateSequencingChainABI,
-      functionName: "transferOwnership",
-      args: [ownerSequencingWalletClient.account.address],
-      account: deployerSequencingWalletClient.account
-    })
-  const transferOwnershipTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: transferOwnershipTxHash
-    })
-  print(
-    `🔍  SyndicateSequencingChain ownership transferred to owner ${ownerSequencingWalletClient.account.address}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${transferOwnershipTx.transactionHash}`
-  )
-
+}: TransferPermissionModuleOwnership) {
   // AllowlistSequencingModule
   const transferAllowlistSequencingModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({

@@ -30,7 +30,8 @@ export async function foundation({
   ownerSequencingWalletClient,
   settlementPublicClient,
   sequencingPublicClient,
-  ethereumChainRpcUrl,
+  ethereumPublicClient,
+  ethereumDeployerWalletClient,
   deployerSequencingWalletClient,
   ownerPrivateKey,
   coreContractsCreatedAtHash,
@@ -181,7 +182,8 @@ export async function foundation({
     chainId,
     sequencingPublicClient,
     deployerSequencingWalletClient,
-    ownerSequencingWalletClient
+    ownerSequencingWalletClient,
+    ethereumDeployerWalletClient
   })
   await upsertToSyndObject(chainName, environment, "sequencing", {
     sequencingContract,
@@ -246,7 +248,7 @@ export async function foundation({
       {
         "settlement-rpc-url": settlementPublicClient.transport.url,
         "sequencing-chain-rpc-url": sequencingPublicClient.transport.url,
-        "ethereum-rpc-url": ethereumChainRpcUrl,
+        "ethereum-rpc-url": ethereumPublicClient.transport.url,
         "sequencing-chain-contract-address": sequencingContract,
         "sequencer-private-key": sequencerPrivateKey,
         "assertion-poster-contract-address": "0xREPLACEMELATER",
