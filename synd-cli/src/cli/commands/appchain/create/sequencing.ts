@@ -51,7 +51,7 @@ export function createSequencingCommand(program: Command) {
         ownerPrivateKey
       ])
 
-      const [_, [ethereumDeployerWalletClient]] =
+      const [ethereumPublicClient, [deployerEthereumWalletClient]] =
         await getSupportedChainClients(ethereumRpc, [deployerPrivateKey])
 
       const sequencerPrivateKey = generatePrivateKey()
@@ -64,21 +64,20 @@ export function createSequencingCommand(program: Command) {
       const {
         sequencingContract,
         allowlistSequencingModule,
-        requireAndModule,
-        deployedAtBlock
+        requireAndModule
       } = await deploySequencingChain({
         sequencerAccount,
         chainId,
         sequencingPublicClient,
         deployerSequencingWalletClient,
         ownerSequencingWalletClient,
-        ethereumDeployerWalletClient
+        deployerEthereumWalletClient,
+        ethereumPublicClient
       })
 
       print("Deployed contracts:")
       print("Sequencing Contract", sequencingContract)
       print("Allowlist Sequencing Module", allowlistSequencingModule)
       print("Require And Module", requireAndModule)
-      print("Deployed at Block", deployedAtBlock.toString())
     })
 }

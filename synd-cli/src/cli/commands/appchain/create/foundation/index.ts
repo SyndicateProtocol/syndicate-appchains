@@ -74,7 +74,7 @@ export function createFoundationCommand(program: Command) {
         ownerPrivateKey
       ])
 
-      const [ethereumPublicClient, [ethereumDeployerWalletClient]] =
+      const [ethereumPublicClient, [deployerEthereumWalletClient]] =
         await getSupportedChainClients(ethereumRpc, [deployerPrivateKey])
 
       await foundation({
@@ -88,7 +88,7 @@ export function createFoundationCommand(program: Command) {
         chainName: name,
         nativeToken,
         ethereumPublicClient,
-        ethereumDeployerWalletClient,
+        deployerEthereumWalletClient,
         ownerPrivateKey,
         coreContractsCreatedAtHash,
         appchainRpc,

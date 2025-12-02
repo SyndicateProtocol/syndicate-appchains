@@ -31,7 +31,7 @@ export async function foundation({
   settlementPublicClient,
   sequencingPublicClient,
   ethereumPublicClient,
-  ethereumDeployerWalletClient,
+  deployerEthereumWalletClient,
   deployerSequencingWalletClient,
   ownerPrivateKey,
   coreContractsCreatedAtHash,
@@ -172,25 +172,24 @@ export async function foundation({
 
   print("🔍  Deploying Syndicate sequencing chain...")
   // Sequencing Chain
-  const {
-    sequencingContract,
-    allowlistSequencingModule,
-    requireAndModule,
-    deployedAtBlock
-  } = await deploySequencingChain({
-    sequencerAccount,
-    chainId,
-    sequencingPublicClient,
-    deployerSequencingWalletClient,
-    ownerSequencingWalletClient,
-    ethereumDeployerWalletClient
-  })
+  const sequencingStartBlock = (
+    await getBlockNumber(sequencingPublicClient)
+  ).toString()
+  const { sequencingContract, allowlistSequencingModule, requireAndModule } =
+    await deploySequencingChain({
+      sequencerAccount,
+      chainId,
+      sequencingPublicClient,
+      deployerSequencingWalletClient,
+      ownerSequencingWalletClient,
+      deployerEthereumWalletClient,
+      ethereumPublicClient
+    })
   await upsertToSyndObject(chainName, environment, "sequencing", {
     sequencingContract,
     allowlistSequencingModule,
     requireAndModule,
     settlementBlockBeforeDeployment,
-    deployedAtBlock,
     sequencer: sequencerAccount.address
   })
 
@@ -201,7 +200,7 @@ export async function foundation({
     coreContracts,
     settlementStartBlock: settlementBlockBeforeDeployment,
     sequencingContract,
-    sequencingStartBlock: deployedAtBlock,
+    sequencingStartBlock,
     ownerSettlementWalletClient,
     settlementPublicClient,
     sequencingPublicClient,

@@ -93,8 +93,6 @@ export type SupportedSequencingChains = Record<
   number,
   {
     bridge: Hex
-    requireAndFactory: Hex
-    syndicateFactory: Hex
     chain: Chain
   }
 >
@@ -122,7 +120,7 @@ export interface Foundation {
   settlementPublicClient: PublicClientWithChain
   sequencingPublicClient: PublicClientWithChain
   ethereumPublicClient: PublicClientWithChain
-  ethereumDeployerWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
   deployerSequencingWalletClient: WalletClient<
     Transport,
     Chain,
@@ -172,19 +170,19 @@ export interface DeploySequencingChain {
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   ownerSequencingWalletClient: PrivateKeyWalletAccount
-  ethereumDeployerWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
 }
 
 export interface CreateRequireAndModule {
-  chainId: number
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateSyndicateSequencingChain {
   requireAndModule: Hex
-  sequencingPublicClient: PublicClientWithChain
-  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
   chainId: number
 }
 

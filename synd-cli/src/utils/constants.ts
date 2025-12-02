@@ -61,14 +61,10 @@ export const syndicate = defineChain({
 export const supportedSequencingChains: SupportedSequencingChains = {
   [risa.id]: {
     bridge: "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA",
-    requireAndFactory: "0x60e6Ac9FF8ff09175329EfB3daDa27abDA812aA4",
-    syndicateFactory: "0x2e44cd104A6b67037b5e6DB662C0E917d1828D9E",
     chain: risa
   },
   [syndicate.id]: {
     bridge: "0x3C8cF0ae6E89AC0796f29B3a58e7dEa1cD072277",
-    requireAndFactory: "0x3eEb8b1500cbaCbc4A3718D39414C8D191AC906B",
-    syndicateFactory: "0x0620625c3662CbD6a8ca8Eef196ee3b10A8Bd157",
     chain: syndicate
   }
 }
