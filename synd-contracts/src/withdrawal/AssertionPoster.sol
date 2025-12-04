@@ -140,7 +140,7 @@ contract AssertionPoster is Ownable, IAssertionPoster {
             require(currentInboxSize >= batchCount && currentInboxSize > 0, "invalid inbox size / batch count");
             nodeNum = IRollupCore(rollup).latestConfirmed();
             require(nodeNum == IRollupCore(rollup).latestNodeCreated(), "unconfirmed nodes exist");
-            state.bytes32Vals = [IRollupCore(rollup_).outbox().roots(sendRoot)];
+            state.bytes32Vals = [IRollupCore(rollup_).outbox().roots(sendRoot), sendRoot];
             state.u64Vals[0] = batchCount;
             require(
                 IRollupCore(rollup_).getNode(nodeNum).stateHash
