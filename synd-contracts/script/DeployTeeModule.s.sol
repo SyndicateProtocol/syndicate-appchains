@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {TeeModule} from "src/withdrawal/TeeModule.sol";
-import {AssertionPoster, IRollup} from "src/withdrawal/AssertionPoster.sol";
+import {AssertionPoster} from "src/withdrawal/AssertionPoster.sol";
 import {TeeKeyManager} from "src/withdrawal/TeeKeyManager.sol";
 import {AttestationDocVerifier} from "src/withdrawal/AttestationDocVerifier.sol";
 import {IBridge} from "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
@@ -48,8 +48,7 @@ contract DeployTeeModule is Script {
             poster = AssertionPoster(assertionPosterAddress);
         } else {
             console2.log("Deploying assertion poster...");
-            IRollup rollup = IRollup(vm.envAddress("ROLLUP_CONTRACT_ADDRESS"));
-            poster = new AssertionPoster(rollup);
+            poster = new AssertionPoster(vm.envAddress("ROLLUP_CONTRACT_ADDRESS"), bytes32(0), 0, 1);
             console2.log("Assertion poster deployed to:", address(poster));
         }
 

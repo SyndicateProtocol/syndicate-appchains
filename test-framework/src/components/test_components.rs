@@ -444,7 +444,7 @@ impl TestComponents {
         .await?;
 
         info!("Starting chain ingestors...");
-        let temp = test_path("chain_ingestor");
+        let temp = test_path("chain_ingestor", None).to_string_lossy().to_string();
         let seq_chain_ingestor_cfg = ChainIngestorConfig {
             ws_urls: vec![seq_rpc_ws_url.clone()],
             db_file: temp.clone() + "/sequencing_chain.db",
@@ -534,10 +534,15 @@ impl TestComponents {
         let assertion_poster_contract_address = match options.base_chains_type {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => Address::ZERO,
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
-                let deploy_tx =
-                    AssertionPoster::deploy_builder(&set_provider, appchain_deployment.rollup)
-                        .gas(100_000_000)
-                        .max_priority_fee_per_gas(0);
+                let deploy_tx = AssertionPoster::deploy_builder(
+                    &set_provider,
+                    appchain_deployment.rollup,
+                    U256::ZERO.into(),
+                    0,
+                    1,
+                )
+                .gas(100_000_000)
+                .max_priority_fee_per_gas(0);
 
                 let tx_hash = deploy_tx.send().await?.watch().await?;
                 let receipt = set_provider.get_transaction_receipt(tx_hash).await?.unwrap();
@@ -809,7 +814,7 @@ impl TestComponents {
             true => {
                 let mut receipt = None;
                 wait_until!(
-                receipt = self.appchain_provider.get_transaction_receipt(tx_hash).await?;
+                receipt = self.appchain_provider.get_transaction_receipt(tx_hash).await.unwrap_or(None);
                 receipt.is_some(),
                         Duration::from_secs(10)
                     );

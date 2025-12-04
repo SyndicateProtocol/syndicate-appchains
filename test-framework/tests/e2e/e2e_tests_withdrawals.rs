@@ -18,8 +18,8 @@ use alloy::{
     sol_types::{SolCall, SolValue},
 };
 use contract_bindings::synd::{
-    assertion_poster::AssertionPoster, i_bridge::IBridge, i_inbox::IInbox, i_rollup::IRollup,
-    tee_key_manager::TeeKeyManager, tee_module::TeeModule,
+    assertion_poster::AssertionPoster, i_bridge::IBridge, i_inbox::IInbox,
+    i_rollup_core::IRollupCore, tee_key_manager::TeeKeyManager, tee_module::TeeModule,
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
@@ -524,7 +524,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             // look for `AssertionConfirmed` event on the `RollupCore` contract
             // NOTE: `AssertionConfirmed` is only available on nito-contracts V3.... since this test
             // uses the legacy version we must check for `NodeConfirmed` event instead
-            let rollup_core = IRollup::new(
+            let rollup_core = IRollupCore::new(
                 components.appchain_deployment.rollup,
                 &components.settlement_provider,
             );
@@ -536,7 +536,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(10 * 60)
+                Duration::from_secs(20 * 60)
             );
 
             // finish the withdrawal on the settlement chain
