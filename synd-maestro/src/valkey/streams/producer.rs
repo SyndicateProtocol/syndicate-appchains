@@ -370,7 +370,6 @@ impl StreamProducer {
     /// Shuts down the finalization checker task gracefully.
     ///
     /// Sends a shutdown signal to the checker and waits for it to finish its current loop.
-    #[instrument(skip_all)]
     pub async fn shutdown(&self) {
         debug!(stream_key = %self.stream_key, "Attempting to shut down StreamProducer's finalization checker...");
         self.shutdown_token.cancel();
