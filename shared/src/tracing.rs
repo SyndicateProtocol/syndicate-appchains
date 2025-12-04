@@ -100,8 +100,12 @@ pub fn setup_global_tracing(config: ServiceTracingConfig) -> Result<OtelGuard, E
     let env_filter = EnvFilter::builder()
         .with_default_directive(filter::LevelFilter::INFO.into())
         .from_env()?
-        // disable spammy and unconnected jsonrpsee_server `connection` spans
-        .add_directive("jsonrpsee_server=off".parse()?);
+        // disable internal jsonrpsee and alloy HTTP/RPC spans
+        .add_directive("jsonrpsee_server=off".parse()?)
+        .add_directive("alloy_json_rpc=off".parse()?)
+        .add_directive("alloy_transport_http=off".parse()?)
+        // always send tracing spans, no matter what log level is set
+        .add_directive("[{trace.span_id}]=trace".parse()?);
 
     let disable_json = std::env::var("RUST_LOG_DISABLE_JSON").is_ok();
     let enable_telemetry = std::env::var("RUST_LOG_ENABLE_TELEMETRY").is_ok();
