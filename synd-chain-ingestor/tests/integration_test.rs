@@ -21,6 +21,7 @@ use tracing::info;
 mod tests {
     use super::*;
     use shared::types::DelayedMsgsData;
+    use std::collections::HashMap;
     use url::Url;
 
     struct MockBlockBuilder;
@@ -79,6 +80,7 @@ mod tests {
         let sequencing_chain_ingestor = start_component(
             "synd-chain-ingestor",
             seq_chain_ingestor_cfg.port,
+            HashMap::new(),
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )

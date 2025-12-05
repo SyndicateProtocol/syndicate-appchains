@@ -17,6 +17,7 @@ use eyre::Result;
 use jsonrpsee::{core::client::ClientT, http_client::HttpClientBuilder};
 use redis::aio::ConnectionManager;
 use std::{
+    collections::HashMap,
     env,
     future::Future,
     path::Path,
@@ -125,6 +126,7 @@ impl Drop for E2EProcess {
 pub async fn start_component(
     executable_name: &str,
     api_port: u16,
+    env_vars: HashMap<String, String>,
     args: Vec<String>,
     cargs: Vec<String>,
 ) -> Result<E2EProcess> {
@@ -162,6 +164,7 @@ pub async fn start_component(
     let mut docker = if let Ok(tag) = tag {
         E2EProcess::new(
             Command::new("docker")
+                .envs(env_vars)
                 .arg("run")
                 .arg("--init")
                 .arg("--rm")
@@ -184,6 +187,7 @@ pub async fn start_component(
             .env_remove("CARGO_PKG_VERSION_PRE")
             .env_remove("CARGO_MANIFEST_LINKS")
             .current_dir(env!("CARGO_WORKSPACE_DIR"))
+            .envs(env_vars)
             .arg("run");
 
         if needs_rocksdb {
@@ -217,6 +221,7 @@ pub async fn start_mchain(
     appchain_chain_id: u64,
     finality_delay: u64,
     migration_params: Option<MigrationParams>,
+    l1_block_num_hardfork_ts: Option<u64>,
     config_manager_rpc_url: Option<String>,
     config_manager_address: Option<Address>,
 ) -> Result<(String, E2EProcess, MProvider)> {
@@ -258,8 +263,22 @@ pub async fn start_mchain(
         args.extend(vec!["--config-manager-address".to_string(), address.to_string()]);
     }
 
-    let docker =
-        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), tmp_dir]).await?;
+    let mut env_vars = HashMap::new();
+    if let Some(custom_l1_block_num_hardfork_ts) = l1_block_num_hardfork_ts {
+        env_vars.insert(
+            "L1_BLOCK_NUM_HARDFORK_TS".to_string(),
+            custom_l1_block_num_hardfork_ts.to_string(),
+        );
+    }
+
+    let docker = start_component(
+        "synd-mchain",
+        port,
+        env_vars,
+        args,
+        vec!["--datadir".to_string(), tmp_dir],
+    )
+    .await?;
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))
@@ -445,7 +464,9 @@ pub async fn start_valkey() -> Result<(E2EProcess, String)> {
     Ok((valkey, valkey_url))
 }
 
-pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
+pub async fn launch_enclave_server(
+    env_vars: HashMap<String, String>,
+) -> Result<(E2EProcess, String, Address)> {
     info!("launching enclave server");
 
     let project_root = env!("CARGO_WORKSPACE_DIR");
@@ -492,6 +513,7 @@ pub async fn launch_enclave_server() -> Result<(E2EProcess, String, Address)> {
     let port = PortManager::instance().next_port().await;
     let docker = E2EProcess::new(
         Command::new("docker")
+            .envs(env_vars)
             .arg("run")
             .arg("--init")
             .arg("--rm")

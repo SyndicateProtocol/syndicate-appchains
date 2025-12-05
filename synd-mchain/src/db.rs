@@ -8,7 +8,7 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 #[cfg(feature = "rocksdb")]
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{env, fmt};
 use tracing::{debug, info, trace};
 
 /// VERSION must be bumped whenever a breaking change is made
@@ -115,6 +115,14 @@ pub struct Block {
 /// 5 Jan 2026
 pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1767571200;
 
+/// gets the timestamp for the `l1_block_number` hardfork (supports env var override for testing
+/// purposes)
+#[allow(clippy::expect_used)]
+pub fn get_l1_block_num_hardfork_ts() -> u64 {
+    env::var("L1_BLOCK_NUM_HARDFORK_TS")
+        .map_or(L1_BLOCK_NUM_HARDFORK_TS, |val| val.parse().expect("invalid timestamp provided"))
+}
+
 impl Block {
     /// The delayed message accumulator
     pub fn after_message_acc(&self) -> FixedBytes<32> {
@@ -126,8 +134,8 @@ impl Block {
     }
 
     /// l1 block number for this mchain block
-    pub const fn l1_block_number(&self) -> u64 {
-        if self.timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+    pub fn l1_block_number(&self) -> u64 {
+        if self.timestamp < get_l1_block_num_hardfork_ts() {
             self.slot.seq_block_number
         } else {
             self.slot.set_block_number

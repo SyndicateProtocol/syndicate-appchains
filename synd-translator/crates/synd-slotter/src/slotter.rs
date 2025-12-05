@@ -8,10 +8,10 @@ use synd_block_builder::appchains::shared::RollupAdapter;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::MchainProvider,
-    db::{ArbitrumBatch, MBlock, Slot, L1_BLOCK_NUM_HARDFORK_TS},
+    db::{get_l1_block_num_hardfork_ts, ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
-use tracing::{info, instrument, trace};
+use tracing::{debug, info, instrument, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.
@@ -44,6 +44,7 @@ pub async fn run(
             .recv(0)
             .await
             .map_err(|e| SlotterError::IngestorError(Chain::Sequencing, e.to_string()))?;
+        trace!("got seq_block: {seq_block:?}");
 
         metrics.record_last_processed_block(seq_block.block_ref.number, Chain::Sequencing);
         metrics.update_chain_timestamp_lag(seq_block.block_ref.timestamp, Chain::Sequencing);
@@ -62,27 +63,34 @@ pub async fn run(
 
         let mut delayed_msgs = vec![];
 
-        let mut blocks_per_slot: u64 = 1;
+        let mut set_blocks_per_slot: u64 = 1;
         let slot_end_ts = seq_block.block_ref.timestamp.saturating_sub(settlement_delay);
 
+        // TODO is it okay to be 0 when there are no delayed msgs?
+        let mut set_block_num_in_slot = 0u64;
+
         while set_block.block_ref.timestamp <= slot_end_ts {
-            blocks_per_slot += 1;
-            delayed_msgs.append(&mut set_block.messages);
+            set_blocks_per_slot += 1;
+            if !set_block.messages.is_empty() {
+                delayed_msgs.append(&mut set_block.messages);
+                set_block_num_in_slot = set_block.block_ref.number;
+            }
+
             set_block = settlement
                 .recv(slot_end_ts)
                 .await
                 .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
+            trace!("got set_block: {set_block:?}");
             metrics.record_last_processed_block(set_block.block_ref.number, Chain::Settlement);
             metrics.update_chain_timestamp_lag(set_block.block_ref.timestamp, Chain::Settlement);
         }
 
-        let l1_block_number = if timestamp < L1_BLOCK_NUM_HARDFORK_TS {
+        let l1_block_number = if timestamp < get_l1_block_num_hardfork_ts() {
             seq_block.block_ref.number
-        } else if delayed_msgs.is_empty() {
-            0
         } else {
-            set_block.block_ref.number - 1
+            set_block_num_in_slot
         };
+        debug!("using l1_block_number: {l1_block_number}");
 
         let (tx_count, sequenced_batch) =
             build_batch(&seq_block, &rollup_adapter, l1_block_number, timestamp)?;
@@ -93,7 +101,7 @@ pub async fn run(
         mblock.slot.set_block_hash = set_block.block_ref.hash;
         mblock.slot.set_block_number = set_block.block_ref.number;
 
-        trace!("Processing slot {:?}", mblock.slot);
+        debug!("Processing slot {:?}", mblock.slot);
         let time = std::time::Instant::now();
         mchain
             .add_batch(&mblock)
@@ -108,8 +116,9 @@ pub async fn run(
                 mblock.timestamp,
                 time.elapsed()
             );
+            debug!("slot payload: {payload:?}");
         }
-        metrics.record_blocks_per_slot(blocks_per_slot);
+        metrics.record_blocks_per_slot(set_blocks_per_slot);
         metrics.record_last_slot(mblock.slot.seq_block_number);
     }
 }

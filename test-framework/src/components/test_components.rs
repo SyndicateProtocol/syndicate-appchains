@@ -117,7 +117,6 @@ pub struct TestComponents {
 
 pub const SEQUENCING_CHAIN_ID: u64 = 15;
 pub const SETTLEMENT_CHAIN_ID: u64 = 31337;
-pub const GENESIS_TIMESTAMP: u64 = 1756209109; // some time after EPOCH_START_TIME (see GasAggregator.sol)
 
 #[allow(clippy::unwrap_used)]
 impl TestComponents {
@@ -157,10 +156,6 @@ impl TestComponents {
             BaseChainsType::Anvil | BaseChainsType::PreLoaded(_) => None,
             BaseChainsType::Nitro | BaseChainsType::NitroWithEigenda => {
                 let info = start_anvil(1).await?;
-                let timestamp = options.initial_l1_timestamp.unwrap_or_else(|| {
-                    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
-                });
-                info.provider.evm_mine(Some(MineOptions::Timestamp(Some(timestamp)))).await?;
                 info.provider.anvil_set_auto_mine(true).await?; //auto-mine enabled
                 info.provider.anvil_set_block_timestamp_interval(1).await?;
                 Some(info)
@@ -274,7 +269,7 @@ impl TestComponents {
             }
             BaseChainsType::PreLoaded(_) => {
                 // disable gas tracking, otherwise there will be an underflow error with anvil
-                // timstamp 0
+                // timestamp 0
                 let _ = sequencing_contract.disableGasTracking().send().await?;
                 mine_block(&seq_provider, 0).await?;
             }
@@ -439,6 +434,7 @@ impl TestComponents {
             options.appchain_chain_id,
             options.finality_delay,
             None,
+            options.l1_block_num_hardfork_ts,
             Some(set_rpc_ws_url.clone()),
             Some(config_manager_address),
         )
@@ -457,6 +453,7 @@ impl TestComponents {
         let sequencing_chain_ingestor = start_component(
             "synd-chain-ingestor",
             seq_chain_ingestor_cfg.port,
+            HashMap::new(),
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -474,6 +471,7 @@ impl TestComponents {
         let settlement_chain_ingestor = start_component(
             "synd-chain-ingestor",
             set_chain_ingestor_cfg.port,
+            HashMap::new(),
             set_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
@@ -499,6 +497,9 @@ impl TestComponents {
         let translator = start_component(
             "synd-translator",
             translator_config.port,
+            options.l1_block_num_hardfork_ts.map_or_else(HashMap::new, |ts| {
+                HashMap::from([("L1_BLOCK_NUM_HARDFORK_TS".to_string(), ts.to_string())])
+            }),
             translator_config.cli_args(),
             vec![],
         )
@@ -593,6 +594,7 @@ impl TestComponents {
                 "synd-maestro",
                 // `/health` is proxied to RPC method
                 maestro_config.port,
+                HashMap::new(),
                 maestro_config.cli_args(),
                 Default::default(),
             )
@@ -612,6 +614,7 @@ impl TestComponents {
             let batch_sequencer_instance = start_component(
                 "synd-batch-sequencer",
                 batch_sequencer_config.port,
+                HashMap::new(),
                 batch_sequencer_config.cli_args(),
                 Default::default(),
             )

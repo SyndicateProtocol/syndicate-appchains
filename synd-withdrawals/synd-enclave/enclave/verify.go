@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -70,6 +72,16 @@ func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uin
 }
 
 const L1_BLOCK_NUM_HARDFORK_TS = 1767571200
+
+// getL1BlockNumHardforkTS returns the hardfork timestamp, supporting env var override for testing
+func getL1BlockNumHardforkTS() uint64 {
+	if val := os.Getenv("L1_BLOCK_NUM_HARDFORK_TS"); val != "" {
+		if ts, err := strconv.ParseUint(val, 10, 64); err == nil {
+			return ts
+		}
+	}
+	return L1_BLOCK_NUM_HARDFORK_TS
+}
 
 func Verify(
 	ctx context.Context,
@@ -183,7 +195,7 @@ func Verify(
 
 		// NOTE: l1BlockNum hardfork logic must match slotter.rs
 		l1BlockNum := uint64(0)
-		if seq_block.Time() < L1_BLOCK_NUM_HARDFORK_TS {
+		if seq_block.Time() < getL1BlockNumHardforkTS() {
 			l1BlockNum = seq_block.NumberU64()
 		} else {
 			// Get settlement block number from latest delayed message if available
