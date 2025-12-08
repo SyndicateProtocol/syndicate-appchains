@@ -43,7 +43,7 @@ const privateKeySchema = (privateKeyName: string) =>
     .regex(/^0x[a-fA-F0-9]{64}$/, `Invalid ${privateKeyName} private key`)
     .transform((val) => val as Hex)
 
-const chainIdSchema = z.coerce
+export const chainIdSchema = z.coerce
   .number()
   .int()
   .positive("Chain ID must be a positive integer")
