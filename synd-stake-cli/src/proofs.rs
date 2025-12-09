@@ -57,7 +57,7 @@ pub async fn update_base_and_ethereum_block_hashes(args: &UpdateBaseAndEthereumB
         .await
         .unwrap_or_else(|e| panic!("failed to get appchain block number: {e}"));
     let gas_limit = U256::from(100_000);
-    let max_fee_per_gas = U256::from(100_000_000);
+    let max_fee_per_gas = U256::from(10_000_000_000_i64);
     let receipt = BlockHashRelayer::new(args.relayer_address, &settlement_provider)
         .sendBlockHashes(args.gas_archive_address, gas_limit, max_fee_per_gas)
         .send()
