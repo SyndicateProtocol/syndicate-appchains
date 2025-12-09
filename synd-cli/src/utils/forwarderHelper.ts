@@ -1,3 +1,4 @@
+import { ERC20InboxABI } from "@/abi/nitro/ERC20Inbox"
 import { syndForwarderABI } from "@/abi/synd/SyndForwarder"
 import {
   type Address,
@@ -22,26 +23,6 @@ const OPTIMISM_PORTAL_ABI = [
       { name: "_data", type: "bytes" }
     ],
     outputs: []
-  }
-] as const
-
-const ARB_BRIDGE_ABI = [
-  {
-    name: "unsafeCreateRetryableTicket",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "l2CallValue", type: "uint256" },
-      { name: "maxSubmissionCost", type: "uint256" },
-      { name: "excessFeeRefundAddress", type: "address" },
-      { name: "callValueRefundAddress", type: "address" },
-      { name: "gasLimit", type: "uint256" },
-      { name: "maxFeePerGas", type: "uint256" },
-      { name: "tokenTotalFeeAmount", type: "uint256" },
-      { name: "data", type: "bytes" }
-    ],
-    outputs: [{ name: "", type: "uint256" }]
   }
 ] as const
 
@@ -111,7 +92,7 @@ export function wrapArb(
 ): Hex {
   const amount = gasLimitArb * maxFeePerGas
   return encodeFunctionData({
-    abi: ARB_BRIDGE_ABI,
+    abi: ERC20InboxABI,
     functionName: "unsafeCreateRetryableTicket",
     args: [
       forwarder, // to
