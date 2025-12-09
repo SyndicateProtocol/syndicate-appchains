@@ -8,7 +8,7 @@
     "lint": "biome lint --write .",
     "typecheck": "tsc --noEmit",
     "check": "biome check .",
-    "check-write": "biome check --write ."
+    "check-write": "biome check --write . --files-ignore-unknown=true --no-errors-on-unmatched"
   },
   "dependencies": {
     "@arbitrum/orbit-sdk": "^0.23.3",

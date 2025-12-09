@@ -23,6 +23,7 @@ export function createSequencingCommand(program: Command) {
   sequencingCmd
     .option("--config <path>", "Path to JSON config file")
     .option("--sequencing-rpc <url>", "RPC URL for the sequencing chain")
+    .option("--ethereum-rpc <url>", "RPC URL for Ethereum")
     .option("--owner-private-key <key>", "Private key of the owner account")
     .option(
       "--deployer-private-key <key>",
@@ -39,7 +40,8 @@ export function createSequencingCommand(program: Command) {
         id: chainId,
         sequencingRpc,
         ownerPrivateKey,
-        deployerPrivateKey
+        deployerPrivateKey,
+        ethereumRpc
       } = validatedOptions
       const [
         sequencingPublicClient,
@@ -48,6 +50,9 @@ export function createSequencingCommand(program: Command) {
         deployerPrivateKey,
         ownerPrivateKey
       ])
+
+      const [ethereumPublicClient, [deployerEthereumWalletClient]] =
+        await getSupportedChainClients(ethereumRpc, [deployerPrivateKey])
 
       const sequencerPrivateKey = generatePrivateKey()
       const sequencerAccount = privateKeyToAccount(sequencerPrivateKey)
@@ -59,20 +64,20 @@ export function createSequencingCommand(program: Command) {
       const {
         sequencingContract,
         allowlistSequencingModule,
-        requireAndModule,
-        deployedAtBlock
+        requireAndModule
       } = await deploySequencingChain({
         sequencerAccount,
         chainId,
         sequencingPublicClient,
         deployerSequencingWalletClient,
-        ownerSequencingWalletClient
+        ownerSequencingWalletClient,
+        deployerEthereumWalletClient,
+        ethereumPublicClient
       })
 
       print("Deployed contracts:")
       print("Sequencing Contract", sequencingContract)
       print("Allowlist Sequencing Module", allowlistSequencingModule)
       print("Require And Module", requireAndModule)
-      print("Deployed at Block", deployedAtBlock.toString())
     })
 }
