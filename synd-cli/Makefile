@@ -46,7 +46,11 @@ generate-contract-abis:
 	  echo "" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "export const teeModuleBytecode =" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "  \"$$(forge inspect src/withdrawal/TeeModule.sol:TeeModule bytecode)\"" >> ../synd-cli/src/abi/synd/TeeModule.ts
-	
+
+	@echo "Generating SyndForwarder..."
+	@cd ../synd-contracts && \
+	  echo "export const syndForwarderABI = $$(forge inspect src/deployment/SyndForwarder.sol:SyndForwarder abi --json) as const" > ../synd-cli/src/abi/synd/SyndForwarder.ts
+
 	@echo "Formatting generated ABI files..."
 	@bunx @biomejs/biome format --write src/abi/synd/
 	

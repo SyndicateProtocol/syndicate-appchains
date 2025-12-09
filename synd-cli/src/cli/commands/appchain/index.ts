@@ -3,10 +3,10 @@ import { arbOwnerCommand } from "./arbOwner"
 import { checkRetryableCommand } from "./checkRetryable"
 import { checkTokenBridgeCommand } from "./checkTokenBridge/"
 import { createAppchainCommand } from "./create"
+import { determineSequencingChainAddressCommand } from "./determineSequencingChainAddress"
 import { e2eCommand } from "./e2e"
 import { executeOutboxCommand } from "./executeOutbox"
 import { handoffCommand } from "./handoff"
-import { determineSequencingChainAddressCommand } from "./determineSequencingChainAddress"
 
 export function appchainCommand(program: Command) {
   const appchainProgram = program

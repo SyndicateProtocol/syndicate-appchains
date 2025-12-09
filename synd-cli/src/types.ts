@@ -1,4 +1,4 @@
-import type { CoreContracts } from "@arbitrum/orbit-sdk";
+import type { CoreContracts } from "@arbitrum/orbit-sdk"
 import type {
   Account,
   Chain,
@@ -6,447 +6,447 @@ import type {
   PrivateKeyAccount,
   PublicClient,
   Transport,
-  WalletClient,
-} from "viem";
+  WalletClient
+} from "viem"
 
-export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>;
+export type PublicClientWithChain = PublicClient<Transport, Chain, undefined>
 
 export type GetChainsResponse = Array<{
-  name: string;
-  chain: string;
-  icon?: string;
-  rpc: string[];
-  features: Array<{ name: string }>;
-  faucets: string[];
+  name: string
+  chain: string
+  icon?: string
+  rpc: string[]
+  features: Array<{ name: string }>
+  faucets: string[]
   nativeCurrency: {
-    name: string;
-    symbol: string;
-    decimals: number;
-  };
-  infoURL: string;
-  shortName: string;
-  chainId: number;
-  networkId: number;
-  slip44: number;
+    name: string
+    symbol: string
+    decimals: number
+  }
+  infoURL: string
+  shortName: string
+  chainId: number
+  networkId: number
+  slip44: number
   ens?: {
-    registry: string;
-  };
+    registry: string
+  }
   explorers: Array<{
-    name: string;
-    url: string;
-    icon?: string;
-    standard: string;
-  }>;
-}>;
+    name: string
+    url: string
+    icon?: string
+    standard: string
+  }>
+}>
 
 export interface GenerateBridgeConfig {
-  coreContracts: CoreContracts;
-  rpcUrl: string;
-  explorerUrl: string;
-  parentChainId: number;
+  coreContracts: CoreContracts
+  rpcUrl: string
+  explorerUrl: string
+  parentChainId: number
   tokenContracts?: {
     l2Contracts: {
-      router: Hex;
-      standardGateway: Hex;
-      customGateway: Hex;
-      wethGateway: Hex;
-      weth: Hex;
-      multicall: Hex;
-      proxyAdmin: Hex;
-    };
+      router: Hex
+      standardGateway: Hex
+      customGateway: Hex
+      wethGateway: Hex
+      weth: Hex
+      multicall: Hex
+      proxyAdmin: Hex
+    }
     l3Contracts: {
-      router: Hex;
-      standardGateway: Hex;
-      customGateway: Hex;
-      wethGateway: Hex;
-      weth: Hex;
-      proxyAdmin: Hex;
-      beaconProxyFactory: Hex;
-      upgradeExecutor: Hex;
-      multicall: Hex;
-    };
-  };
-  chainName: string;
-  chainId: number;
-  chainOwner: Hex;
+      router: Hex
+      standardGateway: Hex
+      customGateway: Hex
+      wethGateway: Hex
+      weth: Hex
+      proxyAdmin: Hex
+      beaconProxyFactory: Hex
+      upgradeExecutor: Hex
+      multicall: Hex
+    }
+  }
+  chainName: string
+  chainId: number
+  chainOwner: Hex
 }
 
 export type ChainNativeCurrency = {
-  name: string;
+  name: string
   /** 2-6 characters long */
-  symbol: string;
-  decimals: number;
-};
+  symbol: string
+  decimals: number
+}
 
 export type SupportedSettlementChains = Record<
   number,
   {
-    rollupCreator: Hex;
-    tokenBridgeCreator: Hex;
-    arbConfigManager: Hex;
-    teeKeyManager: Hex;
-    chain: Chain;
+    rollupCreator: Hex
+    tokenBridgeCreator: Hex
+    arbConfigManager: Hex
+    teeKeyManager: Hex
+    chain: Chain
   }
->;
+>
 
 export type SupportedSequencingChains = Record<
   number,
   {
-    bridge: Hex;
-    inbox: Hex;
-    chain: Chain;
+    bridge: Hex
+    inbox: Hex
+    chain: Chain
     // Implementation address of the SyndicateSequencingChain contract on the Sequencing Chain
-    sequencingChainImplementation: Hex;
-    forwarderAddress: Hex;
-    forwarderParentAddress: Hex;
+    sequencingChainImplementation: Hex
+    forwarderAddress: Hex
+    forwarderParentAddress: Hex
   }
->;
+>
 
 export type SupportedEthereumChains = Record<
   number,
   {
-    chain: Chain;
+    chain: Chain
   }
->;
+>
 
 export type PrivateKeyWalletAccount = WalletClient<
   Transport,
   Chain,
   PrivateKeyAccount
->;
+>
 
 export interface Foundation {
-  chainId: number;
-  chainName: string;
-  nativeToken: Hex;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  ownerSequencingWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  sequencingPublicClient: PublicClientWithChain;
-  ethereumPublicClient: PublicClientWithChain;
-  deployerEthereumWalletClient: PrivateKeyWalletAccount;
+  chainId: number
+  chainName: string
+  nativeToken: Hex
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSequencingWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  sequencingPublicClient: PublicClientWithChain
+  ethereumPublicClient: PublicClientWithChain
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
   deployerSequencingWalletClient: WalletClient<
     Transport,
     Chain,
     PrivateKeyAccount
-  >;
-  ownerPrivateKey: Hex;
-  coreContractsCreatedAtHash?: Hex;
-  appchainRpc: string;
-  appchainExplorer: string;
+  >
+  ownerPrivateKey: Hex
+  coreContractsCreatedAtHash?: Hex
+  appchainRpc: string
+  appchainExplorer: string
 }
 
 export interface DeployNitroRollup {
-  chainId: number;
-  chainName: string;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  appchainRpc: string;
-  appchainExplorer: string;
-  nativeToken: Hex;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
+  chainId: number
+  chainName: string
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  appchainRpc: string
+  appchainExplorer: string
+  nativeToken: Hex
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
 
 export interface DeployRollup {
-  chainId: number;
-  nativeToken: Hex;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
+  chainId: number
+  nativeToken: Hex
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
 }
 
 export interface CreateArbChainConfig {
-  coreContracts: CoreContracts;
-  settlementStartBlock: bigint | string;
-  sequencingContract: Hex;
-  sequencingStartBlock: bigint | string;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  sequencingPublicClient: PublicClientWithChain;
-  appchainExplorer: string;
-  chainId: number;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
+  coreContracts: CoreContracts
+  settlementStartBlock: bigint | string
+  sequencingContract: Hex
+  sequencingStartBlock: bigint | string
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  sequencingPublicClient: PublicClientWithChain
+  appchainExplorer: string
+  chainId: number
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
 }
 
 export interface DeploySequencingChain {
-  sequencerAccount: Account;
-  chainId: number;
-  sequencingPublicClient: PublicClientWithChain;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
-  ownerSequencingWalletClient: PrivateKeyWalletAccount;
-  deployerEthereumWalletClient: PrivateKeyWalletAccount;
-  ethereumPublicClient: PublicClientWithChain;
+  sequencerAccount: Account
+  chainId: number
+  sequencingPublicClient: PublicClientWithChain
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  ownerSequencingWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
 }
 
 export interface CreateRequireAndModule {
-  sequencingPublicClient: PublicClientWithChain;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
+  sequencingPublicClient: PublicClientWithChain
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateSyndicateSequencingChain {
-  requireAndModule: Hex;
-  deployerEthereumWalletClient: PrivateKeyWalletAccount;
-  ethereumPublicClient: PublicClientWithChain;
-  chainId: number;
-  sequencingChainId: number;
-  owner: Hex;
+  requireAndModule: Hex
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
+  chainId: number
+  sequencingChainId: number
+  owner: Hex
 }
 
 export interface DeployAndSetupAllowlistSequencingModule {
-  sequencerAccount: Account;
-  sequencingPublicClient: PublicClientWithChain;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
+  sequencerAccount: Account
+  sequencingPublicClient: PublicClientWithChain
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
 export interface RegisterAllowlistSequencingModuleOnRequireAllModule {
-  requireAndModule: Hex;
-  allowlistSequencingModule: Hex;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
-  sequencingPublicClient: PublicClientWithChain;
+  requireAndModule: Hex
+  allowlistSequencingModule: Hex
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  sequencingPublicClient: PublicClientWithChain
 }
 
 export interface TransferPermissionModuleOwnership {
-  allowlistSequencingModule: Hex;
-  requireAndModule: Hex;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
-  sequencingPublicClient: PublicClientWithChain;
-  ownerSequencingWalletClient: PrivateKeyWalletAccount;
+  allowlistSequencingModule: Hex
+  requireAndModule: Hex
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  sequencingPublicClient: PublicClientWithChain
+  ownerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
 export interface DeployTeeModule {
-  settlementPublicClient: PublicClientWithChain;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  sequencingContract: Hex;
-  sequencingPublicClient: PublicClientWithChain;
-  appchainPublicClient: PublicClientWithChain;
-  ethereumPublicClient: PublicClientWithChain;
-  syndForkSequencingRpc: string;
-  coreContracts: { rollup: Hex; upgradeExecutor: Hex; bridge: Hex };
+  settlementPublicClient: PublicClientWithChain
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  sequencingContract: Hex
+  sequencingPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
+  ethereumPublicClient: PublicClientWithChain
+  syndForkSequencingRpc: string
+  coreContracts: { rollup: Hex; upgradeExecutor: Hex; bridge: Hex }
 }
 
 export interface Features {
-  coreContracts: CoreContracts;
-  chainId: number;
-  chainName: string;
-  appchainPublicClient: PublicClientWithChain;
-  deployerSequencingWalletClient: PrivateKeyWalletAccount;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  deployerAppchainWalletClient: PrivateKeyWalletAccount;
-  sequencingContract: Hex;
-  sequencingPublicClient: PublicClientWithChain;
-  ethereumPublicClient: PublicClientWithChain;
-  syndForkSequencingRpc: string;
+  coreContracts: CoreContracts
+  chainId: number
+  chainName: string
+  appchainPublicClient: PublicClientWithChain
+  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  deployerAppchainWalletClient: PrivateKeyWalletAccount
+  sequencingContract: Hex
+  sequencingPublicClient: PublicClientWithChain
+  ethereumPublicClient: PublicClientWithChain
+  syndForkSequencingRpc: string
 }
 
 export interface DeployMulticall3 {
-  appchainPublicClient: PublicClientWithChain;
-  deployerAppchainWalletClient: PrivateKeyWalletAccount;
+  appchainPublicClient: PublicClientWithChain
+  deployerAppchainWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CanDeployMulticall3 {
-  appchainPublicClient: PublicClientWithChain;
-  deployerAppchainWalletClient: PrivateKeyWalletAccount;
+  appchainPublicClient: PublicClientWithChain
+  deployerAppchainWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateTeeModule {
-  assertionPoster: Hex;
-  bridge: Hex;
-  deployerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  sequencingContract: Hex;
-  sequencingPublicClient: PublicClientWithChain;
-  appchainPublicClient: PublicClientWithChain;
-  ethereumPublicClient: PublicClientWithChain;
-  syndForkSequencingRpc: string;
+  assertionPoster: Hex
+  bridge: Hex
+  deployerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  sequencingContract: Hex
+  sequencingPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
+  ethereumPublicClient: PublicClientWithChain
+  syndForkSequencingRpc: string
 }
 
 interface Synd {
   config: {
-    arbConfigManager: Hex;
-    arbChainConfig: Hex;
-  };
+    arbConfigManager: Hex
+    arbChainConfig: Hex
+  }
   bridge: {
     chainInfo: {
-      chainName: string;
-      chainId: number;
-      chainOwner: Hex;
-      minL2BaseFee: number;
-      parentChainId: number;
-      nativeToken: Hex;
-      staker?: string;
-      batchPoster?: string;
-      networkFeeReceiver?: string;
-      infrastructureFeeCollector?: string;
-      explorerUrl: string;
-      rpcUrl: string;
-    };
+      chainName: string
+      chainId: number
+      chainOwner: Hex
+      minL2BaseFee: number
+      parentChainId: number
+      nativeToken: Hex
+      staker?: string
+      batchPoster?: string
+      networkFeeReceiver?: string
+      infrastructureFeeCollector?: string
+      explorerUrl: string
+      rpcUrl: string
+    }
     coreContracts: {
-      rollup: Hex;
-      inbox: Hex;
-      nativeToken: Hex;
-      outbox: Hex;
-      rollupEventInbox: Hex;
-      challengeManager: Hex;
-      adminProxy: Hex;
-      sequencerInbox: Hex;
-      bridge: Hex;
-      upgradeExecutor: Hex;
-      validatorUtils?: Hex;
-      validatorWalletCreator: Hex;
-      deployedAtBlockNumber: number;
-    };
+      rollup: Hex
+      inbox: Hex
+      nativeToken: Hex
+      outbox: Hex
+      rollupEventInbox: Hex
+      challengeManager: Hex
+      adminProxy: Hex
+      sequencerInbox: Hex
+      bridge: Hex
+      upgradeExecutor: Hex
+      validatorUtils?: Hex
+      validatorWalletCreator: Hex
+      deployedAtBlockNumber: number
+    }
     tokenBridgeContracts: {
       l2Contracts: {
-        router: Hex;
-        standardGateway: Hex;
-        customGateway: Hex;
-        wethGateway: Hex;
-        weth: Hex;
-        multicall: Hex;
-        proxyAdmin: Hex;
-      };
+        router: Hex
+        standardGateway: Hex
+        customGateway: Hex
+        wethGateway: Hex
+        weth: Hex
+        multicall: Hex
+        proxyAdmin: Hex
+      }
       l3Contracts: {
-        router: Hex;
-        standardGateway: Hex;
-        customGateway: Hex;
-        wethGateway: Hex;
-        weth: Hex;
-        proxyAdmin: Hex;
-        beaconProxyFactory: Hex;
-        upgradeExecutor: Hex;
-        multicall: Hex;
-      };
-    };
-  };
+        router: Hex
+        standardGateway: Hex
+        customGateway: Hex
+        wethGateway: Hex
+        weth: Hex
+        proxyAdmin: Hex
+        beaconProxyFactory: Hex
+        upgradeExecutor: Hex
+        multicall: Hex
+      }
+    }
+  }
   sequencing: {
-    syndicateSequencingChain: Hex;
-    allowlistSequencingModule: Hex;
-    requireAndModule: Hex;
-    settlementBlockBeforeDeployment: string;
-    deployedAtBlock: string;
-  };
+    syndicateSequencingChain: Hex
+    allowlistSequencingModule: Hex
+    requireAndModule: Hex
+    settlementBlockBeforeDeployment: string
+    deployedAtBlock: string
+  }
   withdrawals: {
-    teeKeyManager: Hex;
-    assertionPoster: Hex;
-    teeModule: Hex;
-    attestationDocVerifier: Hex;
-  };
+    teeKeyManager: Hex
+    assertionPoster: Hex
+    teeModule: Hex
+    attestationDocVerifier: Hex
+  }
 }
 
 export interface Handoff {
-  newOwner: Hex;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  ownerSequencingWalletClient: PrivateKeyWalletAccount;
-  ownerAppchainWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  sequencingPublicClient: PublicClientWithChain;
-  appchainPublicClient: PublicClientWithChain;
-  synd: Synd;
+  newOwner: Hex
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  ownerSequencingWalletClient: PrivateKeyWalletAccount
+  ownerAppchainWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  sequencingPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
+  synd: Synd
 }
 
 export interface SetAppchainConfig {
-  appchainPublicClient: PublicClientWithChain;
-  ownerAppchainWalletClient: PrivateKeyWalletAccount;
-  newOwner: Hex;
+  appchainPublicClient: PublicClientWithChain
+  ownerAppchainWalletClient: PrivateKeyWalletAccount
+  newOwner: Hex
 }
 
 export interface HandoffNitro {
-  newOwner: Hex;
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  synd: Synd;
-  ownerAppchainWalletClient: PrivateKeyWalletAccount;
-  appchainPublicClient: PublicClientWithChain;
+  newOwner: Hex
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  synd: Synd
+  ownerAppchainWalletClient: PrivateKeyWalletAccount
+  appchainPublicClient: PublicClientWithChain
 }
 
 export interface HandoffSynd {
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  synd: Synd;
-  newOwner: Hex;
-  ownerSequencingWalletClient: PrivateKeyWalletAccount;
-  sequencingPublicClient: PublicClientWithChain;
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  synd: Synd
+  newOwner: Hex
+  ownerSequencingWalletClient: PrivateKeyWalletAccount
+  sequencingPublicClient: PublicClientWithChain
 }
 
 export interface E2E {
-  inbox: Hex;
-  privateKey: Hex;
-  appchainPublicClient: PublicClientWithChain;
-  appchainWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  settlementWalletClient: PrivateKeyWalletAccount;
+  inbox: Hex
+  privateKey: Hex
+  appchainPublicClient: PublicClientWithChain
+  appchainWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  settlementWalletClient: PrivateKeyWalletAccount
 }
 
 export interface Deposit {
-  settlementPublicClient: PublicClientWithChain;
-  settlementWalletClient: PrivateKeyWalletAccount;
-  appchainPublicClient: PublicClientWithChain;
-  inbox: Hex;
-  account: Account;
-  value: bigint;
+  settlementPublicClient: PublicClientWithChain
+  settlementWalletClient: PrivateKeyWalletAccount
+  appchainPublicClient: PublicClientWithChain
+  inbox: Hex
+  account: Account
+  value: bigint
 }
 
 export interface DeployCounter {
-  appchainPublicClient: PublicClientWithChain;
-  appchainWalletClient: PrivateKeyWalletAccount;
+  appchainPublicClient: PublicClientWithChain
+  appchainWalletClient: PrivateKeyWalletAccount
 }
 
 export interface TransferToSelf {
-  appchainWalletClient: PrivateKeyWalletAccount;
-  appchainPublicClient: PublicClientWithChain;
-  value: bigint;
+  appchainWalletClient: PrivateKeyWalletAccount
+  appchainPublicClient: PublicClientWithChain
+  value: bigint
 }
 
 export interface CheckSequencerInbox {
-  ownerSettlementWalletClient: PrivateKeyWalletAccount;
-  settlementPublicClient: PublicClientWithChain;
-  synd: Synd;
+  ownerSettlementWalletClient: PrivateKeyWalletAccount
+  settlementPublicClient: PublicClientWithChain
+  synd: Synd
 }
 
 export interface CallArbOwner {
-  settlementPublicClient: PublicClientWithChain;
-  appchainPublicClient?: PublicClientWithChain;
-  settlementUpgradeExecutor: Hex;
-  settlementInbox: Hex;
-  appchainUpgradeExecutor: Hex;
-  refundAddress: Hex;
-  gasLimit?: bigint;
-  maxFeePerGas?: bigint;
-  functionName: string;
-  calldata: Hex;
+  settlementPublicClient: PublicClientWithChain
+  appchainPublicClient?: PublicClientWithChain
+  settlementUpgradeExecutor: Hex
+  settlementInbox: Hex
+  appchainUpgradeExecutor: Hex
+  refundAddress: Hex
+  gasLimit?: bigint
+  maxFeePerGas?: bigint
+  functionName: string
+  calldata: Hex
 }
 
 export interface CheckTokenBridge {
-  rollup: Hex;
-  appchainPublicClient: PublicClientWithChain;
-  settlementPublicClient: PublicClientWithChain;
-  createdAtHash: Hex;
+  rollup: Hex
+  appchainPublicClient: PublicClientWithChain
+  settlementPublicClient: PublicClientWithChain
+  createdAtHash: Hex
 }
 
 export interface CheckRetryable {
-  hash: Hex;
-  settlementPublicClient: PublicClientWithChain;
-  appchainPublicClient: PublicClientWithChain;
-  rollup: Hex;
+  hash: Hex
+  settlementPublicClient: PublicClientWithChain
+  appchainPublicClient: PublicClientWithChain
+  rollup: Hex
 }
 
 export interface ExecuteOutbox {
-  hash: Hex;
-  appchainRpc: string;
-  settlementRpc: string;
-  privateKey: Hex;
-  rollup: Hex;
+  hash: Hex
+  appchainRpc: string
+  settlementRpc: string
+  privateKey: Hex
+  rollup: Hex
 }
 
 export interface EnsureOwnerBalance {
-  ownerWalletClient: WalletClient<Transport, Chain, Account>;
-  deployerWalletClient: WalletClient<Transport, Chain, Account>;
-  publicClient: PublicClientWithChain;
-  nativeTokenAddress: Hex;
-  nativeTokenSymbol: string;
-  estimatedCostOfRetryables: bigint;
+  ownerWalletClient: WalletClient<Transport, Chain, Account>
+  deployerWalletClient: WalletClient<Transport, Chain, Account>
+  publicClient: PublicClientWithChain
+  nativeTokenAddress: Hex
+  nativeTokenSymbol: string
+  estimatedCostOfRetryables: bigint
 }

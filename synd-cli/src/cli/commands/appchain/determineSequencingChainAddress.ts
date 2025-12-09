@@ -1,7 +1,7 @@
-import { print } from "@/utils/print";
-import type { Command } from "@commander-js/extra-typings";
-import { getSequencingChainAddress } from "@/utils/forwarderHelper";
-import { risa, syndicate } from "@/utils/constants";
+import { risa, syndicate } from "@/utils/constants"
+import { getSequencingChainAddress } from "@/utils/forwarderHelper"
+import { print } from "@/utils/print"
+import type { Command } from "@commander-js/extra-typings"
 
 export function determineSequencingChainAddressCommand(program: Command) {
   program
@@ -13,14 +13,14 @@ export function determineSequencingChainAddressCommand(program: Command) {
     )
     .option("-t, --testnet", "Indicates that the chain is a testnet")
     .action(async (chainIdStr: string, options: { testnet?: boolean }) => {
-      const chainId = Number(chainIdStr);
+      const chainId = Number(chainIdStr)
       if (Number.isNaN(chainId)) {
-        return print("Invalid chain ID");
+        return print("Invalid chain ID")
       }
       const sequencingChainAddress = getSequencingChainAddress(
         chainId,
         options.testnet ? risa.id : syndicate.id
-      );
-      print("Sequencing chain address:", sequencingChainAddress);
-    });
+      )
+      print("Sequencing chain address:", sequencingChainAddress)
+    })
 }

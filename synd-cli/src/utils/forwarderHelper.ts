@@ -1,37 +1,13 @@
+import { syndForwarderABI } from "@/abi/synd/SyndForwarder"
 import {
   type Address,
   type Hex,
   encodeFunctionData,
   getContractAddress,
-  toBytes,
   pad,
-} from "viem";
-import { supportedSequencingChains } from "./constants";
-
-// ABI definitions for the functions we're encoding
-export const SYND_FORWARDER_ABI = [
-  {
-    name: "deploy",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "salt", type: "bytes32" },
-      { name: "impl", type: "address" },
-      { name: "init", type: "bytes" },
-    ],
-    outputs: [],
-  },
-  {
-    name: "call",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "data", type: "bytes" },
-    ],
-    outputs: [],
-  },
-] as const;
+  toBytes
+} from "viem"
+import { supportedSequencingChains } from "./constants"
 
 const OPTIMISM_PORTAL_ABI = [
   {
@@ -43,11 +19,11 @@ const OPTIMISM_PORTAL_ABI = [
       { name: "_value", type: "uint256" },
       { name: "_gasLimit", type: "uint64" },
       { name: "_isCreation", type: "bool" },
-      { name: "_data", type: "bytes" },
+      { name: "_data", type: "bytes" }
     ],
-    outputs: [],
-  },
-] as const;
+    outputs: []
+  }
+] as const
 
 const ARB_BRIDGE_ABI = [
   {
@@ -63,11 +39,11 @@ const ARB_BRIDGE_ABI = [
       { name: "gasLimit", type: "uint256" },
       { name: "maxFeePerGas", type: "uint256" },
       { name: "tokenTotalFeeAmount", type: "uint256" },
-      { name: "data", type: "bytes" },
+      { name: "data", type: "bytes" }
     ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const;
+    outputs: [{ name: "", type: "uint256" }]
+  }
+] as const
 
 /**
  * Encodes a call to SyndForwarder.deploy
@@ -78,10 +54,10 @@ const ARB_BRIDGE_ABI = [
  */
 export function wrapDeploy(salt: Hex, impl: Address, init: Hex): Hex {
   return encodeFunctionData({
-    abi: SYND_FORWARDER_ABI,
+    abi: syndForwarderABI,
     functionName: "deploy",
-    args: [salt, impl, init],
-  });
+    args: [salt, impl, init]
+  })
 }
 
 /**
@@ -92,10 +68,10 @@ export function wrapDeploy(salt: Hex, impl: Address, init: Hex): Hex {
  */
 export function wrapCall(to: Address, data: Hex): Hex {
   return encodeFunctionData({
-    abi: SYND_FORWARDER_ABI,
+    abi: syndForwarderABI,
     functionName: "call",
-    args: [to, data],
-  });
+    args: [to, data]
+  })
 }
 
 /**
@@ -114,9 +90,9 @@ export function wrapOP(forwarder: Address, gasLimit: bigint, data: Hex): Hex {
       BigInt(0), // _value
       gasLimit, // _gasLimit
       false, // _isCreation
-      data, // _data
-    ],
-  });
+      data // _data
+    ]
+  })
 }
 
 /**
@@ -133,7 +109,7 @@ export function wrapArb(
   gasLimitArb: bigint = BigInt(210000),
   maxFeePerGas: bigint = BigInt(1000000000) // 1 gwei
 ): Hex {
-  const amount = gasLimitArb * maxFeePerGas;
+  const amount = gasLimitArb * maxFeePerGas
   return encodeFunctionData({
     abi: ARB_BRIDGE_ABI,
     functionName: "unsafeCreateRetryableTicket",
@@ -146,9 +122,9 @@ export function wrapArb(
       gasLimitArb, // gasLimit
       maxFeePerGas, // maxFeePerGas
       amount, // tokenTotalFeeAmount
-      data, // data
-    ],
-  });
+      data // data
+    ]
+  })
 }
 
 export function getSequencingChainAddress(
@@ -160,6 +136,6 @@ export function getSequencingChainAddress(
       "0xe64a956779ab4f25594d056c498bb94989fa8edbf4b4124362dda18e5c29746e", // << keccak of MinimalUUPSStub bytecode
     from: supportedSequencingChains[seqChainId].forwarderAddress,
     opcode: "CREATE2",
-    salt: pad(toBytes(chainId)),
-  });
+    salt: pad(toBytes(chainId))
+  })
 }
