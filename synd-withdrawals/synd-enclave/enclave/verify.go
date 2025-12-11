@@ -77,6 +77,7 @@ const L1_BLOCK_NUM_HARDFORK_TS = 1767571200
 func getL1BlockNumHardforkTS() uint64 {
 	if val := os.Getenv("L1_BLOCK_NUM_HARDFORK_TS"); val != "" {
 		if ts, err := strconv.ParseUint(val, 10, 64); err == nil {
+			log.Warn("L1_BLOCK_NUM_HARDFORK_TS override", "value", ts)
 			return ts
 		}
 	}

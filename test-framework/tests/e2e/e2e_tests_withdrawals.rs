@@ -694,7 +694,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .unwrap()
                 .header
                 .number;
-            let settlement_block_height = components
+            let set_block_height = components
                 .settlement_provider
                 .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
@@ -702,26 +702,24 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .header
                 .number;
 
-            // let's make it so the settlement block is 10 blocks ahead of sequencing chain
-            // let seq_blocks_to_mine = (seq_block_height + 10) - settlement_block_height;
-            // TODO should be less than 1000 blocks, but its currently failing to include the
-            // past-hardfork timestamp in the deposit settlement block otherwise, need to
-            // figure it out
-            let seq_blocks_to_mine = 1000u64; //(seq_block_height + 10) - settlement_block_height;
-            let nonce = components
-                .settlement_provider
-                .get_transaction_count(test_account1().address)
-                .await?;
-            for i in 0..seq_blocks_to_mine {
-                let tx = TransactionRequest::default()
-                    .with_to(test_account1().address)
-                    .with_value(U256::ZERO)
-                    .with_nonce(nonce + i)
-                    .with_gas_limit(21_000)
-                    .with_max_fee_per_gas(100_000_000)
-                    .with_max_priority_fee_per_gas(0);
+            // let's make it so the settlement block is at least 10 blocks ahead of sequencing chain
+            if set_block_height < seq_block_height + 10 {
+                let seq_blocks_to_mine = (seq_block_height + 10) - set_block_height;
+                let nonce = components
+                    .settlement_provider
+                    .get_transaction_count(test_account1().address)
+                    .await?;
+                for i in 0..seq_blocks_to_mine {
+                    let tx = TransactionRequest::default()
+                        .with_to(test_account1().address)
+                        .with_value(U256::ZERO)
+                        .with_nonce(nonce + i)
+                        .with_gas_limit(21_000)
+                        .with_max_fee_per_gas(100_000_000)
+                        .with_max_priority_fee_per_gas(0);
 
-                let _ = components.settlement_provider.send_transaction(tx).await.unwrap();
+                    let _ = components.settlement_provider.send_transaction(tx).await.unwrap();
+                }
             }
 
             let l1_block_pre_fork =
@@ -737,6 +735,49 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 "TOMATO l1 post-fork: {:?}",
                 l1_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap()
             );
+
+            // keep mining blocks until the timestamp increase is seen on the base chains
+            wait_until!(
+                {
+                    let tx = TransactionRequest::default()
+                        .with_to(test_account1().address)
+                        .with_value(U256::ZERO)
+                        .with_nonce(
+                            components
+                                .settlement_provider
+                                .get_transaction_count(test_account1().address)
+                                .await?,
+                        )
+                        .with_gas_limit(21_000)
+                        .with_max_fee_per_gas(100_000_000)
+                        .with_max_priority_fee_per_gas(0);
+
+                    let _ = components.settlement_provider.send_transaction(tx).await.unwrap();
+                    components.sequence_tx(b"dummy_tx", 0, false).await?;
+
+                    let set_ts = components
+                        .settlement_provider
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .header
+                        .timestamp;
+                    let seq_ts = components
+                        .sequencing_provider
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .header
+                        .timestamp;
+
+                    set_ts >= l1_block_num_hardfork_ts && seq_ts >= l1_block_num_hardfork_ts
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
+            );
+            print!("TOMATO, base chains ready");
 
             // make a new deposit so a new delayed message is included and the l1_block_number is
             // updated
@@ -810,7 +851,8 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(20 * 60)
+                Duration::from_secs(20 * 60),
+                Duration::from_millis(500)
             );
 
             // Execute the withdrawal

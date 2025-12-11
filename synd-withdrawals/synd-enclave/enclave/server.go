@@ -413,9 +413,6 @@ func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
 	if _, ok := allowedMsgs[msg[0]]; !ok {
 		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
-	if ts >= L1_BLOCK_NUM_HARDFORK_TS {
-		blockNum = binary.BigEndian.Uint64(msg[33:41])
-	}
 	if msg[0] == arbostypes.L1MessageType_BatchPostingReport {
 		requestId := msg[teetypes.DelayedMessageRequestIdOffset : teetypes.DelayedMessageRequestIdOffset+32]
 		msg = make([]byte, teetypes.DelayedMessageDataOffset)
@@ -485,24 +482,37 @@ func parseAppBatches(input *teetypes.VerifyAppchainInput) ([][]byte, error) {
 	msgCount := uint64(len(input.DelayedMessages))
 	var i uint64
 	var batches [][]byte
-	blockNum := input.VerifySequencingChainOutput.SequencingBlockNumber - uint64(len(input.VerifySequencingChainOutput.Batches))
+	seqBlockNum := input.VerifySequencingChainOutput.SequencingBlockNumber - uint64(len(input.VerifySequencingChainOutput.Batches))
 	for _, batch := range input.VerifySequencingChainOutput.Batches {
-		blockNum++
-		var hasDelayedMessage bool
+		seqBlockNum++
+		delayedMsgsInBatch := make([]uint64, 0, len(input.DelayedMessages)+1)
+		// collect all the delayed messages in the batch
 		for i < msgCount {
 			timestamp := binary.BigEndian.Uint64(input.DelayedMessages[i][teetypes.DelayedMessageTimestampOffset : teetypes.DelayedMessageTimestampOffset+8])
 			if timestamp+input.Config.SettlementDelay > batch.Timestamp {
 				break
 			}
-			var err error
-			input.DelayedMessages[i], err = processMessage(input.DelayedMessages[i], blockNum, batch.Timestamp)
-			if err != nil {
-				return nil, fmt.Errorf("failed to process delayed message: %w", err)
-			}
+			delayedMsgsInBatch = append(delayedMsgsInBatch, i)
 			i++
-			hasDelayedMessage = true
 		}
-		if hasDelayedMessage || len(batch.Data) > 0 {
+
+		if len(delayedMsgsInBatch) > 0 || len(batch.Data) > 0 {
+			blockNum := uint64(0)
+			if batch.Timestamp < getL1BlockNumHardforkTS() {
+				blockNum = seqBlockNum
+			} else if len(delayedMsgsInBatch) > 0 {
+				// settlement block number of the last delayed msg in the batch
+				lastDelayedMsgIndex := delayedMsgsInBatch[len(delayedMsgsInBatch)-1]
+				blockNum = binary.BigEndian.Uint64(input.DelayedMessages[lastDelayedMsgIndex][teetypes.DelayedMessageBlockNumberOffset : teetypes.DelayedMessageBlockNumberOffset+8])
+			}
+			for _, delayedMsgIdx := range delayedMsgsInBatch {
+				var err error
+				input.DelayedMessages[delayedMsgIdx], err = processMessage(input.DelayedMessages[delayedMsgIdx], blockNum, batch.Timestamp)
+				if err != nil {
+					return nil, fmt.Errorf("failed to process delayed message: %w", err)
+				}
+
+			}
 			batches = append(batches, buildArbBatch(startIndex+i, batch.Data))
 		}
 		batch.Data = nil
