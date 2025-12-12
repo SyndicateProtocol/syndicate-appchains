@@ -3,7 +3,7 @@ use alloy::{
     primitives::B256,
     rlp::{Decodable, RlpDecodable},
 };
-use eyre::{eyre, Context, Result};
+use eyre::{eyre, Result};
 use rocksdb::{Options, DB};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -186,12 +186,15 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     // Open the database with read-write access if we're modifying, read-only otherwise
     let mut opts = Options::default();
     opts.create_if_missing(false);
-    let db =
-        DB::open_for_read_only(&opts, &chaindata_path, false).context("Failed to open database")?;
+    let db = DB::open_for_read_only(&opts, &chaindata_path, false)
+        .inspect_err(|e| eprintln!("couldn't open l1chaindata DB: {e}"))
+        .unwrap();
 
     // Also open the arbitrumdata database which contains Arbitrum-specific state
     let arb_db_path = nitro_db_path.join("arbitrumdata");
-    let arb_db = DB::open_for_read_only(&opts, &arb_db_path, false).unwrap();
+    let arb_db = DB::open_for_read_only(&opts, &arb_db_path, false)
+        .inspect_err(|e| eprintln!("couldn't open l1chaindata DB: {e}"))
+        .unwrap();
 
     // Get the rollup state
     let rollup_state = get_rollup_state(&db, &arb_db)?;

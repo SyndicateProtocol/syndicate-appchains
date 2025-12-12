@@ -29,10 +29,11 @@ var (
 
 // field offsets into the serialized arbostypes.L1IncomingMessage struct
 const (
-	DelayedMessageSenderOffset    = 13
-	DelayedMessageTimestampOffset = 41
-	DelayedMessageRequestIdOffset = 49
-	DelayedMessageDataOffset      = 113
+	DelayedMessageSenderOffset      = 13
+	DelayedMessageBlockNumberOffset = 33
+	DelayedMessageTimestampOffset   = 41
+	DelayedMessageRequestIdOffset   = 49
+	DelayedMessageDataOffset        = 113
 )
 
 // Wrapper around the teemodule.TeeTrustedInput to define the Hash method
@@ -77,9 +78,11 @@ type VerifySequencingChainInput struct {
 }
 
 type VerifyAppchainInput struct {
-	TrustedInput    TrustedInput
-	Config          Config
-	DelayedMessages [][]byte
+	TrustedInput                TrustedInput
+	Config                      Config
+	DelayedMessages             [][]byte
+	DelayedMessagesBlockNumbers []uint64
+
 	// get this from the first delayed message event, based on AppStartBlock.Nonce()
 	StartDelayedMessagesAccumulator common.Hash
 	VerifySequencingChainOutput     VerifySequencingChainOutput
@@ -101,8 +104,9 @@ func (c *Config) Hash() common.Hash {
 }
 
 type SyndicateBatch struct {
-	Timestamp uint64
-	Data      []byte
+	Timestamp     uint64
+	Data          []byte
+	L1BlockNumber uint64
 }
 
 type VerifySequencingChainOutput struct {

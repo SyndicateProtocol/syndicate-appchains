@@ -7,7 +7,7 @@ use crate::appchains::arbitrum::batch::MAX_L2_MESSAGE_SIZE;
 use alloy::{
     consensus::{transaction::RlpEcdsaDecodableTx as _, TxEip1559, TxEip2930, TxEip7702, TxLegacy},
     eips::eip2718::Eip2718Error,
-    primitives::{keccak256, Address, Bytes, Log, TxHash},
+    primitives::{Address, Bytes, Log, TxHash},
     sol_types::SolEvent,
 };
 use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChain::TransactionProcessed;
@@ -50,13 +50,6 @@ pub enum SequencingParserError {
     /// An error occurred while decompressing the transaction.
     #[error("Failed to decompress transaction: {0:?}")]
     DecompressionError(String),
-}
-
-/// The parser for appchain transactions
-#[derive(Debug, Clone)]
-pub struct SequencingTransactionParser {
-    /// The address of the sequencing contract
-    pub sequencing_contract_address: Address,
 }
 
 /// See `arbos/parse_l2.go` for details.
@@ -152,67 +145,61 @@ fn decompress_transactions(data: &[u8]) -> Result<Vec<(Bytes, TxHash)>, Sequenci
         .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))
 }
 
-impl SequencingTransactionParser {
-    /// Creates a new `SequencingTransactionParser`
-    pub const fn new(sequencing_contract_address: Address) -> Self {
-        Self { sequencing_contract_address }
+/// Decodes the event data into a vector of typed transactions
+fn decode_event_data(data: &Bytes) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
+    if data.is_empty() {
+        return Err(SequencingParserError::NoDataProvided);
     }
 
-    /// Checks if a log is a `TransactionProcessed` event
-    pub fn is_log_transaction_processed(&self, eth_log: &Log) -> bool {
-        eth_log.address == self.sequencing_contract_address &&
-            eth_log
-                .topics()
-                .first()
-                .is_some_and(|t| *t == keccak256(TransactionProcessed::SIGNATURE.as_bytes()))
-    }
-
-    /// Decodes the event data into a vector of typed transactions
-    pub fn decode_event_data(data: &Bytes) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
-        if data.is_empty() {
-            return Err(SequencingParserError::NoDataProvided);
-        }
-
-        match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
-            L2MessageKind::Batch => decompress_transactions(&data[1..]),
-            L2MessageKind::SignedTx => Ok(vec![(
-                data.clone(),
-                signed_tx_hash(&data[1..])
-                    .map_err(|e| SequencingParserError::InvalidTxData(e.to_string()))?,
-            )]),
-            // The sequencing contract ensures that unsigned transactions are valid
-            L2MessageKind::UnsignedUserTx | L2MessageKind::ContractTx => {
-                if data.len() > MAX_L2_MESSAGE_SIZE {
-                    return Err(SequencingParserError::InvalidTxData(
-                        "dropping tx greater than the max l2 message size".to_string(),
-                    ));
-                }
-                // TODO(SEQ-1370): compute tx hash for unsigned txs
-                Ok(vec![(data.clone(), Default::default())])
+    match data[0].try_into().map_err(|_| SequencingParserError::UnexpectedDataType)? {
+        L2MessageKind::Batch => decompress_transactions(&data[1..]),
+        L2MessageKind::SignedTx => Ok(vec![(
+            data.clone(),
+            signed_tx_hash(&data[1..])
+                .map_err(|e| SequencingParserError::InvalidTxData(e.to_string()))?,
+        )]),
+        // The sequencing contract ensures that unsigned transactions are valid
+        L2MessageKind::UnsignedUserTx | L2MessageKind::ContractTx => {
+            if data.len() > MAX_L2_MESSAGE_SIZE {
+                return Err(SequencingParserError::InvalidTxData(
+                    "dropping tx greater than the max l2 message size".to_string(),
+                ));
             }
+            // TODO(SEQ-1370): compute tx hash for unsigned txs
+            Ok(vec![(data.clone(), Default::default())])
         }
     }
+}
 
-    /// Decodes the event data into a vector of transactions
-    pub fn get_event_transactions(
-        &self,
-        eth_log: &Log,
-    ) -> Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
-        if !self.is_log_transaction_processed(eth_log) {
-            return Err(SequencingParserError::InvalidLogEvent);
-        }
-        let decoded_event = TransactionProcessed::decode_log_data_validate(&eth_log.data)
-            .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
+/// Checks if a log is a `TransactionProcessed` event
+fn is_log_transaction_processed(eth_log: &Log, sequencing_contract: &Address) -> bool {
+    eth_log.address == *sequencing_contract &&
+        eth_log.topics().first().is_some_and(|t| *t == TransactionProcessed::SIGNATURE_HASH)
+}
 
-        // Decode the transactions
-        Self::decode_event_data(&decoded_event.data)
+/// Decodes the event data into a vector of transactions
+pub fn get_event_transactions(
+    eth_log: &Log,
+    sequencing_contract: &Address,
+) -> eyre::Result<Vec<(Bytes, TxHash)>, SequencingParserError> {
+    if !is_log_transaction_processed(eth_log, sequencing_contract) {
+        return Err(SequencingParserError::InvalidLogEvent);
     }
+    let decoded_event = TransactionProcessed::decode_log_data_validate(&eth_log.data)
+        .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
+
+    // Decode the transactions
+    decode_event_data(&decoded_event.data)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{hex, primitives::B256, sol_types::SolValue};
+    use alloy::{
+        hex,
+        primitives::{keccak256, B256},
+        sol_types::SolValue,
+    };
 
     const DUMMY_TXN_VALUE: &[u8] = &[L2MessageKind::UnsignedUserTx as u8];
 
@@ -229,39 +216,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_new_parser() {
-        let contract_address: Address =
-            "0x000000000000000000000000000000000000abcd".parse().unwrap();
-
-        let parser = SequencingTransactionParser::new(contract_address);
-        assert_eq!(parser.sequencing_contract_address, contract_address);
-    }
-
-    #[tokio::test]
     async fn test_is_log_transaction_processed() {
         let contract_address: Address =
             "0x000000000000000000000000000000000000abcd".parse().unwrap();
-        let parser: SequencingTransactionParser =
-            SequencingTransactionParser::new(contract_address);
-
         let log = generate_valid_test_log(contract_address);
 
-        assert!(parser.is_log_transaction_processed(&log));
+        assert!(is_log_transaction_processed(&log, &contract_address));
 
         let unrelated_contract_address: Address =
             "0x110000000000000000000000000000000000abcd".parse().unwrap();
         let unrelated_log = generate_valid_test_log(unrelated_contract_address);
 
-        assert!(!parser.is_log_transaction_processed(&unrelated_log));
+        assert!(!is_log_transaction_processed(&unrelated_log, &contract_address));
     }
 
     #[tokio::test]
     async fn test_get_event_transactions_valid_log() {
         let contract_address: Address =
             "0x000000000000000000000000000000000000abcd".parse().unwrap();
-        let parser = SequencingTransactionParser::new(contract_address);
         let log = generate_valid_test_log(contract_address);
-        let result = parser.get_event_transactions(&log);
+        let result = get_event_transactions(&log, &contract_address);
         assert!(result.is_ok());
         let transactions = result.unwrap();
         assert_eq!(transactions.len(), 1);
@@ -272,13 +246,12 @@ mod tests {
     async fn test_get_event_transactions_invalid_log() {
         let contract_address: Address =
             "0x000000000000000000000000000000000000abcd".parse().unwrap();
-        let parser = SequencingTransactionParser::new(contract_address);
 
         let unrelated_contract_address: Address =
             "0x110000000000000000000000000000000000abcd".parse().unwrap();
         let log = generate_valid_test_log(unrelated_contract_address);
 
-        let result = parser.get_event_transactions(&log);
+        let result = get_event_transactions(&log, &contract_address);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
     }

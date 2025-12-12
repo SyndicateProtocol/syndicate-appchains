@@ -115,6 +115,7 @@ async fn spin_up_syndicate_stack(
         appchain_chain_id,
         opt.finality_delay,
         None,
+        None,
         Some(settlement_rpc_url.clone()),
         Some(config_manager_address),
     )
@@ -132,6 +133,7 @@ async fn spin_up_syndicate_stack(
     let sequencing_chain_ingestor = start_component(
         "synd-chain-ingestor",
         seq_chain_ingestor_cfg.port,
+        HashMap::new(),
         seq_chain_ingestor_cfg.cli_args(),
         Default::default(),
     )
@@ -149,6 +151,7 @@ async fn spin_up_syndicate_stack(
     let settlement_chain_ingestor = start_component(
         "synd-chain-ingestor",
         set_chain_ingestor_cfg.port,
+        HashMap::new(),
         set_chain_ingestor_cfg.cli_args(),
         Default::default(),
     )
@@ -174,6 +177,7 @@ async fn spin_up_syndicate_stack(
     let translator = start_component(
         "synd-translator",
         translator_config.port,
+        HashMap::new(),
         translator_config.cli_args(),
         vec![],
     )
@@ -212,6 +216,7 @@ async fn spin_up_syndicate_stack(
         "synd-maestro",
         // `/health` is proxied to RPC method
         maestro_config.port,
+        HashMap::new(),
         maestro_config.cli_args(),
         Default::default(),
     )
@@ -228,6 +233,7 @@ async fn spin_up_syndicate_stack(
     let batch_sequencer = start_component(
         "synd-batch-sequencer",
         batch_sequencer_config.port,
+        HashMap::new(),
         batch_sequencer_config.cli_args(),
         Default::default(),
     )

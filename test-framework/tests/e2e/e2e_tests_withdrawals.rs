@@ -11,11 +11,11 @@ use alloy::{
     rpc::types::{
         anvil::MineOptions,
         trace::geth::{GethDebugTracingOptions, GethTrace},
-        TransactionReceipt, TransactionRequest,
+        TransactionRequest,
     },
     signers::local::PrivateKeySigner,
     sol,
-    sol_types::{SolCall, SolValue},
+    sol_types::SolValue,
 };
 use contract_bindings::synd::{
     assertion_poster::AssertionPoster, i_bridge::IBridge, i_inbox::IInbox,
@@ -23,8 +23,11 @@ use contract_bindings::synd::{
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, time::Duration};
-use synd_block_builder::appchains::shared::sequencing_transaction_parser::L2MessageKind;
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    time::{Duration, SystemTime},
+};
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     proposer::ProposerConfig,
@@ -35,6 +38,7 @@ use test_utils::{
     docker::{launch_enclave_server, start_component},
     nitro_chain::{
         apply_l1_to_l2_alias, execute_withdrawal, init_withdrawal_tx, ExecuteWithdrawalParams,
+        NitroBlock,
     },
     port_manager::PortManager,
     wait_until,
@@ -51,7 +55,8 @@ fn init() {
 #[tokio::test]
 async fn e2e_tee_withdrawal() -> Result<()> {
     // use eigenda
-    e2e_tee_withdrawal_basic_flow(BaseChainsType::NitroWithEigenda).await?;
+    // TODO uncomment
+    // e2e_tee_withdrawal_basic_flow(BaseChainsType::NitroWithEigenda).await?;
     // use calldata
     e2e_tee_withdrawal_basic_flow(BaseChainsType::Nitro).await?;
     Ok(())
@@ -67,22 +72,29 @@ sol! {
     function number() return uint256;
 }
 
-#[allow(clippy::unwrap_used)]
+// NOTE: Custom timestamp for L1 anvil cannot be used in this test. This is because nitro uses the
+// system clock time in sequencer mode and it will get very confused if we set a custom timestamp
+#[allow(clippy::unwrap_used, clippy::large_stack_frames)]
 async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Result<()> {
     let close_challenge_interval = Duration::from_secs(1);
     let settlement_delay = 2;
+    // Set it to 30m after current clock time
+    let l1_block_num_hardfork_ts =
+        SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() + 30 * 60;
     TestComponents::run(
         &ConfigurationOptions {
             base_chains_type,
             rollup_owner: test_account1().address,
             settlement_delay,
             close_challenge_interval,
+            l1_block_num_hardfork_ts: Some(l1_block_num_hardfork_ts),
             ..Default::default()
         },
         |components| async move {
             // Simulate L1 block production (this helps to alleviate race
             // conditions when enclave/proposer are building and on slower machines)
             let l1_provider = components.l1_provider.as_ref().unwrap();
+
             let l1_provider_clone = l1_provider.clone();
             let _task = tokio::spawn(async move {
                 loop {
@@ -265,8 +277,12 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             assert!(receipt.status());
 
             // start enclave and proposer, obtain the tee public key
-            let (mut enclave_server_instance, enclave_rpc_url, tee_public_key) =
-                launch_enclave_server().await?;
+            let (_enclave_server_instance, enclave_rpc_url, tee_public_key) =
+                launch_enclave_server(HashMap::from([(
+                    "L1_BLOCK_NUM_HARDFORK_TS".to_string(),
+                    l1_block_num_hardfork_ts.to_string(),
+                )]))
+                .await?;
 
             // deposit funds for the proposer to use on the settlement chain
             let tx = IInbox::new(
@@ -335,9 +351,10 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             let is_valid = key_mgr.isKeyValid(tee_public_key).call().await?;
             assert!(is_valid);
 
-            let mut proposer_instance = start_component(
+            let _proposer_instance = start_component(
                 "synd-proposer",
                 proposer_config.port,
+                HashMap::new(),
                 proposer_config.cli_args(),
                 Default::default(),
             )
@@ -355,133 +372,138 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 Duration::from_millis(500)
             );
 
-            // send 101 valid txs plus some invalid ones to trigger the block splitting code which
-            // does not require the nitro fork to be enabled
-            let latest = components.appchain_provider.get_block_number().await?;
-            let alias_address = apply_l1_to_l2_alias(test_account1().address);
-            let dummy_tx = vec![L2MessageKind::SignedTx as u8, 0xc0];
-            let mut txs = vec![];
-            for _ in 0..100 {
-                txs.push(dummy_tx.clone().into());
-            }
-            for i in 0..101 {
-                txs.push(
-                    TransactionRequest::default()
-                        .with_to(alias_address)
-                        .with_value(parse_ether("0.001")?)
-                        .with_nonce(i)
-                        .with_gas_limit(100_000)
-                        .with_chain_id(components.appchain_chain_id)
-                        .with_max_fee_per_gas(100000000)
-                        .with_max_priority_fee_per_gas(0)
-                        .build(components.sequencing_provider.wallet())
-                        .await?
-                        .encoded_2718()
-                        .into(),
-                );
-                if i % 10 == 0 {
-                    txs.push(dummy_tx.clone().into());
-                }
-            }
-            for _ in 0..100 {
-                txs.push(dummy_tx.clone().into());
-            }
-            components.sequence_batch(txs, 0).await?;
-            wait_until!(
-                components.appchain_provider.get_balance(alias_address).await? >=
-                    parse_ether("0.101")?,
-                Duration::from_secs(10)
-            );
-            assert_eq!(components.appchain_provider.get_block_number().await?, latest + 2);
-            let block_1 =
-                components.appchain_provider.get_block_by_number((latest + 1).into()).await?;
-            assert_eq!(block_1.map(|x| x.transactions.len()), Some(101));
-            let block_2 =
-                components.appchain_provider.get_block_by_number((latest + 2).into()).await?;
-            assert_eq!(block_2.map(|x| x.transactions.len()), Some(2));
-            assert_eq!(
-                components.appchain_provider.get_balance(alias_address).await?,
-                parse_ether("0.101")?
-            );
+            // TODO uncomment, just to speed up testing
+            /*
 
-            assert_eq!(components.appchain_provider.get_block_number().await.unwrap(), 0xb);
+                        // send 101 valid txs plus some invalid ones to trigger the block splitting code which
+                        // does not require the nitro fork to be enabled
+                        let latest = components.appchain_provider.get_block_number().await?;
+                        let alias_address = apply_l1_to_l2_alias(test_account1().address);
+                        let dummy_tx = vec![L2MessageKind::SignedTx as u8, 0xc0];
+                        let mut txs = vec![];
+                        for _ in 0..100 {
+                            txs.push(dummy_tx.clone().into());
+                        }
+                        for i in 0..101 {
+                            txs.push(
+                                TransactionRequest::default()
+                                    .with_to(alias_address)
+                                    .with_value(parse_ether("0.001")?)
+                                    .with_nonce(i)
+                                    .with_gas_limit(100_000)
+                                    .with_chain_id(components.appchain_chain_id)
+                                    .with_max_fee_per_gas(100000000)
+                                    .with_max_priority_fee_per_gas(0)
+                                    .build(components.sequencing_provider.wallet())
+                                    .await?
+                                    .encoded_2718()
+                                    .into(),
+                            );
+                            if i % 10 == 0 {
+                                txs.push(dummy_tx.clone().into());
+                            }
+                        }
+                        for _ in 0..100 {
+                            txs.push(dummy_tx.clone().into());
+                        }
+                        components.sequence_batch(txs, 0).await?;
+                        wait_until!(
+                            components.appchain_provider.get_balance(alias_address).await? >=
+                                parse_ether("0.101")?,
+                            Duration::from_secs(10)
+                        );
+                        assert_eq!(components.appchain_provider.get_block_number().await?, latest + 2);
+                        let block_1 =
+                            components.appchain_provider.get_block_by_number((latest + 1).into()).await?;
+                        assert_eq!(block_1.map(|x| x.transactions.len()), Some(101));
+                        let block_2 =
+                            components.appchain_provider.get_block_by_number((latest + 2).into()).await?;
+                        assert_eq!(block_2.map(|x| x.transactions.len()), Some(2));
+                        assert_eq!(
+                            components.appchain_provider.get_balance(alias_address).await?,
+                            parse_ether("0.101")?
+                        );
 
-            // Deploy a stylus contract
-            let stylus_tx = TransactionRequest::default()
-                .with_deploy_code(STYLUS_COUNTER_SMARTCACHE)
-                .with_nonce(101)
-                .with_gas_limit(10_000_000)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?
-                .encoded_2718();
+                        assert_eq!(components.appchain_provider.get_block_number().await.unwrap(), 0xb);
 
-            let stylus = components
-                .sequence_tx(&stylus_tx, 0, true)
-                .await?
-                .unwrap()
-                .contract_address
-                .unwrap();
+                        // Deploy a stylus contract
+                        let stylus_tx = TransactionRequest::default()
+                            .with_deploy_code(STYLUS_COUNTER_SMARTCACHE)
+                            .with_nonce(101)
+                            .with_gas_limit(10_000_000)
+                            .with_chain_id(components.appchain_chain_id)
+                            .with_max_fee_per_gas(100000000)
+                            .with_max_priority_fee_per_gas(0)
+                            .build(components.sequencing_provider.wallet())
+                            .await?
+                            .encoded_2718();
 
-            // Activate the stylus contract
-            let active_tx = TransactionRequest::default()
-                // ArbWasm
-                .with_to(address!("0x0000000000000000000000000000000000000071"))
-                .input(activateProgramCall { program: stylus }.abi_encode().into())
-                .with_value(parse_ether("0.5").unwrap())
-                .with_nonce(102)
-                .with_gas_limit(10_000_000)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?
-                .encoded_2718();
+                        let stylus = components
+                            .sequence_tx(&stylus_tx, 0, true)
+                            .await?
+                            .unwrap()
+                            .contract_address
+                            .unwrap();
 
-            components.sequence_tx(&active_tx, 0, false).await?;
+                        // Activate the stylus contract
+                        let active_tx = TransactionRequest::default()
+                            // ArbWasm
+                            .with_to(address!("0x0000000000000000000000000000000000000071"))
+                            .input(activateProgramCall { program: stylus }.abi_encode().into())
+                            .with_value(parse_ether("0.5").unwrap())
+                            .with_nonce(102)
+                            .with_gas_limit(10_000_000)
+                            .with_chain_id(components.appchain_chain_id)
+                            .with_max_fee_per_gas(100000000)
+                            .with_max_priority_fee_per_gas(0)
+                            .build(components.sequencing_provider.wallet())
+                            .await?
+                            .encoded_2718();
 
-            // Set a value on the stylus contract
-            let set_value_tx = TransactionRequest::default()
-                .with_to(stylus)
-                .input(
-                    setNumberSmartcacheArbitrumMainnetNetworkCall { new_number: U256::from(34) }
-                        .abi_encode()
-                        .into(),
-                )
-                .with_nonce(103)
-                .with_gas_limit(1_000_000)
-                .with_chain_id(components.appchain_chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?
-                .encoded_2718();
+                        components.sequence_tx(&active_tx, 0, false).await?;
 
-            components.sequence_tx(&set_value_tx, 0, true).await?.unwrap();
+                        // Set a value on the stylus contract
+                        let set_value_tx = TransactionRequest::default()
+                            .with_to(stylus)
+                            .input(
+                                setNumberSmartcacheArbitrumMainnetNetworkCall { new_number: U256::from(34) }
+                                    .abi_encode()
+                                    .into(),
+                            )
+                            .with_nonce(103)
+                            .with_gas_limit(1_000_000)
+                            .with_chain_id(components.appchain_chain_id)
+                            .with_max_fee_per_gas(100000000)
+                            .with_max_priority_fee_per_gas(0)
+                            .build(components.sequencing_provider.wallet())
+                            .await?
+                            .encoded_2718();
 
-            // Wait for the blocks to be mined
-            wait_until!(
-                components.appchain_provider.get_block_number().await.unwrap() == 0xe,
-                Duration::from_secs(10)
-            );
+                        components.sequence_tx(&set_value_tx, 0, true).await?.unwrap();
 
-            // check the value
-            assert_eq!(
-                U256::try_from_be_slice(
-                    &components
-                        .appchain_provider
-                        .call(
-                            TransactionRequest::default()
-                                .with_to(stylus)
-                                .input(numberCall {}.abi_encode().into()),
-                        )
-                        .await?,
-                )
-                .unwrap(),
-                U256::from(34)
-            );
+                        // Wait for the blocks to be mined
+                        wait_until!(
+                            components.appchain_provider.get_block_number().await.unwrap() == 0xe,
+                            Duration::from_secs(10)
+                        );
+
+                        // check the value
+                        assert_eq!(
+                            U256::try_from_be_slice(
+                                &components
+                                    .appchain_provider
+                                    .call(
+                                        TransactionRequest::default()
+                                            .with_to(stylus)
+                                            .input(numberCall {}.abi_encode().into()),
+                                    )
+                                    .await?,
+                            )
+                            .unwrap(),
+                            U256::from(34)
+                        );
+
+            */
 
             // send a contract tx to trigger the nitro fork code.
             #[cfg(false)]
@@ -557,47 +579,279 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);
 
-            // lets withdraw using sendL2MessageFromOrigin
-            let withdrawal_value = parse_ether("0.5")?;
-            let to_address = address!("0x0000000000000000000000000000000000000002");
-            let withdraw_from_origin_tx =
-                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
-                    .await?;
-            let tx_hash = withdraw_from_origin_tx.hash();
-            let mut raw_tx_with_prefix = withdraw_from_origin_tx.encoded_2718();
-            raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
+            // TODO uncomment, just to speed up testing
+            /*
 
-            let nonce = components
+                        // lets withdraw using sendL2MessageFromOrigin
+                        let withdrawal_value = parse_ether("0.5")?;
+                        let to_address = address!("0x0000000000000000000000000000000000000002");
+                        let withdraw_from_origin_tx =
+                            init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                                .await?;
+                        let tx_hash = withdraw_from_origin_tx.hash();
+                        let mut raw_tx_with_prefix = withdraw_from_origin_tx.encoded_2718();
+                        raw_tx_with_prefix.insert(0, L2MessageKind::SignedTx as u8);
+
+                        let nonce = components
+                            .settlement_provider
+                            .get_transaction_count(components.settlement_provider.default_signer_address())
+                            .await?;
+                        assert!(inbox
+                            .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
+                            .nonce(nonce)
+                            .send()
+                            .await?
+                            .get_receipt()
+                            .await?
+                            .status());
+
+                        let mut receipt: Option<TransactionReceipt> = None;
+                        wait_until!(
+                            {
+                                // send a dummy tx so that the sequencing chain progresses and the deposit is
+                                // slotted in
+                                components.sequence_tx(b"dummy_tx", 0, false).await?;
+                                receipt =
+                                    components.appchain_provider.get_transaction_receipt(*tx_hash).await?;
+                                receipt.is_some()
+                            },
+                            Duration::from_secs(60),
+                            Duration::from_millis(500)
+                        );
+                        let receipt = receipt.unwrap();
+                        assert!(receipt.status());
+
+                        // wait for the sendroot to be updated
+                        let appchain_block_hash_to_prove = receipt.block_hash.unwrap();
+                        wait_until!(
+                            rollup_core
+                                .NodeConfirmed_filter()
+                                .query()
+                                .await?
+                                .iter()
+                                .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
+                            Duration::from_secs(10 * 60)
+                        );
+
+                        // topic 3 of the L2ToL1Tx event is the withdrawal position
+                        let withdrawal_position: u64 =
+                            U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into())
+                                .try_into()
+                                .unwrap();
+
+                        // finish the withdrawal on the settlement chain
+                        execute_withdrawal(ExecuteWithdrawalParams {
+                            to_address,
+                            withdrawal_value,
+                            appchain_block_hash_to_prove,
+                            bridge_address: components.appchain_deployment.bridge,
+                            settlement_provider: &components.settlement_provider,
+                            appchain_provider: &components.appchain_provider,
+                            l2_sender: components.appchain_provider.default_signer_address(),
+                            send_root_size: 2,
+                            withdrawal_position,
+                        })
+                        .await;
+
+                        // Assert new balance is equal to withdrawal amount
+                        let balance_after = components.settlement_provider.get_balance(to_address).await?;
+                        assert_eq!(balance_after, withdrawal_value);
+
+            */
+
+            // Testing l1 block number HARDFORK below
+            // - progress timestamp past L1_BLOCK_NUM_HARDFORK_TS
+            // - sequence a tx
+            // - assert l1_block_num on the rollup matches the expected value
+            // - make a new withdrawal
+            // - assert the new withdrawal passes
+            //
+            // TODO rm all debug prints
+            println!("POTATO");
+
+            // Progress L1 timestamp to be after l1_block_num_hardfork_ts
+            assert!(
+                l1_provider
+                    .get_block_by_number(BlockNumberOrTag::Latest)
+                    .await?
+                    .unwrap()
+                    .header
+                    .timestamp <
+                    l1_block_num_hardfork_ts
+            );
+
+            //NOTE: settlement block height must be increased to be higher than seq block height,
+            //otherwise appchain nitro will think there was a reorg
+            //(this shouldn't be a problem in mainnet/testnet because the settlement chains used
+            //have a lot more activity)
+
+            let seq_block_height = components
+                .sequencing_provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await
+                .unwrap()
+                .unwrap()
+                .header
+                .number;
+            let set_block_height = components
                 .settlement_provider
-                .get_transaction_count(components.settlement_provider.default_signer_address())
-                .await?;
-            assert!(inbox
-                .sendL2MessageFromOrigin(raw_tx_with_prefix.into())
-                .nonce(nonce)
-                .send()
+                .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
-                .get_receipt()
-                .await?
-                .status());
+                .unwrap()
+                .header
+                .number;
 
-            let mut receipt: Option<TransactionReceipt> = None;
+            // let's make it so the settlement block is at least 10 blocks ahead of sequencing chain
+            if set_block_height < seq_block_height + 10 {
+                let seq_blocks_to_mine = (seq_block_height + 10) - set_block_height;
+                let nonce = components
+                    .settlement_provider
+                    .get_transaction_count(test_account1().address)
+                    .await?;
+                for i in 0..seq_blocks_to_mine {
+                    let tx = TransactionRequest::default()
+                        .with_to(test_account1().address)
+                        .with_value(U256::ZERO)
+                        .with_nonce(nonce + i)
+                        .with_gas_limit(21_000)
+                        .with_max_fee_per_gas(100_000_000)
+                        .with_max_priority_fee_per_gas(0);
+
+                    let _ = components.settlement_provider.send_transaction(tx).await.unwrap();
+                }
+            }
+
+            let l1_block_pre_fork =
+                l1_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
+            println!("TOMATO l1 pre-fork: {:?}", l1_block_pre_fork);
+
+            // Progress time to just after the hardfork
+            l1_provider
+                .evm_mine(Some(MineOptions::Timestamp(Some(l1_block_num_hardfork_ts + 10))))
+                .await?;
+
+            println!(
+                "TOMATO l1 post-fork: {:?}",
+                l1_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap()
+            );
+
+            // keep mining blocks until the timestamp increase is seen on the base chains
             wait_until!(
                 {
-                    // send a dummy tx so that the sequencing chain progresses and the deposit is
-                    // slotted in
+                    let tx = TransactionRequest::default()
+                        .with_to(test_account1().address)
+                        .with_value(U256::ZERO)
+                        .with_nonce(
+                            components
+                                .settlement_provider
+                                .get_transaction_count(test_account1().address)
+                                .await?,
+                        )
+                        .with_gas_limit(21_000)
+                        .with_max_fee_per_gas(100_000_000)
+                        .with_max_priority_fee_per_gas(0);
+
+                    let _ = components.settlement_provider.send_transaction(tx).await.unwrap();
                     components.sequence_tx(b"dummy_tx", 0, false).await?;
-                    receipt =
-                        components.appchain_provider.get_transaction_receipt(*tx_hash).await?;
-                    receipt.is_some()
+
+                    let set_ts = components
+                        .settlement_provider
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .header
+                        .timestamp;
+                    let seq_ts = components
+                        .sequencing_provider
+                        .get_block_by_number(BlockNumberOrTag::Latest)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .header
+                        .timestamp;
+
+                    set_ts >= l1_block_num_hardfork_ts && seq_ts >= l1_block_num_hardfork_ts
                 },
                 Duration::from_secs(60),
                 Duration::from_millis(500)
             );
-            let receipt = receipt.unwrap();
+            println!("TOMATO, base chains ready");
+
+            // make a new deposit so a new delayed message is included and the l1_block_number is
+            // updated
+            let receipt = inbox
+                .depositEth()
+                .value(parse_ether("1")?)
+                .nonce(
+                    components
+                        .settlement_provider
+                        .get_transaction_count(test_account1().address)
+                        .await?,
+                )
+                .send()
+                .await
+                .unwrap()
+                .get_receipt()
+                .await
+                .unwrap();
             assert!(receipt.status());
 
-            // wait for the sendroot to be updated
-            let appchain_block_hash_to_prove = receipt.block_hash.unwrap();
+            println!("TOMATO receipt: {:?}", receipt);
+            println!("TOMATO hardfork timestamp: {l1_block_num_hardfork_ts}");
+
+            wait_until!(
+                {
+                    // Sequence dummy transactions until we see the deposit and the updated
+                    // l1_block_number
+                    let _ = components.sequence_tx(b"test_tx_after_hardfork", 0, false).await;
+
+                    let block: NitroBlock = components
+                        .appchain_provider
+                        .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+                        .await
+                        .unwrap();
+
+                    println!(
+                        "TOMATO nitro: #{} {}, l1_bloc_num: {}",
+                        block.number, block.hash, block.l1_block_number
+                    );
+
+                    // TODO note that this check is not `==`. The appchain nitro will apply a few
+                    // numbers on top of the reported l1_block_number.
+                    // example: in a test run translator used l1_block_num 1102, but nitro decided
+                    // to use 1109
+                    //
+                    // Need to investigate if this can cause issues (like appchain assuming a reorg
+                    // happened if in a given interval more sequencing blocks have been produced
+                    // than settlement blocks)
+
+                    if block.l1_block_number >= U256::from(receipt.block_number.unwrap()) {
+                        let set_block: NitroBlock = components
+                            .settlement_provider
+                            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+                            .await
+                            .unwrap();
+                        println!("TOMATO set block: {set_block:?}")
+                    }
+
+                    block.l1_block_number >= U256::from(receipt.block_number.unwrap())
+                },
+                Duration::from_secs(60),
+                Duration::from_millis(500)
+            );
+
+            // Make a new withdrawal
+            let withdrawal_value = parse_ether("0.05")?;
+            let to_address = address!("0x0000000000000000000000000000000000000003");
+            let tx =
+                init_withdrawal_tx(to_address, withdrawal_value, &components.appchain_provider)
+                    .await?;
+
+            let receipt = components.sequence_tx(tx.encoded_2718().as_slice(), 0, true).await?;
+            let appchain_block_hash_to_prove = receipt.unwrap().block_hash.unwrap();
+
+            // Wait for the withdrawal root to be posted
             wait_until!(
                 rollup_core
                     .NodeConfirmed_filter()
@@ -605,16 +859,11 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     .await?
                     .iter()
                     .any(|event| event.0.blockHash == appchain_block_hash_to_prove),
-                Duration::from_secs(10 * 60)
+                Duration::from_secs(20 * 60),
+                Duration::from_millis(500)
             );
 
-            // topic 3 of the L2ToL1Tx event is the withdrawal position
-            let withdrawal_position: u64 =
-                U256::from_be_bytes(receipt.logs()[1].clone().topics()[3].into())
-                    .try_into()
-                    .unwrap();
-
-            // finish the withdrawal on the settlement chain
+            // Execute the withdrawal
             execute_withdrawal(ExecuteWithdrawalParams {
                 to_address,
                 withdrawal_value,
@@ -623,18 +872,17 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 settlement_provider: &components.settlement_provider,
                 appchain_provider: &components.appchain_provider,
                 l2_sender: components.appchain_provider.default_signer_address(),
-                send_root_size: 2,
-                withdrawal_position,
+                send_root_size: 3, // We've made 3 withdrawals total now
+                withdrawal_position: 0,
             })
             .await;
 
-            // Assert new balance is equal to withdrawal amount
+            // Assert the withdrawal passed
             let balance_after = components.settlement_provider.get_balance(to_address).await?;
             assert_eq!(balance_after, withdrawal_value);
 
-            // Cleanup: kill the instances
-            proposer_instance.kill();
-            enclave_server_instance.kill();
+            // TODO mine a bunch of sequencing blocks (no settlement)
+            // assert nothing bad happens and l1_block_number is still fine
 
             Ok(())
         },

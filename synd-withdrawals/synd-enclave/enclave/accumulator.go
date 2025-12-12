@@ -99,11 +99,11 @@ func buildL2MessageSegment(txs [][]byte) ([]byte, error) {
 
 const TX_PER_BLOCK = 100
 
-func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
+func buildBatch(txs [][]byte, l1BlockNum uint64, l1BlockTimestamp uint64) ([]byte, error) {
 	var data []byte
 
-	if ts != 0 {
-		segment, err := rlp.EncodeToBytes(ts)
+	if l1BlockTimestamp != 0 {
+		segment, err := rlp.EncodeToBytes(l1BlockTimestamp)
 		if err != nil {
 			return nil, err
 		}
@@ -114,8 +114,10 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 		data = append(data, segment...)
 	}
 
-	if blockNum != 0 {
-		segment, err := rlp.EncodeToBytes(blockNum)
+	// TODO is this correct? why not apply this segment after the hardfork?
+	// if l1BlockNum != 0 && l1BlockTimestamp < L1_BLOCK_NUM_HARDFORK_TS {
+	if l1BlockNum != 0 {
+		segment, err := rlp.EncodeToBytes(l1BlockNum)
 		if err != nil {
 			return nil, err
 		}
@@ -126,24 +128,24 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 		data = append(data, segment...)
 	}
 
-	var block [][]byte
+	var batchTxs [][]byte
 	size := 1
 	for _, tx := range txs {
 		txSize := len(tx) + 8
 		size += txSize
-		if len(block) >= TX_PER_BLOCK || (len(block) > 0 && size > arbostypes.MaxL2MessageSize) {
-			segment, err := buildL2MessageSegment(block)
+		if len(batchTxs) >= TX_PER_BLOCK || (len(batchTxs) > 0 && size > arbostypes.MaxL2MessageSize) {
+			segment, err := buildL2MessageSegment(batchTxs)
 			if err != nil {
 				return nil, err
 			}
 			data = append(data, segment...)
-			block = nil
+			batchTxs = nil
 			size = 1 + txSize
 		}
-		block = append(block, tx)
+		batchTxs = append(batchTxs, tx)
 	}
-	if len(block) > 0 {
-		segment, err := buildL2MessageSegment(block)
+	if len(batchTxs) > 0 {
+		segment, err := buildL2MessageSegment(batchTxs)
 		if err != nil {
 			return nil, err
 		}
@@ -159,9 +161,9 @@ func buildBatch(txs [][]byte, ts uint64, blockNum uint64) ([]byte, error) {
 }
 
 type SyndicateAccumulator struct {
-	Address  common.Address
-	Batches  []teetypes.SyndicateBatch
-	BlockNum uint64
+	Address     common.Address
+	Batches     []teetypes.SyndicateBatch
+	SeqBlockNum uint64
 }
 
 var TransactionProcessedEvent abi.Event
@@ -174,11 +176,11 @@ func init() {
 	TransactionProcessedEvent = abi.Events["TransactionProcessed"]
 }
 
-func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.Receipts) error {
-	if s.BlockNum > 0 && s.BlockNum+1 != block.NumberU64() {
+func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error {
+	if s.SeqBlockNum > 0 && s.SeqBlockNum+1 != block.NumberU64() {
 		return errors.New("unexpected block number")
 	}
-	s.BlockNum = block.NumberU64()
+	s.SeqBlockNum = block.NumberU64()
 	var txs [][]byte
 	for _, receipt := range receipts {
 		for _, log := range receipt.Logs {
@@ -201,14 +203,15 @@ func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.R
 	var data []byte
 	if len(txs) > 0 {
 		var err error
-		data, err = buildBatch(txs, block.Time(), block.NumberU64())
+		data, err = buildBatch(txs, l1BlockNum, timestamp)
 		if err != nil {
 			return err
 		}
 	}
 	s.Batches = append(s.Batches, teetypes.SyndicateBatch{
-		Timestamp: block.Time(),
-		Data:      data,
+		Timestamp:     block.Time(),
+		Data:          data,
+		L1BlockNumber: l1BlockNum,
 	})
 	return nil
 }

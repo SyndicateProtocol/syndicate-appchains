@@ -501,7 +501,7 @@ mod tests {
         assert_eq!(mchain.get_block_number().await, 2);
         mchain
             .add_batch(&MBlock {
-                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty.clone()])),
+                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty.clone()], 0)),
                 slot: Slot { seq_block_number: 2, ..Default::default() },
                 timestamp: 0,
             })
@@ -510,7 +510,7 @@ mod tests {
         assert_eq!(mchain.get_block_number().await, 3);
         mchain
             .add_batch(&MBlock {
-                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty; 2])),
+                payload: Some(ArbitrumBatch::new(Default::default(), vec![empty; 2], 0)),
                 slot: Slot { seq_block_number: 3, ..Default::default() },
                 timestamp: 0,
             })

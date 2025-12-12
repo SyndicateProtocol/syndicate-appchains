@@ -36,14 +36,13 @@ pub fn create_log(
 
 /// Helper function to create a mock header object
 pub fn create_header(batch_count: u64, offset: u64, block: &Block) -> alloy::rpc::types::Header {
-    let l1_block_num = block.slot.seq_block_number;
     alloy::rpc::types::Header {
         inner: alloy::consensus::Header {
             number: batch_count + offset,
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
-            mix_hash: U256::from(l1_block_num)
+            mix_hash: U256::from(block.l1_block_number)
                 .checked_shl(64)
                 .unwrap()
                 .checked_add(U256::from(1))

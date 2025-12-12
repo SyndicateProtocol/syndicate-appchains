@@ -62,10 +62,11 @@ func (w *Wavm) GetBlockHeaderByHash(hash common.Hash) (*types.Header, error) {
 }
 
 type ValidationInput struct {
-	BlockHash    common.Hash
-	PreimageData map[arbutil.PreimageType][][]byte
-	Batches      [][]byte
-	Messages     [][]byte
+	BlockHash        common.Hash
+	PreimageData     map[arbutil.PreimageType][][]byte
+	Batches          [][]byte
+	Messages         [][]byte
+	MessagesBlockNum []uint64
 }
 
 func New(data ValidationInput) (*Wavm, error) {

@@ -228,14 +228,14 @@ func GetDelayedMessages(
 	start uint64,
 	endAcc common.Hash,
 	settlesToArbitrumRollup bool,
-) (common.Hash, [][]byte, bool, error) {
+) (common.Hash, [][]byte, []uint64, bool, error) {
 	endBlock, err := c.BlockNumber(ctx)
 	if err != nil {
-		return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block number")
+		return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to get block number")
 	}
 	acc, end, err := GetMessageAcc(ctx, c, bridge, 0)
 	if err != nil {
-		return common.Hash{}, nil, false, errors.Wrap(err, "failed to get message account data")
+		return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to get message account data")
 	}
 
 	if acc != endAcc {
@@ -248,14 +248,14 @@ func GetDelayedMessages(
 			[][]common.Hash{{messageDeliveredEventHash}, nil, {endAcc}},
 			1)
 		if err != nil {
-			return common.Hash{}, nil, false, err
+			return common.Hash{}, nil, nil, false, err
 		}
 		if len(logs) != 1 {
-			return common.Hash{}, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected 1", len(logs))
+			return common.Hash{}, nil, nil, false, fmt.Errorf("unexpected number of logs found: got %d, expected 1", len(logs))
 		}
 		end = logs[0].Topics[1].Big().Uint64()
 		if end == 0 {
-			return common.Hash{}, nil, false, errors.New("unexpected message index 0 found")
+			return common.Hash{}, nil, nil, false, errors.New("unexpected message index 0 found")
 		}
 		end--
 		endBlock = logs[0].BlockNumber
@@ -268,7 +268,7 @@ func GetDelayedMessages(
 		dummy = true
 	} else {
 		if start > end {
-			return common.Hash{}, nil, false, fmt.Errorf("start message %d is after end %d", start, end)
+			return common.Hash{}, nil, nil, false, fmt.Errorf("start message %d is after end %d", start, end)
 		}
 		if start < end {
 			indexes = append(indexes, common.BigToHash(big.NewInt(int64(start))))
@@ -283,21 +283,21 @@ func GetDelayedMessages(
 		[][]common.Hash{{messageDeliveredEventHash}, indexes},
 		uint64(len(indexes)))
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, nil, false, err
 	}
 	if len(logs) != len(indexes) {
-		return common.Hash{}, nil, false,
+		return common.Hash{}, nil, nil, false,
 			fmt.Errorf("unexpected number of logs found: got %d, expected %d", len(logs), len(indexes))
 	}
 
 	ibridge, err := bridgegen.NewBridge(bridge, c)
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, nil, false, err
 	}
 
 	seqInbox, err := ibridge.SequencerInbox(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, nil, false, err
 	}
 
 	addrs := []common.Address{bridge, seqInbox}
@@ -310,13 +310,13 @@ func GetDelayedMessages(
 				break
 			}
 
-			return common.Hash{}, nil, false, err
+			return common.Hash{}, nil, nil, false, err
 		}
 		addrs = append(addrs, inbox)
 		i++
 	}
 	if i == 0 {
-		return common.Hash{}, nil, false, errors.New("no inbox addresses found")
+		return common.Hash{}, nil, nil, false, errors.New("no inbox addresses found")
 	}
 
 	logs, err = getLogs(ctx, c, logs[0].BlockNumber, logs[len(logs)-1].BlockNumber,
@@ -325,7 +325,7 @@ func GetDelayedMessages(
 			{messageDeliveredEventHash, inboxMessageDeliveredEventHash, inboxMessageDeliveredFromOriginEventHash},
 		}, 0)
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, nil, false, err
 	}
 
 	if len(logs)%2 != 0 {
@@ -333,20 +333,21 @@ func GetDelayedMessages(
 			fmt.Println("LOG: ", log.Topics[0], log.TxHash, log.Address, log.Topics[1].Big().Uint64())
 		}
 
-		return common.Hash{}, nil, false, fmt.Errorf("even number of logs expected: got %d", len(logs))
+		return common.Hash{}, nil, nil, false, fmt.Errorf("even number of logs expected: got %d", len(logs))
 	}
 
 	iinbox, err := bridgegen.NewIDelayedMessageProvider(common.Address{}, c)
 	if err != nil {
-		return common.Hash{}, nil, false, err
+		return common.Hash{}, nil, nil, false, err
 	}
 
 	var msgs [][]byte
+	var msgsBlockNumbers []uint64
 	var prevAcc *common.Hash
 	for i := 0; i < len(logs); i += 2 {
 		msgDeliveredLog, err := ibridge.ParseMessageDelivered(logs[i])
 		if err != nil {
-			return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
+			return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 		}
 
 		inboxLog := logs[i+1]
@@ -358,7 +359,7 @@ func GetDelayedMessages(
 		case inboxMessageDeliveredEventHash:
 			dataLog, err := iinbox.ParseInboxMessageDelivered(inboxLog)
 			if err != nil {
-				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered log")
+				return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to parse message delivered log")
 			}
 			logData = dataLog.Data
 			logBlockNum = dataLog.Raw.BlockNumber
@@ -367,37 +368,37 @@ func GetDelayedMessages(
 		case inboxMessageDeliveredFromOriginEventHash:
 			dataLog, err := iinbox.ParseInboxMessageDeliveredFromOrigin(inboxLog)
 			if err != nil {
-				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse message delivered from origin log")
+				return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to parse message delivered from origin log")
 			}
 			// fetch the tx from the event
 			tx, _, err := c.TransactionByHash(ctx, inboxLog.TxHash)
 			if err != nil {
-				return common.Hash{}, nil, false, errors.Wrap(err, fmt.Sprintf("failed to get tx by hash %s", inboxLog.TxHash.String()))
+				return common.Hash{}, nil, nil, false, errors.Wrap(err, fmt.Sprintf("failed to get tx by hash %s", inboxLog.TxHash.String()))
 			}
 			if len(tx.Data()) < 4 {
-				return common.Hash{}, nil, false, errors.New("tx data too short")
+				return common.Hash{}, nil, nil, false, errors.New("tx data too short")
 			}
 			if l2MessageFromOriginCallSelector.Cmp(common.BytesToHash(tx.Data()[:4])) != 0 {
-				return common.Hash{}, nil, false, errors.New("invalid function selector")
+				return common.Hash{}, nil, nil, false, errors.New("invalid function selector")
 			}
 			args := make(map[string]interface{})
 			err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 			if err != nil {
-				return common.Hash{}, nil, false, errors.Wrap(err, "failed to parse inputs of sendL2MessageFromOrigin")
+				return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to parse inputs of sendL2MessageFromOrigin")
 			}
 			var ok bool
 			logData, ok = args["messageData"].([]byte)
 			if !ok {
-				return common.Hash{}, nil, false, errors.New("failed to cast messageData to []byte")
+				return common.Hash{}, nil, nil, false, errors.New("failed to cast messageData to []byte")
 			}
 			logBlockNum = dataLog.Raw.BlockNumber
 			logMsgIndex = dataLog.MessageNum
 		}
 		if msgDeliveredLog.MessageIndex.Cmp(logMsgIndex) != 0 {
-			return common.Hash{}, nil, false, errors.New("event log msg index mismatch")
+			return common.Hash{}, nil, nil, false, errors.New("event log msg index mismatch")
 		}
 		if msgDeliveredLog.Raw.BlockNumber != logBlockNum {
-			return common.Hash{}, nil, false, errors.New("event log block number mismatch")
+			return common.Hash{}, nil, nil, false, errors.New("event log block number mismatch")
 		}
 		// skip events prior to the start one
 		if msgDeliveredLog.MessageIndex.Cmp(big.NewInt(int64(start))) != 0 {
@@ -429,27 +430,32 @@ func GetDelayedMessages(
 		if settlesToArbitrumRollup {
 			block, err := c.BlockByHash(ctx, msgDeliveredLog.Raw.BlockHash)
 			if err != nil {
-				return common.Hash{}, nil, false, errors.Wrap(err, "failed to get block by hash")
+				return common.Hash{}, nil, nil, false, errors.Wrap(err, "failed to get block by hash")
 			}
 
 			// Override the block number with the L1 block number
-			// It is used during contract execution in nitro rollups
+			// this is necessary to match the on-chain accumulator.
+			// because nitro rollups solidity contracts get the l1_block_num as the return value of `block.number`,
+			// we need this data patch in order for the block numbers used to calculate the accumulators to match
 			l1BlockNum := types.DeserializeHeaderExtraInformation(block.Header()).L1BlockNumber
+			log.Info("TOMATO helpers.go", "msgIndex", msgDeliveredLog.MessageIndex, "settlementBlockNum", block.NumberU64(),
+				"l1BlockNum", l1BlockNum, "originalBlockNum", msg.Header.BlockNumber)
 			msg.Header.BlockNumber = l1BlockNum
 		}
 
 		data, err := msg.Serialize()
 		if err != nil {
-			return common.Hash{}, nil, false, err
+			return common.Hash{}, nil, nil, false, err
 		}
 
+		msgsBlockNumbers = append(msgsBlockNumbers, msgDeliveredLog.Raw.BlockNumber)
 		msgs = append(msgs, data)
 	}
 	if start != end+1 || prevAcc == nil {
-		return common.Hash{}, nil, false, fmt.Errorf("missing message: got %d, expected %d", start, end+1)
+		return common.Hash{}, nil, nil, false, fmt.Errorf("missing message: got %d, expected %d", start, end+1)
 	}
 
-	return *prevAcc, msgs, dummy, nil
+	return *prevAcc, msgs, msgsBlockNumbers, dummy, nil
 }
 
 func getNumBatches(batches []teetypes.SyndicateBatch, dmsgs [][]byte, setDelay uint64) uint64 {

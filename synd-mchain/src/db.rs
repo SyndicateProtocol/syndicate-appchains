@@ -8,8 +8,8 @@ use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 #[cfg(feature = "rocksdb")]
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use tracing::{debug, trace};
+use std::{env, fmt};
+use tracing::{debug, info, trace};
 
 /// VERSION must be bumped whenever a breaking change is made
 const VERSION: u64 = 4;
@@ -64,12 +64,18 @@ pub struct ArbitrumBatch {
     pub batch_data: Bytes,
     /// The delayed messages included in this batch
     pub delayed_messages: Vec<DelayedMessage>,
+    /// the l1 block number
+    pub l1_block_number: u64,
 }
 
 impl ArbitrumBatch {
     /// Creates a new [`ArbitrumBatch`]
-    pub const fn new(batch_data: Bytes, delayed_messages: Vec<DelayedMessage>) -> Self {
-        Self { batch_data, delayed_messages }
+    pub const fn new(
+        batch_data: Bytes,
+        delayed_messages: Vec<DelayedMessage>,
+        l1_block_number: u64,
+    ) -> Self {
+        Self { batch_data, delayed_messages, l1_block_number }
     }
 }
 
@@ -108,6 +114,9 @@ pub struct Block {
     pub before_message_count: u64,
     /// reorg data
     pub slot: Slot,
+    // TODO this is a breaking chain, need to update MCHAIN version
+    /// the l1 block number
+    pub l1_block_number: u64,
 }
 
 impl Block {
@@ -347,6 +356,7 @@ pub trait ArbitrumDB {
         };
         let batch = arbitrum_batch.batch_data;
         let messages = arbitrum_batch.delayed_messages;
+        let l1_block_number = arbitrum_batch.l1_block_number;
 
         let mut block = Block {
             timestamp: mblock.timestamp,
@@ -357,16 +367,16 @@ pub trait ArbitrumDB {
             before_message_acc: state.message_acc,
             messages: messages.iter().map(|x| (x.to_owned(), FixedBytes::ZERO)).collect(),
             after_batch_acc: Default::default(),
+            l1_block_number,
         };
         let mut inbox_acc = block.before_message_acc;
         let offset = self.get_migration_offset();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
-            let l1_block_num = block.slot.seq_block_number;
             let message_hash = keccak256(
                 (
                     [msg.kind],
                     msg.sender,
-                    l1_block_num,
+                    block.l1_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,
@@ -464,6 +474,7 @@ pub trait ArbitrumDB {
             },
             true,
         )?;
+        info!("migration applied: {params:?}");
 
         Ok(())
     }

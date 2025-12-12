@@ -9,8 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -67,12 +70,26 @@ func readMessage(ctx context.Context, wavm *wavmio.Wavm, delayedMessagesRead uin
 	return msg, nil
 }
 
+const L1_BLOCK_NUM_HARDFORK_TS = 1767571200
+
+// getL1BlockNumHardforkTS returns the hardfork timestamp, supporting env var override for testing
+func getL1BlockNumHardforkTS() uint64 {
+	if val := os.Getenv("L1_BLOCK_NUM_HARDFORK_TS"); val != "" {
+		if ts, err := strconv.ParseUint(val, 10, 64); err == nil {
+			log.Warn("L1_BLOCK_NUM_HARDFORK_TS override", "value", ts)
+			return ts
+		}
+	}
+	return L1_BLOCK_NUM_HARDFORK_TS
+}
+
 func Verify(
 	ctx context.Context,
 	data wavmio.ValidationInput,
 	processor interface {
-		ProcessBlock(*types.Block, types.Receipts) error
+		ProcessBlock(block *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error
 	},
+	appchain bool,
 ) (_ *execution.MessageResult, err error) {
 	if data.BlockHash == (common.Hash{}) {
 		return nil, errors.New("genesis block verification unsupported")
@@ -97,6 +114,10 @@ func Verify(
 	}
 
 	db := state.NewDatabase(triedb.NewDatabase(rawdb.WrapDatabaseWithWasm(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), memorydb.New()), nil), nil)
+
+	// TODO it seems arbitrum uses the nonce in the block header to indicate the number of delayed messages read. this is a bit obscure, should find docs that lay this out
+	startDelayedMessagesRead := header.Nonce.Uint64()
+	prevDelayedMessagesRead := startDelayedMessagesRead
 
 	for wavm.GetInboxPosition() < batchCount {
 		if err = ctx.Err(); err != nil {
@@ -177,8 +198,36 @@ func Verify(
 			return nil, fmt.Errorf("bad commit root hash expected %v, got %v", header.Root, result)
 		}
 
+		// NOTE: l1BlockNum hardfork logic must match slotter.rs and server.go:parseAppBatches
+		l1BlockNum := uint64(0)
+		if !appchain {
+			l1BlockNum = block.NumberU64()
+		} else {
+			// apply the l1_block_number hardfork logic only to derive the apchain
+			hardforkTS := getL1BlockNumHardforkTS()
+			log.Info("TOMATO verify.go hardfork check", "seq_block.Time()", block.Time(), "hardforkTS", hardforkTS, "seq_block.NumberU64()", block.NumberU64(), "message.DelayedMessagesRead", message.DelayedMessagesRead, "prevDelayedMessagesRead", prevDelayedMessagesRead, "startDelayedMessagesRead", startDelayedMessagesRead, "len(data.Messages)", len(data.Messages))
+			if block.Time() < hardforkTS {
+				l1BlockNum = block.NumberU64()
+				log.Info("TOMATO verify.go pre-hardfork", "l1BlockNum", l1BlockNum)
+			} else {
+				// Get settlement block number from the last delayed message consumed in THIS block
+				// Only if this block consumed new delayed messages (DelayedMessagesRead increased)
+				if message.DelayedMessagesRead > prevDelayedMessagesRead && len(data.Messages) > 0 {
+					lastMsgIdx := message.DelayedMessagesRead - 1 - startDelayedMessagesRead
+					if lastMsgIdx < uint64(len(data.Messages)) {
+						lastMsg := data.Messages[lastMsgIdx]
+						l1BlockNum = data.MessagesBlockNum[lastMsgIdx]
+						log.Info("TOMATO verify.go post-hardfork got l1_bloc_num", "l1BlockNum", l1BlockNum, "delayedMsgsRead", message.DelayedMessagesRead, "delayedMsg", hexutil.Encode(lastMsg))
+					}
+				} else {
+					log.Info("TOMATO verify.go post-hardfork NO delayed messages for this block")
+				}
+			}
+			prevDelayedMessagesRead = message.DelayedMessagesRead
+		}
+
 		if processor != nil {
-			if err := processor.ProcessBlock(block, receipts); err != nil {
+			if err := processor.ProcessBlock(block, receipts, l1BlockNum, block.Time()); err != nil {
 				return nil, err
 			}
 		}

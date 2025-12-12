@@ -475,7 +475,7 @@ func (p *Proposer) Prove(
 	}
 
 	// get delayed messages
-	startAcc, msgs, isDummy, err := GetDelayedMessages(
+	startAcc, msgs, msgsBlockNumbers, isDummy, err := GetDelayedMessages(
 		ctx,
 		p.SettlementClient,
 		p.Config.AppchainBridgeAddress,
@@ -509,6 +509,7 @@ func (p *Proposer) Prove(
 		TrustedInput:                    *trustedInput,
 		Config:                          p.Config.EnclaveConfig,
 		DelayedMessages:                 msgs,
+		DelayedMessagesBlockNumbers:     msgsBlockNumbers,
 		StartDelayedMessagesAccumulator: startAcc,
 		VerifySequencingChainOutput:     seqOutput,
 		AppStartBlockHeader:             *header,

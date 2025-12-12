@@ -55,7 +55,8 @@ fn deposit_eth(src: Address, dest: Address, value: U256) -> DelayedMessage {
 async fn arb_owner_test() -> Result<()> {
     // Start the appchain's node
     let appchain_owner = address!("0x0000000000000000000000000000000000000001");
-    let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _mchain, _) =
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: appchain_owner,
@@ -84,7 +85,7 @@ async fn no_l1_fees_test() -> Result<()> {
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
     let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -114,6 +115,7 @@ async fn no_l1_fees_test() -> Result<()> {
             payload: Some(ArbitrumBatch::new(
                 arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
                 vec![msg.clone()],
+                0,
             )),
             timestamp: 100,
             slot: Slot { seq_block_number: 1, ..Default::default() },
@@ -124,6 +126,7 @@ async fn no_l1_fees_test() -> Result<()> {
             payload: Some(ArbitrumBatch::new(
                 arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
                 vec![msg],
+                0,
             )),
             timestamp: 200,
             slot: Slot { seq_block_number: 2, ..Default::default() },
@@ -140,7 +143,7 @@ async fn no_l1_fees_test() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
 
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
@@ -168,6 +171,7 @@ async fn test_nitro_batch() -> Result<()> {
             payload: Some(ArbitrumBatch::new(
                 arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
                 vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
+                0,
             )),
             timestamp: 0,
             slot: Slot { seq_block_number: 1, ..Default::default() },
@@ -200,7 +204,7 @@ async fn test_nitro_batch() -> Result<()> {
     )]);
     mchain
         .add_batch(&MBlock {
-            payload: Some(ArbitrumBatch::new(batch.encode()?, Default::default())),
+            payload: Some(ArbitrumBatch::new(batch.encode()?, Default::default(), 0)),
             slot: Slot { seq_block_number: 2, ..Default::default() },
             ..Default::default()
         })
@@ -224,7 +228,7 @@ async fn test_nitro_batch() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -250,6 +254,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             payload: Some(ArbitrumBatch::new(
                 arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
                 vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
+                0,
             )),
             timestamp: 0,
             slot: Slot { seq_block_number: 1, ..Default::default() },
@@ -300,7 +305,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     )]);
     mchain
         .add_batch(&MBlock {
-            payload: Some(ArbitrumBatch::new(batch.encode()?, Default::default())),
+            payload: Some(ArbitrumBatch::new(batch.encode()?, Default::default(), 0)),
             slot: Slot { seq_block_number: 2, ..Default::default() },
             timestamp: 0,
         })
@@ -324,7 +329,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_end_of_block_tx() -> Result<()> {
     let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -356,6 +361,7 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
                     };
                     3
                 ],
+                0,
             )),
             timestamp: 0,
             slot: Slot { seq_block_number: 1, ..Default::default() },
@@ -369,7 +375,7 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
 #[tokio::test]
 async fn test_nitro_delayed_message_after_batch() -> Result<()> {
     let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -395,6 +401,7 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
             payload: Some(ArbitrumBatch::new(
                 arbitrum::batch::Batch(vec![]).encode()?,
                 vec![msg.clone()],
+                0,
             )),
             timestamp: 0,
             slot: Slot { seq_block_number: 1, ..Default::default() },
@@ -422,7 +429,7 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
     let msg: DelayedMessage = deposit_eth(Address::ZERO, TEST_ADDR, U256::from(1));
     mchain
         .add_batch(&MBlock {
-            payload: Some(ArbitrumBatch::new(batch.encode()?, vec![msg])),
+            payload: Some(ArbitrumBatch::new(batch.encode()?, vec![msg], 0)),
             timestamp: 0,
             slot: Slot { seq_block_number: 2, ..Default::default() },
         })

@@ -1,18 +1,12 @@
 //! Types module for `synd-translator`
 
-use alloy::primitives::{Bytes, FixedBytes};
-use shared::types::{BlockRef, GetBlockRef};
+use alloy::primitives::FixedBytes;
+use shared::types::{BlockRef, GetBlockRef, PartialBlock};
 use strum_macros::Display;
 use synd_mchain::db::DelayedMessage;
 
 #[allow(missing_docs)]
-#[derive(Debug, Default, Clone)]
-pub struct SequencingBlock {
-    pub block_ref: BlockRef,
-    pub parent_hash: FixedBytes<32>,
-    pub batch: Bytes,
-    pub tx_count: u64,
-}
+pub type SequencingBlock = PartialBlock;
 
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
@@ -36,12 +30,6 @@ impl From<Chain> for &'static str {
             Chain::Sequencing => "sequencing",
             Chain::Settlement => "settlement",
         }
-    }
-}
-
-impl GetBlockRef for SequencingBlock {
-    fn block_ref(&self) -> &BlockRef {
-        &self.block_ref
     }
 }
 

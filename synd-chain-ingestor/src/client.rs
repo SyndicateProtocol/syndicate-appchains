@@ -200,7 +200,7 @@ struct BlockStream<
 > {
     stream: Pin<Box<Peekable<ReadyChunks<S>>>>,
     buffer: VecDeque<Block>,
-    block_builder: Arc<B>,
+    block_builder: B,
     indexed_block_number: u64,
     inbox_addr: Option<Address>,
     client: EthClient,
@@ -225,7 +225,7 @@ impl<
 {
     fn new(
         stream: S,
-        block_builder: Arc<B>,
+        block_builder: B,
         start_block: u64,
         client: EthClient,
         init_data: (Vec<Address>, u64),
@@ -313,6 +313,26 @@ impl<
         B: BlockBuilder<Block> + Sync,
     > BlockStreamT<Block> for BlockStream<S, Block, B>
 {
+    /// Receives the next block from the stream once a block with timestamp >= the provided
+    /// timestamp has arrived.
+    ///
+    /// This function:
+    /// 1. Processes the initial message on first call (converting init data into batched requests)
+    /// 2. Executes queued init requests or polls the stream for new block data
+    /// 3. Builds blocks using the block builder with delayed message data
+    /// 4. Manages a buffer of blocks, handling reorgs by updating stale blocks in-place
+    /// 5. Returns the oldest block in the buffer once its timestamp meets the requirement
+    ///
+    /// # Arguments
+    /// * `timestamp` - The minimum timestamp threshold for the returned block
+    ///
+    /// # Returns
+    /// The next block with `block.timestamp >= timestamp`, pulled from the back of the buffer
+    ///
+    /// # Errors
+    /// - If the stream closes unexpectedly
+    /// - If a reorg affects a block that has already been removed from the buffer
+    /// - If block building or delayed message processing fails
     #[allow(clippy::unwrap_used)]
     async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
         let mut responses = vec![];
@@ -340,7 +360,7 @@ impl<
                     self.inbox_addr,
                 )
                 .await?;
-                let block = self.block_builder.build_block(&partial_block, delayed_msgs_data)?;
+                let block = self.block_builder.build_block(partial_block, delayed_msgs_data)?;
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
@@ -498,7 +518,7 @@ pub trait IngestorProvider: Sync {
         &self,
         start_block: u64,
         addresses: Vec<Address>,
-        block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
+        block_builder: impl BlockBuilder<Block> + Sync + 'static,
         client: EthClient,
         inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
@@ -598,7 +618,7 @@ impl IngestorProvider for IngestorProviderImpl {
         &self,
         start_block: u64,
         addresses: Vec<Address>,
-        block_builder: Arc<impl BlockBuilder<Block> + Sync + 'static>,
+        block_builder: impl BlockBuilder<Block> + Sync + 'static,
         client: EthClient,
         inbox_addr: Option<Address>,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {

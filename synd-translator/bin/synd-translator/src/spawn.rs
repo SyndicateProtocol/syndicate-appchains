@@ -8,13 +8,14 @@ use shared::{
     service_start_utils::{start_http_server_with_aux_handlers, MetricsState},
     tracing::SpanKind,
 };
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, IngestorProviderConfig, IngestorProviderImpl},
     eth_client::EthClient,
 };
 use synd_mchain::client::{MProvider, MchainProvider};
+use synd_slotter::slotter;
 use tracing::{error, instrument, log::info};
 use url::Url;
 
@@ -89,9 +90,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         settlement_config.start_block = state.settlement_block.number;
     }
 
-    let arbitrum_adapter = Arc::new(ArbitrumAdapter::new(&config.block_builder));
-
-    let adapter = arbitrum_adapter.clone();
+    let arbitrum_adapter = ArbitrumAdapter::new(&config.block_builder);
 
     let seq_urls = sequencing_client
         .get_urls()
@@ -112,8 +111,8 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     let sequencing = sequencing_client
         .get_blocks(
             sequencing_config.start_block,
-            adapter.sequencer_addresses(),
-            adapter,
+            arbitrum_adapter.sequencer_addresses(),
+            arbitrum_adapter.clone(),
             seq_client,
             None,
         )
@@ -139,7 +138,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
         .get_blocks(
             settlement_config.start_block,
             arbitrum_adapter.settlement_addresses(),
-            arbitrum_adapter,
+            arbitrum_adapter.clone(),
             set_client,
             inbox_address,
         )
@@ -147,10 +146,11 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
 
     let settlement_delay = config.settlement_delay;
 
-    Ok(synd_slotter::slotter::run(
+    Ok(slotter::run(
         settlement_delay.unwrap(),
         sequencing,
         settlement,
+        arbitrum_adapter,
         &mchain,
         &metrics.slotter,
     )
