@@ -28,7 +28,6 @@ use std::{
     fmt::Debug,
     time::{Duration, SystemTime},
 };
-use synd_mchain::db::L1_BLOCK_NUM_HARDFORK_TS;
 use test_framework::components::{
     configuration::{BaseChainsType, ConfigurationOptions},
     proposer::ProposerConfig,
@@ -777,7 +776,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 Duration::from_secs(60),
                 Duration::from_millis(500)
             );
-            print!("TOMATO, base chains ready");
+            println!("TOMATO, base chains ready");
 
             // make a new deposit so a new delayed message is included and the l1_block_number is
             // updated
@@ -798,7 +797,7 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                 .unwrap();
             assert!(receipt.status());
 
-            println!("TOMATO receipt_block_num: {:?}", receipt.block_number);
+            println!("TOMATO receipt: {:?}", receipt);
             println!("TOMATO hardfork timestamp: {l1_block_num_hardfork_ts}");
 
             wait_until!(
@@ -814,8 +813,8 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                         .unwrap();
 
                     println!(
-                        "TOMATO nitro block: {block:?}, l1_block_number: {}",
-                        block.l1_block_number
+                        "TOMATO nitro: #{} {}, l1_bloc_num: {}",
+                        block.number, block.hash, block.l1_block_number
                     );
 
                     // TODO note that this check is not `==`. The appchain nitro will apply a few
@@ -826,6 +825,15 @@ async fn e2e_tee_withdrawal_basic_flow(base_chains_type: BaseChainsType) -> Resu
                     // Need to investigate if this can cause issues (like appchain assuming a reorg
                     // happened if in a given interval more sequencing blocks have been produced
                     // than settlement blocks)
+
+                    if block.l1_block_number >= U256::from(receipt.block_number.unwrap()) {
+                        let set_block: NitroBlock = components
+                            .settlement_provider
+                            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+                            .await
+                            .unwrap();
+                        println!("TOMATO set block: {set_block:?}")
+                    }
 
                     block.l1_block_number >= U256::from(receipt.block_number.unwrap())
                 },

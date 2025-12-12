@@ -6,7 +6,6 @@ package enclave
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/triedb"
 
 	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/enclave/wavmio"
-	"github.com/SyndicateProtocol/synd-appchains/synd-enclave/teetypes"
 	"github.com/offchainlabs/nitro/arbos"
 	"github.com/offchainlabs/nitro/arbos/arbosState"
 	"github.com/offchainlabs/nitro/arbos/arbostypes"
@@ -88,8 +87,9 @@ func Verify(
 	ctx context.Context,
 	data wavmio.ValidationInput,
 	processor interface {
-		ProcessBlock(seqBlock *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error
+		ProcessBlock(block *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error
 	},
+	appchain bool,
 ) (_ *execution.MessageResult, err error) {
 	if data.BlockHash == (common.Hash{}) {
 		return nil, errors.New("genesis block verification unsupported")
@@ -114,6 +114,10 @@ func Verify(
 	}
 
 	db := state.NewDatabase(triedb.NewDatabase(rawdb.WrapDatabaseWithWasm(rawdb.NewDatabase(&PreimageDb{wavm: wavm, memDb: memorydb.New()}), memorydb.New()), nil), nil)
+
+	// TODO it seems arbitrum uses the nonce in the block header to indicate the number of delayed messages read. this is a bit obscure, should find docs that lay this out
+	startDelayedMessagesRead := header.Nonce.Uint64()
+	prevDelayedMessagesRead := startDelayedMessagesRead
 
 	for wavm.GetInboxPosition() < batchCount {
 		if err = ctx.Err(); err != nil {
@@ -171,22 +175,22 @@ func Verify(
 
 		chainContext := wavmio.WavmChainContext{ChainConfig: chainConfig, Wavm: wavm}
 
-		seq_block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.NewMessageRecordingContext([]rawdb.WasmTarget{rawdb.LocalTarget()}))
+		block, receipts, err := arbos.ProduceBlock(message.Message, message.DelayedMessagesRead, header, statedb, chainContext, false, core.NewMessageRecordingContext([]rawdb.WasmTarget{rawdb.LocalTarget()}))
 		if err != nil {
 			return nil, err
 		}
-		if seq_block.NumberU64() != header.Number.Uint64()+1 {
-			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", seq_block.NumberU64(), header.Number.Uint64()+1)
+		if block.NumberU64() != header.Number.Uint64()+1 {
+			return nil, fmt.Errorf("unexpected block number: got %d, expected %d", block.NumberU64(), header.Number.Uint64()+1)
 		}
 
-		header = seq_block.Header()
+		header = block.Header()
 		bytes, err := rlp.EncodeToBytes(header)
 		if err != nil {
 			return nil, fmt.Errorf("error RLP encoding header: %v", err)
 		}
 		wavm.Preimages[arbutil.Keccak256PreimageType][crypto.Keccak256Hash(bytes)] = bytes
 
-		result, err := statedb.Commit(seq_block.NumberU64(), true, false)
+		result, err := statedb.Commit(block.NumberU64(), true, false)
 		if err != nil {
 			return nil, err
 		}
@@ -194,25 +198,36 @@ func Verify(
 			return nil, fmt.Errorf("bad commit root hash expected %v, got %v", header.Root, result)
 		}
 
-		// NOTE: l1BlockNum hardfork logic must match slotter.rs
+		// NOTE: l1BlockNum hardfork logic must match slotter.rs and server.go:parseAppBatches
 		l1BlockNum := uint64(0)
-		if seq_block.Time() < getL1BlockNumHardforkTS() {
-			l1BlockNum = seq_block.NumberU64()
+		if !appchain {
+			l1BlockNum = block.NumberU64()
 		} else {
-			// Get settlement block number from latest delayed message if available
-			if len(data.Messages) > 0 {
-				lastMsg := data.Messages[len(data.Messages)-1]
-				if len(lastMsg) < teetypes.DelayedMessageBlockNumberOffset+8 {
-					return nil, errors.New("delayed message too short to contain block number")
+			// apply the l1_block_number hardfork logic only to derive the apchain
+			hardforkTS := getL1BlockNumHardforkTS()
+			log.Info("TOMATO verify.go hardfork check", "seq_block.Time()", block.Time(), "hardforkTS", hardforkTS, "seq_block.NumberU64()", block.NumberU64(), "message.DelayedMessagesRead", message.DelayedMessagesRead, "prevDelayedMessagesRead", prevDelayedMessagesRead, "startDelayedMessagesRead", startDelayedMessagesRead, "len(data.Messages)", len(data.Messages))
+			if block.Time() < hardforkTS {
+				l1BlockNum = block.NumberU64()
+				log.Info("TOMATO verify.go pre-hardfork", "l1BlockNum", l1BlockNum)
+			} else {
+				// Get settlement block number from the last delayed message consumed in THIS block
+				// Only if this block consumed new delayed messages (DelayedMessagesRead increased)
+				if message.DelayedMessagesRead > prevDelayedMessagesRead && len(data.Messages) > 0 {
+					lastMsgIdx := message.DelayedMessagesRead - 1 - startDelayedMessagesRead
+					if lastMsgIdx < uint64(len(data.Messages)) {
+						lastMsg := data.Messages[lastMsgIdx]
+						l1BlockNum = data.MessagesBlockNum[lastMsgIdx]
+						log.Info("TOMATO verify.go post-hardfork got l1_bloc_num", "l1BlockNum", l1BlockNum, "delayedMsgsRead", message.DelayedMessagesRead, "delayedMsg", hexutil.Encode(lastMsg))
+					}
+				} else {
+					log.Info("TOMATO verify.go post-hardfork NO delayed messages for this block")
 				}
-				l1BlockNum = binary.BigEndian.Uint64(
-					lastMsg[teetypes.DelayedMessageBlockNumberOffset : teetypes.DelayedMessageBlockNumberOffset+8],
-				)
 			}
+			prevDelayedMessagesRead = message.DelayedMessagesRead
 		}
 
 		if processor != nil {
-			if err := processor.ProcessBlock(seq_block, receipts, l1BlockNum, seq_block.Time()); err != nil {
+			if err := processor.ProcessBlock(block, receipts, l1BlockNum, block.Time()); err != nil {
 				return nil, err
 			}
 		}

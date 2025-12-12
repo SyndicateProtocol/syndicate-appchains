@@ -57,7 +57,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     let mut pending_ts: VecDeque<u64> = Default::default();
     let mut finalized_batch_count = 1u64;
     if db.get_state().batch_count == 0 {
-        let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg]);
+        let batch = ArbitrumBatch::new(EMPTY_BATCH, vec![init_msg], 0);
         db.add_batch(MBlock { payload: Some(batch), ..Default::default() }).unwrap();
         if let Some(migration_params) = migration_params {
             info!("applying migration: {migration_params:?}");

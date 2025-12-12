@@ -42,7 +42,7 @@ pub fn create_header(batch_count: u64, offset: u64, block: &Block) -> alloy::rpc
             base_fee_per_gas: Some(1),
             extra_data: FixedBytes::<32>::ZERO.into(),
             #[allow(clippy::unwrap_used)]
-            mix_hash: U256::from(block.l1_block_number())
+            mix_hash: U256::from(block.l1_block_number)
                 .checked_shl(64)
                 .unwrap()
                 .checked_add(U256::from(1))

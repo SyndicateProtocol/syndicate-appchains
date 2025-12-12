@@ -162,19 +162,14 @@ pub async fn start_component(
         tag = Ok("dev".to_string());
     }
     let mut docker = if let Ok(tag) = tag {
-        E2EProcess::new(
-            Command::new("docker")
-                .envs(env_vars)
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("--net=host")
-                .arg(format!(
-                    "ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"
-                ))
-                .args(args),
-            executable_name,
-        )
+        let mut cmd = Command::new("docker");
+        cmd.arg("run").arg("--init").arg("--rm").arg("--net=host");
+        for (key, value) in &env_vars {
+            cmd.arg("-e").arg(format!("{key}={value}"));
+        }
+        cmd.arg(format!("ghcr.io/syndicateprotocol/syndicate-appchains/{executable_name}:{tag}"))
+            .args(args);
+        E2EProcess::new(&mut cmd, executable_name)
     } else {
         let mut cmd = Command::new("cargo");
         // ring has a custom build.rs script that rebuilds whenever certain environment
@@ -511,17 +506,13 @@ pub async fn launch_enclave_server(
     }
 
     let port = PortManager::instance().next_port().await;
-    let docker = E2EProcess::new(
-        Command::new("docker")
-            .envs(env_vars)
-            .arg("run")
-            .arg("--init")
-            .arg("--rm")
-            .arg("-p")
-            .arg(format!("{port}:1234"))
-            .arg(image_name),
-        "enclave-server",
-    )?;
+    let mut cmd = Command::new("docker");
+    cmd.arg("run").arg("--init").arg("--rm");
+    for (key, value) in env_vars {
+        cmd.arg("-e").arg(format!("{key}={value}"));
+    }
+    cmd.arg("-p").arg(format!("{port}:1234")).arg(image_name);
+    let docker = E2EProcess::new(&mut cmd, "enclave-server")?;
 
     let enclave_rpc_url = format!("http://localhost:{port}");
 

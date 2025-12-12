@@ -161,9 +161,9 @@ func buildBatch(txs [][]byte, l1BlockNum uint64, l1BlockTimestamp uint64) ([]byt
 }
 
 type SyndicateAccumulator struct {
-	Address  common.Address
-	Batches  []teetypes.SyndicateBatch
-	BlockNum uint64
+	Address     common.Address
+	Batches     []teetypes.SyndicateBatch
+	SeqBlockNum uint64
 }
 
 var TransactionProcessedEvent abi.Event
@@ -176,11 +176,11 @@ func init() {
 	TransactionProcessedEvent = abi.Events["TransactionProcessed"]
 }
 
-func (s *SyndicateAccumulator) ProcessBlock(seqBlock *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error {
-	if s.BlockNum > 0 && s.BlockNum+1 != seqBlock.NumberU64() {
+func (s *SyndicateAccumulator) ProcessBlock(block *types.Block, receipts types.Receipts, l1BlockNum uint64, timestamp uint64) error {
+	if s.SeqBlockNum > 0 && s.SeqBlockNum+1 != block.NumberU64() {
 		return errors.New("unexpected block number")
 	}
-	s.BlockNum = seqBlock.NumberU64()
+	s.SeqBlockNum = block.NumberU64()
 	var txs [][]byte
 	for _, receipt := range receipts {
 		for _, log := range receipt.Logs {
@@ -209,8 +209,9 @@ func (s *SyndicateAccumulator) ProcessBlock(seqBlock *types.Block, receipts type
 		}
 	}
 	s.Batches = append(s.Batches, teetypes.SyndicateBatch{
-		Timestamp: seqBlock.Time(),
-		Data:      data,
+		Timestamp:     block.Time(),
+		Data:          data,
+		L1BlockNumber: l1BlockNum,
 	})
 	return nil
 }

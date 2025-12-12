@@ -64,12 +64,18 @@ pub struct ArbitrumBatch {
     pub batch_data: Bytes,
     /// The delayed messages included in this batch
     pub delayed_messages: Vec<DelayedMessage>,
+    /// the l1 block number
+    pub l1_block_number: u64,
 }
 
 impl ArbitrumBatch {
     /// Creates a new [`ArbitrumBatch`]
-    pub const fn new(batch_data: Bytes, delayed_messages: Vec<DelayedMessage>) -> Self {
-        Self { batch_data, delayed_messages }
+    pub const fn new(
+        batch_data: Bytes,
+        delayed_messages: Vec<DelayedMessage>,
+        l1_block_number: u64,
+    ) -> Self {
+        Self { batch_data, delayed_messages, l1_block_number }
     }
 }
 
@@ -108,19 +114,9 @@ pub struct Block {
     pub before_message_count: u64,
     /// reorg data
     pub slot: Slot,
-}
-
-/// timestamp for the hardfork where L1 block number changes from being derived from the seq chain
-/// to the set chain
-/// 5 Jan 2026
-pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1767571200;
-
-/// gets the timestamp for the `l1_block_number` hardfork (supports env var override for testing
-/// purposes)
-#[allow(clippy::expect_used)]
-pub fn get_l1_block_num_hardfork_ts() -> u64 {
-    env::var("L1_BLOCK_NUM_HARDFORK_TS")
-        .map_or(L1_BLOCK_NUM_HARDFORK_TS, |val| val.parse().expect("invalid timestamp provided"))
+    // TODO this is a breaking chain, need to update MCHAIN version
+    /// the l1 block number
+    pub l1_block_number: u64,
 }
 
 impl Block {
@@ -131,15 +127,6 @@ impl Block {
     /// The delayed message count
     pub const fn after_message_count(&self) -> u64 {
         self.before_message_count + self.messages.len() as u64
-    }
-
-    /// l1 block number for this mchain block
-    pub fn l1_block_number(&self) -> u64 {
-        if self.timestamp < get_l1_block_num_hardfork_ts() {
-            self.slot.seq_block_number
-        } else {
-            self.slot.set_block_number
-        }
     }
 }
 
@@ -369,6 +356,7 @@ pub trait ArbitrumDB {
         };
         let batch = arbitrum_batch.batch_data;
         let messages = arbitrum_batch.delayed_messages;
+        let l1_block_number = arbitrum_batch.l1_block_number;
 
         let mut block = Block {
             timestamp: mblock.timestamp,
@@ -379,16 +367,16 @@ pub trait ArbitrumDB {
             before_message_acc: state.message_acc,
             messages: messages.iter().map(|x| (x.to_owned(), FixedBytes::ZERO)).collect(),
             after_batch_acc: Default::default(),
+            l1_block_number,
         };
         let mut inbox_acc = block.before_message_acc;
         let offset = self.get_migration_offset();
-        let l1_block_number = block.l1_block_number();
         for (i, (msg, acc)) in block.messages.iter_mut().enumerate() {
             let message_hash = keccak256(
                 (
                     [msg.kind],
                     msg.sender,
-                    l1_block_number,
+                    block.l1_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,

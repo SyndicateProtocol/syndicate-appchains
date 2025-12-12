@@ -382,7 +382,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, input teetypes.Verif
 			Messages:     input.DelayedMessages,
 		}
 
-		data, err = Verify(ctx, blockVerifierInput, &acc)
+		data, err = Verify(ctx, blockVerifierInput, &acc, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to verify sequencing chain: %w", err)
 		}
@@ -391,7 +391,7 @@ func (s *Server) VerifySequencingChain(ctx context.Context, input teetypes.Verif
 	output := teetypes.VerifySequencingChainOutput{
 		L1BatchAcc:            l1BatchAcc,
 		SequencingBlockHash:   data.BlockHash,
-		SequencingBlockNumber: acc.BlockNum,
+		SequencingBlockNumber: acc.SeqBlockNum,
 		Batches:               acc.Batches,
 		Signature:             []byte{},
 	}
@@ -409,7 +409,7 @@ var allowedMsgs = map[byte]struct{}{
 	arbostypes.L1MessageType_BatchPostingReport: {},
 }
 
-func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
+func processMessage(msg []byte, l1BlockNum uint64, ts uint64) ([]byte, error) {
 	if _, ok := allowedMsgs[msg[0]]; !ok {
 		return nil, fmt.Errorf("unexpected message: type %d", msg[0])
 	}
@@ -419,7 +419,7 @@ func processMessage(msg []byte, blockNum uint64, ts uint64) ([]byte, error) {
 		copy(msg[teetypes.DelayedMessageRequestIdOffset:teetypes.DelayedMessageRequestIdOffset+32], requestId)
 		msg[0] = arbostypes.L1MessageType_EndOfBlock
 	}
-	binary.BigEndian.PutUint64(msg[33:41], blockNum)
+	binary.BigEndian.PutUint64(msg[33:41], l1BlockNum)
 	binary.BigEndian.PutUint64(msg[41:49], ts)
 	return msg, nil
 }
@@ -482,9 +482,7 @@ func parseAppBatches(input *teetypes.VerifyAppchainInput) ([][]byte, error) {
 	msgCount := uint64(len(input.DelayedMessages))
 	var i uint64
 	var batches [][]byte
-	seqBlockNum := input.VerifySequencingChainOutput.SequencingBlockNumber - uint64(len(input.VerifySequencingChainOutput.Batches))
 	for _, batch := range input.VerifySequencingChainOutput.Batches {
-		seqBlockNum++
 		delayedMsgsInBatch := make([]uint64, 0, len(input.DelayedMessages)+1)
 		// collect all the delayed messages in the batch
 		for i < msgCount {
@@ -497,17 +495,21 @@ func parseAppBatches(input *teetypes.VerifyAppchainInput) ([][]byte, error) {
 		}
 
 		if len(delayedMsgsInBatch) > 0 || len(batch.Data) > 0 {
-			blockNum := uint64(0)
+			// Compute l1BlockNum based on hardfork logic to match the slotter
+			var l1BlockNum uint64
 			if batch.Timestamp < getL1BlockNumHardforkTS() {
-				blockNum = seqBlockNum
+				// Pre-hardfork: use sequencing block number from batch
+				l1BlockNum = batch.L1BlockNumber
 			} else if len(delayedMsgsInBatch) > 0 {
-				// settlement block number of the last delayed msg in the batch
+				// Post-hardfork: use settlement block number of last delayed message in batch
 				lastDelayedMsgIndex := delayedMsgsInBatch[len(delayedMsgsInBatch)-1]
-				blockNum = binary.BigEndian.Uint64(input.DelayedMessages[lastDelayedMsgIndex][teetypes.DelayedMessageBlockNumberOffset : teetypes.DelayedMessageBlockNumberOffset+8])
+				l1BlockNum = input.DelayedMessagesBlockNumbers[lastDelayedMsgIndex]
 			}
+			// l1BlockNum stays 0 if post-hardfork with no delayed messages
+			log.Info("TOMATO parseAppBatches", "batch.Timestamp", batch.Timestamp, "len(delayedMsgsInBatch)", len(delayedMsgsInBatch), "l1BlockNum", l1BlockNum)
 			for _, delayedMsgIdx := range delayedMsgsInBatch {
 				var err error
-				input.DelayedMessages[delayedMsgIdx], err = processMessage(input.DelayedMessages[delayedMsgIdx], blockNum, batch.Timestamp)
+				input.DelayedMessages[delayedMsgIdx], err = processMessage(input.DelayedMessages[delayedMsgIdx], l1BlockNum, batch.Timestamp)
 				if err != nil {
 					return nil, fmt.Errorf("failed to process delayed message: %w", err)
 				}
@@ -539,12 +541,13 @@ func (s *Server) VerifyAppchain(ctx context.Context, input teetypes.VerifyAppcha
 	}
 	if len(batches) > 0 {
 		blockVerifierInput := wavmio.ValidationInput{
-			BlockHash:    input.TrustedInput.AppStartBlockHash,
-			PreimageData: input.PreimageData,
-			Batches:      batches,
-			Messages:     input.DelayedMessages,
+			BlockHash:        input.TrustedInput.AppStartBlockHash,
+			PreimageData:     input.PreimageData,
+			Batches:          batches,
+			Messages:         input.DelayedMessages,
+			MessagesBlockNum: input.DelayedMessagesBlockNumbers,
 		}
-		result, err = Verify(ctx, blockVerifierInput, nil)
+		result, err = Verify(ctx, blockVerifierInput, nil, true)
 		if err != nil {
 			return nil, err
 		}

@@ -1,14 +1,14 @@
 //! Slotter module for `synd-translator`
 
 use crate::{batch::build_batch, metrics::SlotterMetrics};
-use alloy::primitives::FixedBytes;
+use alloy::{hex, primitives::FixedBytes};
 use common::types::{Chain, SequencingBlock, SettlementBlock};
 use shared::tracing::SpanKind;
 use synd_block_builder::appchains::shared::RollupAdapter;
 use synd_chain_ingestor::client::BlockStreamT;
 use synd_mchain::{
     client::MchainProvider,
-    db::{get_l1_block_num_hardfork_ts, ArbitrumBatch, MBlock, Slot},
+    db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
 use tracing::{debug, info, instrument, trace};
@@ -66,14 +66,21 @@ pub async fn run(
         let mut set_blocks_per_slot: u64 = 1;
         let slot_end_ts = seq_block.block_ref.timestamp.saturating_sub(settlement_delay);
 
-        // TODO is it okay to be 0 when there are no delayed msgs?
-        let mut set_block_num_in_slot = 0u64;
+        let mut last_delayed_msg_consumed_set_block_num = 0u64;
 
         while set_block.block_ref.timestamp <= slot_end_ts {
             set_blocks_per_slot += 1;
             if !set_block.messages.is_empty() {
-                delayed_msgs.append(&mut set_block.messages);
-                set_block_num_in_slot = set_block.block_ref.number;
+                delayed_msgs.append(&mut set_block.messages.clone());
+                // TODO change this so it reads from the message itself
+                println!(
+                    "TOMATO took set_num from this msg: {}",
+                    hex::encode(
+                        #[allow(clippy::unwrap_used)]
+                        set_block.messages.last().unwrap().data.as_ref()
+                    )
+                );
+                last_delayed_msg_consumed_set_block_num = set_block.block_ref.number;
             }
 
             set_block = settlement
@@ -88,7 +95,12 @@ pub async fn run(
         let l1_block_number = if timestamp < get_l1_block_num_hardfork_ts() {
             seq_block.block_ref.number
         } else {
-            set_block_num_in_slot
+            if last_delayed_msg_consumed_set_block_num != 0 {
+                info!(
+                    "TOMATO slotter l1_bloc_num after fork {last_delayed_msg_consumed_set_block_num}, hardfork_ts: {}", get_l1_block_num_hardfork_ts()
+                );
+            }
+            last_delayed_msg_consumed_set_block_num
         };
         debug!("using l1_block_number: {l1_block_number}");
 
@@ -96,7 +108,8 @@ pub async fn run(
             build_batch(&seq_block, &rollup_adapter, l1_block_number, timestamp)?;
 
         if tx_count > 0 || !delayed_msgs.is_empty() {
-            mblock.payload = Some(ArbitrumBatch::new(sequenced_batch, delayed_msgs));
+            mblock.payload =
+                Some(ArbitrumBatch::new(sequenced_batch, delayed_msgs, l1_block_number));
         }
         mblock.slot.set_block_hash = set_block.block_ref.hash;
         mblock.slot.set_block_number = set_block.block_ref.number;
@@ -121,6 +134,19 @@ pub async fn run(
         metrics.record_blocks_per_slot(set_blocks_per_slot);
         metrics.record_last_slot(mblock.slot.seq_block_number);
     }
+}
+
+/// timestamp for the hardfork where L1 block number changes from being derived from the seq chain
+/// to the set chain
+/// 5 Jan 2026
+pub const L1_BLOCK_NUM_HARDFORK_TS: u64 = 1767571200;
+
+/// gets the timestamp for the `l1_block_number` hardfork (supports env var override for testing
+/// purposes)
+#[allow(clippy::expect_used)]
+pub fn get_l1_block_num_hardfork_ts() -> u64 {
+    std::env::var("L1_BLOCK_NUM_HARDFORK_TS")
+        .map_or(L1_BLOCK_NUM_HARDFORK_TS, |val| val.parse().expect("invalid timestamp provided"))
 }
 
 /// Slotter Errors

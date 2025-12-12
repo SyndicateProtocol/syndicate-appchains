@@ -78,9 +78,11 @@ type VerifySequencingChainInput struct {
 }
 
 type VerifyAppchainInput struct {
-	TrustedInput    TrustedInput
-	Config          Config
-	DelayedMessages [][]byte
+	TrustedInput                TrustedInput
+	Config                      Config
+	DelayedMessages             [][]byte
+	DelayedMessagesBlockNumbers []uint64
+
 	// get this from the first delayed message event, based on AppStartBlock.Nonce()
 	StartDelayedMessagesAccumulator common.Hash
 	VerifySequencingChainOutput     VerifySequencingChainOutput
@@ -102,8 +104,9 @@ func (c *Config) Hash() common.Hash {
 }
 
 type SyndicateBatch struct {
-	Timestamp uint64
-	Data      []byte
+	Timestamp     uint64
+	Data          []byte
+	L1BlockNumber uint64
 }
 
 type VerifySequencingChainOutput struct {
