@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {SyndicateCombinedSequencingChain} from "src/SyndicateCombinedSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {RequireCompositeModule} from "src/requirement-modules/RequireCompositeModule.sol";
@@ -22,6 +23,10 @@ contract SyndicateFactoryTest is Test {
 
     // Events
     event SyndicateSequencingChainCreated(
+        uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
+    );
+
+    event SyndicateCombinedSequencingChainCreated(
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
 
@@ -113,6 +118,38 @@ contract SyndicateFactoryTest is Test {
         assertEq(sequencingChain.appchainId(), appchainId);
         assertEq(address(sequencingChain.permissionRequirementModule()), permissionModuleAddress);
         assertEq(permissionModule.owner(), admin);
+    }
+
+    function testCreateCombinedSequencingChain() public {
+        RequireAndModule permissionModule = new RequireAndModule(admin);
+        address permissionModuleAddress = address(permissionModule);
+
+        bytes32 salt = keccak256(abi.encodePacked("salt-for-combined-test"));
+        address expectedAddress = factory.computeCombinedSequencingChainAddress(salt, appchainId);
+
+        vm.expectEmit(true, true, true, true);
+        emit SyndicateCombinedSequencingChainCreated(appchainId, expectedAddress, permissionModuleAddress);
+
+        (address sequencingChainAddress, uint256 actualChainId) =
+            factory.createCombinedSequencingChain(appchainId, admin, permissionModule, salt);
+
+        assertTrue(sequencingChainAddress != address(0));
+        assertEq(actualChainId, appchainId);
+        assertEq(sequencingChainAddress, expectedAddress);
+
+        SyndicateCombinedSequencingChain combinedChain = SyndicateCombinedSequencingChain(sequencingChainAddress);
+
+        // Verify chain setup
+        assertEq(combinedChain.appchainId(), appchainId);
+        assertEq(address(combinedChain.permissionRequirementModule()), permissionModuleAddress);
+        assertEq(combinedChain.owner(), admin);
+    }
+
+    function testGetCombinedBytecode() public view {
+        bytes memory bytecode = factory.getCombinedBytecode(appchainId);
+        bytes memory expectedBytecode =
+            abi.encodePacked(type(SyndicateCombinedSequencingChain).creationCode, abi.encode(appchainId));
+        assertEq(bytecode, expectedBytecode);
     }
 
     function testCorrectAppChainIdAssignment() public {

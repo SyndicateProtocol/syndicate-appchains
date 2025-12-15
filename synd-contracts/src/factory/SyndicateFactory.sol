@@ -2,6 +2,8 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain} from "../SyndicateSequencingChain.sol";
+import {SyndicateCombinedSequencingChain} from "../SyndicateCombinedSequencingChain.sol";
+import {SyndicateSequencingChainBase} from "../SyndicateSequencingChainBase.sol";
 import {IRequirementModule} from "../interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
@@ -24,11 +26,22 @@ contract SyndicateFactory is AccessControl, Pausable {
         uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
     );
 
+    /// @notice Emitted when a new SyndicateCombinedSequencingChain is created
+    event SyndicateCombinedSequencingChainCreated(
+        uint256 indexed appchainId, address indexed sequencingChainAddress, address indexed permissionModuleAddress
+    );
+
     /// @notice Emitted when namespace configuration is updated
     event NamespaceConfigUpdated(uint256 oldNamespacePrefix, uint256 newNamespacePrefix);
 
     /// @notice Emitted when a chain ID is manually marked as used
     event ChainIdManuallyMarked(uint256 indexed chainId);
+
+    /// @notice Chain type for deployment
+    enum ChainType {
+        Standard,
+        Combined
+    }
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
@@ -55,7 +68,40 @@ contract SyndicateFactory is AccessControl, Pausable {
         nextAutoChainId = 1;
     }
 
-    /// @notice Creates a new SyndicateSequencingChain contract
+    /// @notice Creates a new SyndicateSequencingChain contract (standard, without accumulator)
+    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @param salt The salt for CREATE2 deployment
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used
+    function createSyndicateSequencingChain(
+        uint256 appchainId,
+        address admin,
+        IRequirementModule permissionModule,
+        bytes32 salt
+    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+        return _createChain(ChainType.Standard, appchainId, admin, permissionModule, salt);
+    }
+
+    /// @notice Creates a new SyndicateCombinedSequencingChain contract (with accumulator for TEE proving)
+    /// @param appchainId The app chain ID (0 for auto-increment)
+    /// @param admin The admin address for the new chain
+    /// @param permissionModule The pre-deployed permission module
+    /// @param salt The salt for CREATE2 deployment
+    /// @return sequencingChain The deployed sequencing chain address
+    /// @return actualChainId The chain ID that was used
+    function createCombinedSequencingChain(
+        uint256 appchainId,
+        address admin,
+        IRequirementModule permissionModule,
+        bytes32 salt
+    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+        return _createChain(ChainType.Combined, appchainId, admin, permissionModule, salt);
+    }
+
+    /// @notice Internal function to create a sequencing chain of the specified type
+    /// @param chainType The type of chain to create (Standard or Combined)
     /// @param appchainId The app chain ID (0 for auto-increment)
     /// @param admin The admin address for the new chain
     /// @param permissionModule The pre-deployed permission module
@@ -63,12 +109,13 @@ contract SyndicateFactory is AccessControl, Pausable {
     /// @return sequencingChain The deployed sequencing chain address
     /// @return actualChainId The chain ID that was used
     //#olympix-ignore-reentrancy-events
-    function createSyndicateSequencingChain(
+    function _createChain(
+        ChainType chainType,
         uint256 appchainId,
         address admin,
         IRequirementModule permissionModule,
         bytes32 salt
-    ) external whenNotPaused returns (address sequencingChain, uint256 actualChainId) {
+    ) internal returns (address sequencingChain, uint256 actualChainId) {
         if (admin == address(0) || address(permissionModule) == address(0)) {
             revert ZeroAddress();
         }
@@ -86,25 +133,31 @@ contract SyndicateFactory is AccessControl, Pausable {
         }
 
         // Deploy the sequencing chain using CREATE2
-        bytes memory bytecode = getBytecode(actualChainId);
+        bytes memory bytecode =
+            chainType == ChainType.Standard ? getBytecode(actualChainId) : getCombinedBytecode(actualChainId);
         sequencingChain = Create2.deploy(0, salt, bytecode);
 
         // Store the mapping of appchain ID to contract address
         appchainContracts[actualChainId] = sequencingChain;
         chainIDs.push(actualChainId);
 
-        // Set sequencing module
-        SyndicateSequencingChain(sequencingChain).updateRequirementModule(address(permissionModule));
+        // Set sequencing module (both types inherit from SyndicateSequencingChainBase)
+        SyndicateSequencingChainBase(sequencingChain).updateRequirementModule(address(permissionModule));
 
         // Transfer owner
         Ownable(sequencingChain).transferOwnership(admin);
 
-        emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+        // Emit appropriate event
+        if (chainType == ChainType.Standard) {
+            emit SyndicateSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+        } else {
+            emit SyndicateCombinedSequencingChainCreated(actualChainId, sequencingChain, address(permissionModule));
+        }
 
         return (sequencingChain, actualChainId);
     }
 
-    /// @notice Computes the address where a sequencing chain will be deployed
+    /// @notice Computes the address where a standard sequencing chain will be deployed
     /// @param salt The salt for CREATE2 deployment
     /// @param chainId The chain ID
     /// @return The computed address
@@ -112,11 +165,26 @@ contract SyndicateFactory is AccessControl, Pausable {
         return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
     }
 
-    /// @notice Returns the bytecode for deploying a SyndicateSequencingChain
+    /// @notice Computes the address where a combined sequencing chain will be deployed
+    /// @param salt The salt for CREATE2 deployment
+    /// @param chainId The chain ID
+    /// @return The computed address
+    function computeCombinedSequencingChainAddress(bytes32 salt, uint256 chainId) external view returns (address) {
+        return Create2.computeAddress(salt, keccak256(getCombinedBytecode(chainId)));
+    }
+
+    /// @notice Returns the bytecode for deploying a SyndicateSequencingChain (standard)
     /// @param chainId The chain ID
     /// @return The bytecode with constructor parameters
     function getBytecode(uint256 chainId) public pure returns (bytes memory) {
         return abi.encodePacked(type(SyndicateSequencingChain).creationCode, abi.encode(chainId));
+    }
+
+    /// @notice Returns the bytecode for deploying a SyndicateCombinedSequencingChain (with accumulator)
+    /// @param chainId The chain ID
+    /// @return The bytecode with constructor parameters
+    function getCombinedBytecode(uint256 chainId) public pure returns (bytes memory) {
+        return abi.encodePacked(type(SyndicateCombinedSequencingChain).creationCode, abi.encode(chainId));
     }
 
     /// @notice Get the next auto-generated chain ID
