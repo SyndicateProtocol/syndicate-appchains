@@ -39,7 +39,7 @@ contract DeployPerformanceStaking is Script {
     address public gasAggregatorDeployment = address(0x1aCc3a26FCB9751D5E3b698D009b9C944eb98F9e);
     address public blockHashSenderDeployment = address(0xD77Aa8b1743326Baeb548357f8334df911A4E58f);
     address public gasArchiveDeployment = address(0xAb5390d3708C78e84b82de12D3e07d94145a3C0b);
-    address public splitterDeployment = address(0x0000000000000000000000000000000000000000);
+    address public splitterDeployment = address(0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d);
 
 
     uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
@@ -191,11 +191,12 @@ contract DeployPerformanceStaking is Script {
 
         if (commonsChainID == 510003) {
             // Only setup mainnet chains if we are on commons
-            revert("TODO: Add mainnet chain emissions receivers");
-            emissionsReceiver.setAppchainEmissionsReceiver(510003, address(0x0000000000000000000000000000000000000000)); // Commons
-            emissionsReceiver.setAppchainEmissionsReceiver(63829, address(0x0000000000000000000000000000000000000000)); // CMMT
-            emissionsReceiver.setAppchainEmissionsReceiver(510525, address(0x0000000000000000000000000000000000000000)); // Clankermon
-            emissionsReceiver.setAppchainEmissionsReceiver(574014, address(0x0000000000000000000000000000000000000000)); // Stadium
+            // emissionsReceiver.setAppchainEmissionsReceiver(510003, address(0x0000000000000000000000000000000000000000)); // Commons
+            // emissionsReceiver.setAppchainEmissionsReceiver(63829, address(0x0000000000000000000000000000000000000000)); // CMMT
+            emissionsReceiver.setAppchainEmissionsReceiver(510525, address(0xec0e25aBc32e5dcee851133c59a0bE9Fe6BA452A)); // Clankermon
+            emissionsReceiver.setAppchainEmissionsReceiver(574014, address(0x6c43da7CD9f68CfEfC626155D52805d66308835c)); // Stadium
+            emissionsReceiver.setAppchainEmissionsReceiver(88899, address(0xa0055EFF3f0f17309C09685c1417Ec4Fb9899A31)); // Unite
+            emissionsReceiver.setAppchainEmissionsReceiver(510530, address(0xF86883ab3E6341C51B67caFFdba3cE687a5c83ff)); // OpenLoot
         }
 
 
@@ -204,10 +205,9 @@ contract DeployPerformanceStaking is Script {
         emissionsReceiver.transferOwnership(commonsAdmin);
         console2.log("EmissionsReceiver ownership transferred to admin");
 
-        performancePool.transferOwnership(commonsAdmin);
-        console2.log("Performance Pool ownserhip transfer to admin");
-
-        appchainPool.transferOwnership(commonsAdmin);
-        console2.log("Appchain Pool ownership transferred to admin");
+        //   EmissionsReceiver deployed to: 0xf8CA1551b6878779e4F4e60fffF07EF74Ac6051e
+        //   PerformancePool deployed to: 0xD966439E91f41337D784BFFA0d38958fFECa54D2
+        //   AppchainPool deployed to: 0xEd582132C33DE5B5A661De3D2dCe5FB8F2d8F33D
+        //   Splitter deployed to: 0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d
     }
 }
