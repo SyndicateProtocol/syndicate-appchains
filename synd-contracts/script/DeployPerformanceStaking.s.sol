@@ -41,8 +41,8 @@ contract DeployPerformanceStaking is Script {
     address public gasArchiveDeployment = address(0xAb5390d3708C78e84b82de12D3e07d94145a3C0b);
     address public splitterDeployment = address(0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d);
 
-
     uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
+
     function applyArbRollupAlias(address l1Address) internal pure returns (address l2Address) {
         unchecked {
             l2Address = address(uint160(l1Address) + offset);
@@ -108,7 +108,10 @@ contract DeployPerformanceStaking is Script {
         console2.log("Actions on Mainnet...");
         console2.log("These need to be done using the admin Gnosis Safe");
 
-        console2.log("1. Call 'setRelayDestinationL3(address)' on the EmissionsScheduler contract to set the relay destination to:", splitterDeployment);
+        console2.log(
+            "1. Call 'setRelayDestinationL3(address)' on the EmissionsScheduler contract to set the relay destination to:",
+            splitterDeployment
+        );
         console2.log("2. Call 'unpause()' on EmissionsScheduler contract");
     }
 
@@ -157,7 +160,7 @@ contract DeployPerformanceStaking is Script {
 
         bytes memory initData = abi.encodeCall(GasArchive.initialize, (startingEpoch));
         GasArchive gasArchive = GasArchive(address(new ERC1967Proxy(address(gasArchiveImpl), initData)));
-        console2.log("GasArchive proxy deployed to:", address(gasArchive)); 
+        console2.log("GasArchive proxy deployed to:", address(gasArchive));
 
         console2.log("=== Setup ===");
 
@@ -181,7 +184,8 @@ contract DeployPerformanceStaking is Script {
         PerformancePool performancePool = new PerformancePool(commonsAdmin, staking, gasArchiveDeployment);
         console2.log("PerformancePool deployed to:", address(performancePool));
 
-        AppchainPool appchainPool = new AppchainPool(commonsAdmin, staking, gasArchiveDeployment, address(emissionsReceiver));
+        AppchainPool appchainPool =
+            new AppchainPool(commonsAdmin, staking, gasArchiveDeployment, address(emissionsReceiver));
         console2.log("AppchainPool deployed to:", address(appchainPool));
 
         Splitter splitter = new Splitter(basePool, address(performancePool), address(appchainPool));
@@ -198,7 +202,6 @@ contract DeployPerformanceStaking is Script {
             emissionsReceiver.setAppchainEmissionsReceiver(88899, address(0xa0055EFF3f0f17309C09685c1417Ec4Fb9899A31)); // Unite
             emissionsReceiver.setAppchainEmissionsReceiver(510530, address(0xF86883ab3E6341C51B67caFFdba3cE687a5c83ff)); // OpenLoot
         }
-
 
         console2.log("===  Transfer Ownership ===");
 
