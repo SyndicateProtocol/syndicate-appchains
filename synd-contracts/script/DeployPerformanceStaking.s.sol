@@ -39,7 +39,8 @@ contract DeployPerformanceStaking is Script {
     address public gasAggregatorDeployment = address(0x1aCc3a26FCB9751D5E3b698D009b9C944eb98F9e);
     address public blockHashSenderDeployment = address(0xD77Aa8b1743326Baeb548357f8334df911A4E58f);
     address public gasArchiveDeployment = address(0xAb5390d3708C78e84b82de12D3e07d94145a3C0b);
-    address public splitterDeployment = address(0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d);
+    address public appchainPoolDeployment = address(0xEd582132C33DE5B5A661De3D2dCe5FB8F2d8F33D);
+    address public splitterDeployment = address(0x0000000000000000000000000000000000000000);
 
     uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
 
@@ -63,7 +64,8 @@ contract DeployPerformanceStaking is Script {
         } else if (block.chainid == commonsChainID) {
             console2.log("Deploying Performance Staking Contracts on Commons...");
             // deployCommons();
-            deployCommonsPools();
+            // deployCommonsPools();
+            redeployCommonsPools();
         } else if (block.chainid == 1) {
             actionsOnMainnet();
         } else {
@@ -209,8 +211,25 @@ contract DeployPerformanceStaking is Script {
         console2.log("EmissionsReceiver ownership transferred to admin");
 
         //   EmissionsReceiver deployed to: 0xf8CA1551b6878779e4F4e60fffF07EF74Ac6051e
-        //   PerformancePool deployed to: 0xD966439E91f41337D784BFFA0d38958fFECa54D2
         //   AppchainPool deployed to: 0xEd582132C33DE5B5A661De3D2dCe5FB8F2d8F33D
-        //   Splitter deployed to: 0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d
+
+        // DEPRECATED
+        // Splitter deployed to: 0xF37a28C21A72eCf75fde856Ed18D28D1A49fA21d
+    }
+
+    function redeployCommonsPools() public {
+        require(gasArchiveDeployment != address(0), "GasArchive deployment not set");
+        require(commonsAdmin != address(0), "CommonsAdmin not set");
+        require(appchainPoolDeployment != address(0), "AppchainPool deployment not set");
+        console2.log("Redeploying Commons (Part 3)...");
+
+        PerformancePool performancePool = new PerformancePool(commonsAdmin, staking, gasArchiveDeployment);
+        console2.log("PerformancePool deployed to:", address(performancePool));
+
+        Splitter splitter = new Splitter(basePool, address(performancePool), appchainPoolDeployment);
+        console2.log("Splitter deployed to:", address(splitter));
+
+        // PerformancePool deployed to: 0x5A25d511b8cCF2894950243D1C57CA9F1447cabA
+        // Splitter deployed to: 0x789D425A45557a9743029F937A3BA9aAC0827008
     }
 }
