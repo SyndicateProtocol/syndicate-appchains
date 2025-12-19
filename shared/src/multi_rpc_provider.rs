@@ -41,7 +41,7 @@ use std::{
         Arc,
     },
 };
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use url::Url;
 
 /// Multi-RPC provider that handles multiple RPC endpoints with automatic failover

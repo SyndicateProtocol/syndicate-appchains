@@ -14,7 +14,7 @@ use contract_bindings::synd::syndicate_sequencing_chain::SyndicateSequencingChai
 use rlp::Rlp;
 use std::io::Cursor;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::warn;
 
 /// Represents errors that can occur during sequencing transaction parsing.
 #[derive(Debug, Error, PartialEq, Eq)]

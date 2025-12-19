@@ -10,7 +10,7 @@ use synd_mchain::{
     db::{ArbitrumBatch, MBlock, Slot},
 };
 use thiserror::Error;
-use tracing::{error, info, instrument, trace};
+use tracing::{info, instrument, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
 /// slots to the slot processor to generate `synd-mchain` blocks.

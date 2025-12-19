@@ -11,7 +11,7 @@ use shared::parse::parse_address;
 use std::{fmt::Debug, time::Duration};
 use synd_block_builder::config::BlockBuilderConfig;
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::debug;
 
 /// Configuration for a generic chain ingestor
 #[allow(missing_docs)]

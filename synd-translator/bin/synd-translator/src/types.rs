@@ -2,7 +2,6 @@ use crate::config::IngestorConfigError;
 use eyre::Report;
 use synd_block_builder::config::ConfigError;
 use thiserror::Error;
-use tracing::error;
 
 #[derive(Debug, Error)]
 pub enum RuntimeError {
