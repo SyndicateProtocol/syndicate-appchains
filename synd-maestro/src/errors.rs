@@ -6,7 +6,6 @@ use redis::RedisError;
 use shared::json_rpc::RpcError;
 use std::num::ParseIntError;
 use thiserror::Error;
-use tracing::error;
 
 /// Primary error type for the Maestro service
 #[derive(Debug, Error)]
