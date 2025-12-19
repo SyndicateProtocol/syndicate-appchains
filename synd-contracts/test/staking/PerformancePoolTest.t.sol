@@ -865,4 +865,22 @@ contract PerformancePoolTest is Test {
         // Still expect 0 since user2 wasnt staked for the entire epoch
         assertEq(0, e2_user2_claimable);
     }
+
+    function test_claim_1_user_stake_multiple_appchains() public {
+        vm.startPrank(user1);
+        staking.stakeSynd{value: 50 ether}(appchainId1);
+        staking.stakeSynd{value: 50 ether}(appchainId2);
+        vm.stopPrank();
+
+        stepDays(60);
+        uint256 epoch = staking.getCurrentEpoch() - 1;
+
+        setGasShares(epoch, 1, 1, 0);
+
+        performancePool.computeDiminishingFactors(epoch, 0);
+        performancePool.deposit{value: 100 ether}(epoch);
+
+        assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId1), 50 ether);
+        assertEq(performancePool.getClaimableAmount(epoch, user1, appchainId2), 50 ether);
+    }
 }
