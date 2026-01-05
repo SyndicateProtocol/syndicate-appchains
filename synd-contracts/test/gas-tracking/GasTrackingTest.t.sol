@@ -13,6 +13,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {Comparators} from "@openzeppelin/contracts/utils/Comparators.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract MockGasCounter {
     mapping(uint256 => uint256) public tokensUsedPerEpoch;
@@ -311,6 +312,43 @@ contract GasAggregatorTest is Test {
         gasAggregator.simulateAggregateTokens(0, new uint256[](0), new uint256[](0));
 
         vm.expectRevert(abi.encodeWithSelector(GasAggregator.EpochNotOver.selector, 1, 1));
+        gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
+    }
+
+    function test_pause() public {
+        // Set up chains 1, 2, and 3
+        uint256[] memory chains = new uint256[](3);
+        chains[0] = 1;
+        chains[1] = 2;
+        chains[2] = 3;
+        setupChainsWithOverrides(chains);
+
+        uint256[] memory gasUsage = new uint256[](3);
+        gasUsage[0] = 100;
+        gasUsage[1] = 101;
+        gasUsage[2] = 100;
+
+        // Set gas usage for current epoch
+        uint256 epoch = 1;
+        mockGasCounter1.setTokensForEpoch(epoch, gasUsage[0]);
+        mockGasCounter2.setTokensForEpoch(epoch, gasUsage[1]);
+        mockGasCounter3.setTokensForEpoch(epoch, gasUsage[2]);
+
+        // Move to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION);
+
+
+        vm.prank(admin);
+        gasAggregator.pause();
+        assertEq(gasAggregator.paused(), true);
+
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
+
+        vm.prank(admin);
+        gasAggregator.unpause();
+        assertEq(gasAggregator.paused(), false);
+
         gasAggregator.aggregateTokens(new uint256[](0), new uint256[](0));
     }
 
