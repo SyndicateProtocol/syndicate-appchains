@@ -219,8 +219,9 @@ pub async fn start_mchain(
     migration_params: Option<MigrationParams>,
     config_manager_rpc_url: Option<String>,
     config_manager_address: Option<Address>,
-) -> Result<(String, E2EProcess, MProvider)> {
-    let tmp_dir = test_path("synd-mchain", None).to_string_lossy().to_string();
+) -> Result<(String, E2EProcess, MProvider, String)> {
+    let tmp_dir_path = test_path("synd-mchain", None);
+    let tmp_dir = tmp_dir_path.to_string_lossy().to_string();
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
@@ -259,10 +260,11 @@ pub async fn start_mchain(
     }
 
     let docker =
-        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), tmp_dir]).await?;
+        start_component("synd-mchain", port, args, vec!["--datadir".to_string(), tmp_dir.clone()])
+            .await?;
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
-    Ok((url, docker, mchain))
+    Ok((url, docker, mchain, tmp_dir))
 }
 
 #[derive(Clone)]

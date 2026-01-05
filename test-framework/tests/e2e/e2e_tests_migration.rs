@@ -111,7 +111,7 @@ async fn spin_up_syndicate_stack(
     )
     .await?;
 
-    let (mchain_rpc_url, mchain, _mchain_provider) = start_mchain(
+    let (mchain_rpc_url, mchain, _mchain_provider, _mchain_datadir) = start_mchain(
         appchain_chain_id,
         opt.finality_delay,
         None,

@@ -108,6 +108,7 @@ pub struct TestComponents {
 
     /// Mchain
     pub mchain_provider: MProvider,
+    pub mchain_datadir: String,
 
     pub maestro_url: String,
     pub valkey_url: String,
@@ -434,7 +435,7 @@ impl TestComponents {
 
         info!("Starting components...");
         info!("Starting synd-mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
+        let (mchain_rpc_url, mchain, mchain_provider, mchain_datadir) = start_mchain(
             options.appchain_chain_id,
             options.finality_delay,
             None,
@@ -676,6 +677,7 @@ impl TestComponents {
                 assertion_poster_address: assertion_poster_contract_address,
 
                 mchain_provider,
+                mchain_datadir,
                 maestro_url,
                 valkey_url: valkey_url_init,
 

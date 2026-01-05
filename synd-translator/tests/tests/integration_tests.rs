@@ -55,7 +55,7 @@ fn deposit_eth(src: Address, dest: Address, value: U256) -> DelayedMessage {
 async fn arb_owner_test() -> Result<()> {
     // Start the appchain's node
     let appchain_owner = address!("0x0000000000000000000000000000000000000001");
-    let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, _, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: appchain_owner,
@@ -83,8 +83,7 @@ async fn arb_owner_test() -> Result<()> {
 async fn no_l1_fees_test() -> Result<()> {
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
-    let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -139,8 +138,7 @@ async fn no_l1_fees_test() -> Result<()> {
 /// via the block builder code and posted to the dummy appchain contract.
 #[tokio::test]
 async fn test_nitro_batch() -> Result<()> {
-    let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
 
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
@@ -223,8 +221,7 @@ async fn test_nitro_batch() -> Result<()> {
 /// Regression test
 #[tokio::test]
 async fn test_nitro_batch_two_tx() -> Result<()> {
-    let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -323,8 +320,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
 #[tokio::test]
 async fn test_nitro_end_of_block_tx() -> Result<()> {
-    let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,
@@ -368,8 +364,7 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
 
 #[tokio::test]
 async fn test_nitro_delayed_message_after_batch() -> Result<()> {
-    let (mchain_url, _mchain, mchain) =
-        start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
+    let (mchain_url, _, mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, 0, None, None, None).await?;
     let chain_info = launch_nitro_node(NitroNodeArgs {
         chain_id: APPCHAIN_CHAIN_ID,
         chain_owner: Address::ZERO,

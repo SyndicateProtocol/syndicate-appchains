@@ -12,11 +12,13 @@ version.workspace      = true
 alloy             = { workspace = true, features = ["node-bindings", "providers", "rpc-types-anvil"] }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
+flate2            = { workspace = true }
 jsonrpsee         = { workspace = true }
 redis             = { workspace = true, features = ["tokio-comp"] }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
 shared            = { workspace = true }
 synd-mchain       = { workspace = true }
+tar               = { workspace = true }
 tokio             = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing           = { workspace = true }

@@ -278,7 +278,7 @@ fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig)
 /// Downloads a snapshot from a URL, decompresses it, and extracts it to the datadir
 #[cfg(feature = "rocksdb")]
 #[allow(clippy::cognitive_complexity)]
-async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
+pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::{fs, io::BufReader};
     use tar::Archive;
@@ -300,12 +300,23 @@ async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
     }
 
     let bytes = response.bytes().await?;
+
+    // Verify we got some data
+    if bytes.is_empty() {
+        return Err(eyre::eyre!("Downloaded snapshot file is empty"));
+    }
+
     fs::write(&temp_file, &bytes)?;
 
-    info!("Downloaded snapshot, extracting to {}", datadir);
+    info!("Downloaded snapshot ({} bytes), extracting to {}", bytes.len(), datadir);
 
-    // Ensure datadir exists
-    fs::create_dir_all(datadir)?;
+    // Ensure datadir exists and is completely empty
+    let datadir_path = std::path::Path::new(datadir);
+    if datadir_path.exists() {
+        // Remove the entire directory and recreate it to ensure it's completely clean
+        fs::remove_dir_all(datadir_path)?;
+    }
+    fs::create_dir_all(datadir_path)?;
 
     // Determine if the file is gzipped by checking the first two bytes (magic number)
     let is_gzipped = bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
@@ -321,7 +332,66 @@ async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
     };
 
     let mut archive = Archive::new(reader);
-    archive.unpack(datadir)?;
+    archive.set_unpack_xattrs(false);
+    archive.set_preserve_permissions(false);
+
+    // Extract entries manually for better error handling
+    for entry_result in archive.entries()? {
+        let mut entry =
+            entry_result.map_err(|e| eyre::eyre!("Failed to read archive entry: {}", e))?;
+
+        let entry_path =
+            entry.path().map_err(|e| eyre::eyre!("Failed to get entry path: {}", e))?.to_path_buf();
+
+        // Skip directories - create them as needed
+        if entry.header().entry_type().is_dir() {
+            continue;
+        }
+
+        // Only process regular files
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+
+        // Get the filename (last component of the path)
+        let file_name = entry_path
+            .file_name()
+            .ok_or_else(|| eyre::eyre!("Entry path has no filename: {:?}", entry_path))?;
+
+        let target_path = datadir_path.join(file_name);
+
+        // Remove existing file if it exists
+        if target_path.exists() {
+            fs::remove_file(&target_path)?;
+        }
+
+        // Create the file and copy the entry content
+        let mut out_file = fs::File::create(&target_path).map_err(|e| {
+            eyre::eyre!(
+                "Failed to create file {:?}: {}. Entry path: {:?}",
+                target_path,
+                e,
+                entry_path
+            )
+        })?;
+
+        std::io::copy(&mut entry, &mut out_file).map_err(|e| {
+            eyre::eyre!(
+                "Failed to copy entry {:?} to {:?}: {}. File size: {} bytes, is_gzipped: {}, datadir: {:?}. This might indicate the tar file is corrupted or contains unsupported entry types.",
+                entry_path,
+                target_path,
+                e,
+                bytes.len(),
+                is_gzipped,
+                datadir
+            )
+        })?;
+
+        // Sync the file to ensure it's written to disk
+        out_file
+            .sync_all()
+            .map_err(|e| eyre::eyre!("Failed to sync file {:?}: {}", target_path, e))?;
+    }
 
     // Clean up temporary file
     fs::remove_file(&temp_file)?;
