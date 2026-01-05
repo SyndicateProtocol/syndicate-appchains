@@ -181,7 +181,7 @@ pub async fn delayed_msgs_data_from_partial_block(
                 let tx = client
                     .get_transaction_by_hash(block.log_tx_hashes[i])
                     .await
-                    .unwrap_or_else(|| panic!("tx for log not found: {:?}", log));
+                    .unwrap_or_else(|| panic!("tx for log not found: {log:?}"));
 
                 let decoded_tx = sendL2MessageFromOriginCall::abi_decode_validate(tx.input())?;
                 let seq_num: U256 = log.topics()[1].into();

@@ -303,7 +303,7 @@ pub async fn deploy_nitro_rollup(
         "nitro-contracts".to_string()
     };
     let nitro_contracts_dir =
-        Path::new(project_root).join(format!("synd-contracts/lib/{}", repo_name));
+        Path::new(project_root).join(format!("synd-contracts/lib/{repo_name}"));
 
     info!("Nitro contracts dir: {:?}", nitro_contracts_dir);
 

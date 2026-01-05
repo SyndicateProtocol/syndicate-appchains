@@ -73,6 +73,10 @@ pub struct MchainConfig {
         value_parser = parse_address
     )]
     pub config_manager_address: Option<Address>,
+
+    /// URL to a tar file snapshot to restore the database from on startup
+    #[arg(long, env = "SNAPSHOT_URL")]
+    pub snapshot_url: Option<String>,
 }
 
 impl MchainConfig {
@@ -143,13 +147,13 @@ pub async fn with_onchain_config(config: MchainConfig) -> MchainConfig {
     let provider = ProviderBuilder::new()
         .connect(url.as_str())
         .await
-        .unwrap_or_else(|error| panic!("error connecting to RPC URL: {}", error));
+        .unwrap_or_else(|error| panic!("error connecting to RPC URL: {error}"));
 
     let onchain = get_config(address, U256::from(config.appchain_chain_id), provider)
         .await
-        .unwrap_or_else(|error| panic!("error obtaining onchain config: {}", error));
+        .unwrap_or_else(|error| panic!("error obtaining onchain config: {error}"));
 
-    info!("got onchain config: {:?}", onchain);
+    info!("got onchain config: {onchain:?}");
 
     override_with_onchain_config(config, &onchain)
 }
@@ -271,6 +275,61 @@ fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig)
     config
 }
 
+/// Downloads a snapshot from a URL, decompresses it, and extracts it to the datadir
+#[cfg(feature = "rocksdb")]
+#[allow(clippy::cognitive_complexity)]
+async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
+    use flate2::read::GzDecoder;
+    use std::{fs, io::BufReader};
+    use tar::Archive;
+
+    info!("Downloading snapshot from {}", snapshot_url);
+
+    // Create a temporary file to store the downloaded tar
+    let temp_dir = std::env::temp_dir();
+    let temp_file = temp_dir.join(format!("snapshot_{}.tar", std::process::id()));
+
+    // Download the file using async reqwest
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3600)) // 1 hour timeout for large files
+        .build()?;
+    let response = client.get(snapshot_url).send().await?;
+
+    if !response.status().is_success() {
+        return Err(eyre::eyre!("Failed to download snapshot: HTTP {}", response.status()));
+    }
+
+    let bytes = response.bytes().await?;
+    fs::write(&temp_file, &bytes)?;
+
+    info!("Downloaded snapshot, extracting to {}", datadir);
+
+    // Ensure datadir exists
+    fs::create_dir_all(datadir)?;
+
+    // Determine if the file is gzipped by checking the first two bytes (magic number)
+    let is_gzipped = bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+
+    // Open and extract the tar file
+    let file = fs::File::open(&temp_file)?;
+    let reader: Box<dyn std::io::Read> = if is_gzipped {
+        info!("Detected gzipped tar file");
+        Box::new(GzDecoder::new(BufReader::new(file)))
+    } else {
+        info!("Detected uncompressed tar file");
+        Box::new(BufReader::new(file))
+    };
+
+    let mut archive = Archive::new(reader);
+    archive.unpack(datadir)?;
+
+    // Clean up temporary file
+    fs::remove_file(&temp_file)?;
+
+    info!("Snapshot extracted successfully to {}", datadir);
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -291,6 +350,7 @@ mod test {
             migrated_delayed_msgs_count: None,
             config_manager_rpc_url: None,
             config_manager_address: None,
+            snapshot_url: None,
         }
     }
 

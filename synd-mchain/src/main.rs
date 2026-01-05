@@ -17,7 +17,7 @@ async fn main() -> eyre::Result<()> {
         tracing::setup_global_logging,
     };
     use synd_mchain::{
-        config::{with_onchain_config, MchainConfig},
+        config::{load_snapshot, with_onchain_config, MchainConfig},
         metrics::MchainMetrics,
         server::start_mchain,
     };
@@ -28,6 +28,11 @@ async fn main() -> eyre::Result<()> {
     setup_global_logging()?;
 
     let cfg = with_onchain_config(MchainConfig::parse()).await;
+
+    // Load snapshot if URL is provided
+    if let Some(ref snapshot_url) = cfg.snapshot_url {
+        load_snapshot(snapshot_url, &cfg.datadir).await?;
+    }
 
     info!("loading rocksdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir.clone())?;

@@ -128,7 +128,7 @@ contract PerformancePool is IUserPool, RewardPoolBase {
         uint256 appchainTotal = getAppchainTotalReward(epochIndex, appchainId);
         if (appchainTotal == 0) return 0;
 
-        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserStake(epochIndex, user);
+        uint256 userStaked = ISyndStaking(address(stakingContract)).getUserAppchainStake(epochIndex, user, appchainId);
         if (userStaked == 0) return 0;
 
         uint256 appchainStaked = ISyndStaking(address(stakingContract)).getAppchainStake(epochIndex, appchainId);
