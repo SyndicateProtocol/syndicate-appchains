@@ -86,7 +86,6 @@ contract BasicTests is ArbChainConfigTestBase {
     }
 
     function testGetArbChainConfigAddress() public view {
-        // Verify that the manager returns the correct address
         address retrievedAddress = chainConfig.getArbChainConfigAddress(CHAIN_ID);
         assertEq(retrievedAddress, address(chainConfig));
     }
