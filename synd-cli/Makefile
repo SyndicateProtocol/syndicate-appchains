@@ -54,7 +54,7 @@ generate-contract-abis:
 	  echo "" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "export const teeModuleBytecode =" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "  \"$$(forge inspect src/withdrawal/TeeModule.sol:TeeModule bytecode)\"" >> ../synd-cli/src/abi/synd/TeeModule.ts
-
+	
 	@echo "Formatting generated ABI files..."
 	@bunx @biomejs/biome format --write src/abi/synd/
 	
