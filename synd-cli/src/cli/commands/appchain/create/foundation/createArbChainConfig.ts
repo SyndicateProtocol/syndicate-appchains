@@ -1,6 +1,6 @@
 import {
-  beaconProxyABI,
-  beaconProxyBytecode
+  BeaconProxyABI,
+  BeaconProxyBytecode
 } from "@/abi/openzeppelin/BeaconProxy"
 import { arbChainConfigABI } from "@/abi/synd/ArbChainConfig"
 import type { CreateArbChainConfig } from "@/types"
@@ -72,8 +72,8 @@ export async function createArbChainConfig({
   // Deploy the BeaconProxy with initialization data
   // The proxy constructor will delegatecall initialize() to the implementation
   const deployHash = await deployerSettlementWalletClient.deployContract({
-    abi: beaconProxyABI,
-    bytecode: beaconProxyBytecode,
+    abi: BeaconProxyABI,
+    bytecode: BeaconProxyBytecode,
     args: [beaconAddress, initializeData]
   })
   const deployReceipt = await settlementPublicClient.waitForTransactionReceipt({
