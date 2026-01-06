@@ -1,6 +1,25 @@
 //! The `MockChain` is used for appchain block derivation.
 
-use std::{fs, io::ErrorKind};
+use std::fs;
+use tracing::info;
+
+fn datadir_is_empty(datadir: &std::path::Path) -> bool {
+    fs::read_dir(datadir)
+        .map(|entries| {
+            let files: Vec<_> =
+                entries.filter_map(|e| e.ok()).filter(|e| e.file_name() != "lost+found").collect();
+
+            if !files.is_empty() {
+                info!("datadir {} is not empty, found {} files", datadir.display(), files.len());
+                for file in &files {
+                    info!("  {}", file.path().display());
+                }
+            }
+
+            files.is_empty()
+        })
+        .unwrap_or(true) // If directory doesn't exist, treat as empty
+}
 
 #[tokio::main]
 #[cfg(feature = "rocksdb")]
@@ -18,6 +37,7 @@ async fn main() -> eyre::Result<()> {
         service_start_utils::{start_http_server_with_metrics_only, MetricsState},
         tracing::setup_global_logging,
     };
+    use std::path::Path;
     use synd_mchain::{
         config::{load_snapshot, with_onchain_config, MchainConfig},
         metrics::MchainMetrics,
@@ -33,22 +53,10 @@ async fn main() -> eyre::Result<()> {
 
     // Load snapshot if URL is provided
     if let Some(ref snapshot_url) = cfg.snapshot_url {
-        // Check if datadir exists and has files
-        let is_empty = match fs::read_dir(&cfg.datadir) {
-            Ok(mut entries) => entries.next().is_none(),
-            Err(e) if e.kind() == ErrorKind::NotFound => true,
-            Err(e) => return Err(e.into()),
-        };
-
-        if is_empty {
+        if datadir_is_empty(Path::new(&cfg.datadir)) {
             load_snapshot(snapshot_url, &cfg.datadir).await?;
         } else {
             warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
-
-            let entries = fs::read_dir(&cfg.datadir)?;
-            for entry in entries {
-                info!("{}", entry?.path().display());
-            }
         }
     }
 
