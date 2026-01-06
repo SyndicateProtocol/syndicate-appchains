@@ -5,6 +5,7 @@ import {L1Relayer} from "src/staking/L1Relayer.sol";
 import {L2Relayer} from "src/staking/L2Relayer.sol";
 import {Refunder} from "src/staking/Refunder.sol";
 import {RelayerMocks} from "src/staking/RelayerMocks.sol";
+import {RelayHelper} from "src/staking/RelayHelper.sol";
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Test} from "forge-std/Test.sol";
@@ -12,6 +13,14 @@ import {Vm} from "forge-std/Vm.sol";
 
 contract DummyToken is ERC20 {
     constructor() ERC20("DummyToken", "DT") {}
+
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
+}
+
+contract ContractMock {
+    fallback() external {}
 }
 
 contract RelayersTest is Test {
@@ -27,11 +36,13 @@ contract RelayersTest is Test {
     address public opMessageRelayer;
     address public arbBridge;
 
+    RelayHelper public relayHelper;
+
     function setUp() public {
         admin = makeAddr("admin");
-        opBridge = makeAddr("opBridge");
-        opMessageRelayer = makeAddr("opMessageRelayer");
-        arbBridge = makeAddr("arbBridge");
+        opBridge = address(new ContractMock());
+        opMessageRelayer = address(new ContractMock());
+        arbBridge = address(new ContractMock());
 
         dummyToken = new DummyToken();
 
@@ -41,6 +52,7 @@ contract RelayersTest is Test {
         l1Relayer = new L1Relayer(
             opBridge, opMessageRelayer, address(dummyToken), address(dummyToken), address(l2Relayer), admin
         );
+        relayHelper = new RelayHelper(admin, address(l1Relayer), address(dummyToken));
     }
 
     function test_admin_L2Relayer() public {
@@ -87,5 +99,49 @@ contract RelayersTest is Test {
 
         assertEq(address(relayerMocks).balance, 100 ether);
         assertEq(address(refunder).balance, 0);
+    }
+
+    function test_relayHelperContractBalance() public {
+        vm.prank(admin);
+        vm.expectRevert(); // InsufficientBalance
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
+
+        dummyToken.mint(address(relayHelper), 1 ether);
+
+        vm.prank(makeAddr("anyone"));
+        vm.expectRevert(); // AccessControl: account ... is missing role ...
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
+
+        vm.prank(admin);
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
+    }
+
+    function test_relayHelperSenderAllowance() public {
+        address anyone = makeAddr("anyone");
+        dummyToken.mint(anyone, 1 ether);
+
+        vm.prank(anyone);
+        vm.expectRevert();
+        relayHelper.relaySenderAllowance(address(l2Relayer), 1);
+
+        vm.prank(anyone);
+        dummyToken.approve(address(relayHelper), 1 ether);
+
+        vm.prank(anyone);
+        relayHelper.relaySenderAllowance(address(l2Relayer), 1);
+    }
+
+    function test_relayHelperWithdraw() public {
+        dummyToken.mint(address(relayHelper), 1 ether);
+
+        vm.prank(makeAddr("anyone"));
+        vm.expectRevert();
+        relayHelper.withdraw(1 ether, admin);
+
+        vm.prank(admin);
+        relayHelper.withdraw(1 ether, admin);
+
+        assertEq(dummyToken.balanceOf(address(relayHelper)), 0);
+        assertEq(dummyToken.balanceOf(admin), 1 ether);
     }
 }
