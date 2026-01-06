@@ -1,6 +1,6 @@
 //! The `MockChain` is used for appchain block derivation.
 
-use std::fs;
+use std::{fs, io::ErrorKind};
 
 #[tokio::main]
 #[cfg(feature = "rocksdb")]
@@ -34,17 +34,21 @@ async fn main() -> eyre::Result<()> {
     // Load snapshot if URL is provided
     if let Some(ref snapshot_url) = cfg.snapshot_url {
         // Check if datadir exists and has files
-        let is_empty =
-            fs::read_dir(&cfg.datadir).map(|mut entries| entries.next().is_none()).unwrap_or(true);
+        let is_empty = match fs::read_dir(&cfg.datadir) {
+            Ok(mut entries) => entries.next().is_none(),
+            Err(e) if e.kind() == ErrorKind::NotFound => true,
+            Err(e) => return Err(e.into()),
+        };
+
         if is_empty {
             load_snapshot(snapshot_url, &cfg.datadir).await?;
-        }
-    } else {
-        warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
-        // Print contents of datadir
-        let entries = fs::read_dir(&cfg.datadir)?;
-        for entry in entries {
-            info!("{}", entry?.path().display());
+        } else {
+            warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
+
+            let entries = fs::read_dir(&cfg.datadir)?;
+            for entry in entries {
+                info!("{}", entry?.path().display());
+            }
         }
     }
 
