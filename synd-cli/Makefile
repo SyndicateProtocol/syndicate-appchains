@@ -12,10 +12,7 @@ generate-contract-abis:
 	
 	@echo "Generating ArbChainConfig..."
 	@cd ../synd-contracts && \
-	  echo "export const arbChainConfigABI = $$(forge inspect src/config/ArbChainConfig.sol:ArbChainConfig abi --json) as const" > ../synd-cli/src/abi/synd/ArbChainConfig.ts && \
-	  echo "" >> ../synd-cli/src/abi/synd/ArbChainConfig.ts && \
-	  echo "export const arbChainConfigBytecode =" >> ../synd-cli/src/abi/synd/ArbChainConfig.ts && \
-	  echo "  \"$$(forge inspect src/config/ArbChainConfig.sol:ArbChainConfig bytecode)\"" >> ../synd-cli/src/abi/synd/ArbChainConfig.ts
+	  echo "export const arbChainConfigABI = $$(forge inspect src/config/ArbChainConfig.sol:ArbChainConfig abi --json) as const" > ../synd-cli/src/abi/synd/ArbChainConfig.ts
 	
 	@echo "Generating ArbConfigManager..."
 	@cd ../synd-contracts && \
