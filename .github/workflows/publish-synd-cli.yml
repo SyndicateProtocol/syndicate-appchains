@@ -1,12 +1,10 @@
 name: Publish synd-cli Binaries
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag_name:
-        description: Release tag version (e.g., v1.2.3, v0.10.15-dev.1)
+        description: "synd-cli version tag (e.g., synd-cli-v1.0.0)"
         required: true
         type: string
 
@@ -74,13 +72,13 @@ jobs:
           retention-days: 1
 
   publish-release:
-    name: Attach binaries to GitHub release
+    name: Create release and attach binaries
     permissions:
       contents: write
     needs: build
     runs-on: ubuntu-latest
     env:
-      TAG_NAME: ${{ github.event.release.tag_name || inputs.tag_name }}
+      TAG_NAME: ${{ inputs.tag_name }}
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -94,10 +92,12 @@ jobs:
           mv synd-cli/synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
           mv synd-cli/synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
 
-      - name: Attach binaries to release
+      - name: Create release and attach binaries
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.TAG_NAME }}
+          name: "synd-cli ${{ env.TAG_NAME }}"
+          body: "Release of synd-cli ${{ env.TAG_NAME }}"
           files: |
             synd-cli-linux-x64-${{ env.TAG_NAME }}
             synd-cli-linux-arm64-${{ env.TAG_NAME }}
