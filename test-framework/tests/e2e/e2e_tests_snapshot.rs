@@ -15,10 +15,11 @@ use test_framework::components::{
 use test_utils::{
     nitro_chain::ArbContractVersion,
     port_manager::PortManager,
-    snapshot::{create_tar_gz_from_rocksdb, start_file_server},
+    tar::{create_tar_gz, start_file_server},
     utils::test_path,
     wait_until,
 };
+use tokio::time::sleep;
 
 #[ctor::ctor]
 fn init() {
@@ -62,15 +63,15 @@ async fn e2e_snapshot_restore() -> Result<()> {
 
 
             // Wait a bit to ensure RocksDB has flushed all data to disk
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            sleep(Duration::from_secs(2)).await;
 
             // Create snapshot
             let temp_dir = std::env::temp_dir();
             let test_id = format!("e2e_snapshot_{}", std::process::id());
             let snapshot_file = temp_dir.join(format!("{test_id}_snapshot.tar.gz"));
 
-            // Use the RocksDB-specific function that handles locked files
-            create_tar_gz_from_rocksdb(&mchain_datadir, &snapshot_file)?;
+            // Create the snapshot archive
+            create_tar_gz(&mchain_datadir, &snapshot_file)?;
             let snapshot_size = fs::metadata(&snapshot_file)?.len();
 
             // Verify we actually captured data
@@ -81,7 +82,7 @@ async fn e2e_snapshot_restore() -> Result<()> {
             let server_handle = start_file_server(&snapshot_file, port).await?;
 
             // Give the server a moment to start
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(100)).await;
 
             let snapshot_url = format!("http://127.0.0.1:{port}/snapshot.tar.gz");
 
@@ -90,7 +91,6 @@ async fn e2e_snapshot_restore() -> Result<()> {
             // with the snapshot URL in a separate test path
             let restore_datadir = test_path("synd-mchain-restore", None);
             let _ = fs::remove_dir_all(&restore_datadir);
-            fs::create_dir_all(&restore_datadir)?;
 
             // Start a new mchain instance with the snapshot URL
             let restore_port = PortManager::instance().next_port().await;
@@ -116,7 +116,7 @@ async fn e2e_snapshot_restore() -> Result<()> {
                     .await?;
 
             // Wait for mchain to start and load the snapshot
-            tokio::time::sleep(Duration::from_secs(10)).await;
+           sleep(Duration::from_secs(10)).await;
 
             // Create a provider for the restored mchain
             let restore_mchain_url = format!("ws://localhost:{restore_port}");

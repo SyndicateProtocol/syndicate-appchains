@@ -10,7 +10,11 @@ use contract_bindings::synd::{
     arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
 };
 use eyre::Result;
+use flate2::read::GzDecoder;
+use futures_util::StreamExt;
 use shared::parse::{parse_address, parse_hash};
+use std::{env::temp_dir, fs, io::Write, path::Path, process, time};
+use tar::Archive;
 use tracing::{info, warn};
 
 /// CLI args for the `synd-mchain` executable
@@ -276,127 +280,42 @@ fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig)
 }
 
 /// Downloads a snapshot from a URL, decompresses it, and extracts it to the datadir
-#[cfg(feature = "rocksdb")]
 #[allow(clippy::cognitive_complexity)]
 pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
-    use flate2::read::GzDecoder;
-    use std::{fs, io::BufReader};
-    use tar::Archive;
+    info!("Downloading snapshot from {snapshot_url}");
 
-    info!("Downloading snapshot from {}", snapshot_url);
-
-    // Create a temporary file to store the downloaded tar
-    let temp_dir = std::env::temp_dir();
-    let temp_file = temp_dir.join(format!("snapshot_{}.tar", std::process::id()));
-
-    // Download the file using async reqwest
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(3600)) // 1 hour timeout for large files
-        .build()?;
+    let client = reqwest::Client::builder().timeout(time::Duration::from_secs(3600)).build()?;
     let response = client.get(snapshot_url).send().await?;
 
     if !response.status().is_success() {
         return Err(eyre::eyre!("Failed to download snapshot: HTTP {}", response.status()));
     }
 
-    let bytes = response.bytes().await?;
+    // Stream to temp file to avoid keeping large files in RAM
+    let temp_file = temp_dir().join(format!("snapshot_{}.tar", process::id()));
+    let mut file = fs::File::create(&temp_file)?;
+    let mut stream = response.bytes_stream();
 
-    // Verify we got some data
-    if bytes.is_empty() {
-        return Err(eyre::eyre!("Downloaded snapshot file is empty"));
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        file.write_all(&chunk)?;
     }
+    drop(file);
 
-    fs::write(&temp_file, &bytes)?;
+    info!("Downloaded snapshot, extracting to {datadir}");
+    fs::create_dir_all(Path::new(datadir))?;
 
-    info!("Downloaded snapshot ({} bytes), extracting to {}", bytes.len(), datadir);
-
-    // Ensure datadir exists and is completely empty
-    let datadir_path = std::path::Path::new(datadir);
-    if datadir_path.exists() {
-        // Remove the entire directory and recreate it to ensure it's completely clean
-        fs::remove_dir_all(datadir_path)?;
-    }
-    fs::create_dir_all(datadir_path)?;
-
-    // Determine if the file is gzipped by checking the first two bytes (magic number)
-    let is_gzipped = bytes.len() >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
-
-    // Open and extract the tar file
+    let is_gzipped = snapshot_url.ends_with(".gz") || snapshot_url.ends_with(".tgz");
     let file = fs::File::open(&temp_file)?;
-    let reader: Box<dyn std::io::Read> = if is_gzipped {
-        info!("Detected gzipped tar file");
-        Box::new(GzDecoder::new(BufReader::new(file)))
+
+    if is_gzipped {
+        Archive::new(GzDecoder::new(file)).unpack(Path::new(datadir))?;
     } else {
-        info!("Detected uncompressed tar file");
-        Box::new(BufReader::new(file))
-    };
-
-    let mut archive = Archive::new(reader);
-    archive.set_unpack_xattrs(false);
-    archive.set_preserve_permissions(false);
-
-    // Extract entries manually for better error handling
-    for entry_result in archive.entries()? {
-        let mut entry =
-            entry_result.map_err(|e| eyre::eyre!("Failed to read archive entry: {}", e))?;
-
-        let entry_path =
-            entry.path().map_err(|e| eyre::eyre!("Failed to get entry path: {}", e))?.to_path_buf();
-
-        // Skip directories - create them as needed
-        if entry.header().entry_type().is_dir() {
-            continue;
-        }
-
-        // Only process regular files
-        if !entry.header().entry_type().is_file() {
-            continue;
-        }
-
-        // Get the filename (last component of the path)
-        let file_name = entry_path
-            .file_name()
-            .ok_or_else(|| eyre::eyre!("Entry path has no filename: {:?}", entry_path))?;
-
-        let target_path = datadir_path.join(file_name);
-
-        // Remove existing file if it exists
-        if target_path.exists() {
-            fs::remove_file(&target_path)?;
-        }
-
-        // Create the file and copy the entry content
-        let mut out_file = fs::File::create(&target_path).map_err(|e| {
-            eyre::eyre!(
-                "Failed to create file {:?}: {}. Entry path: {:?}",
-                target_path,
-                e,
-                entry_path
-            )
-        })?;
-
-        std::io::copy(&mut entry, &mut out_file).map_err(|e| {
-            eyre::eyre!(
-                "Failed to copy entry {:?} to {:?}: {}. File size: {} bytes, is_gzipped: {}, datadir: {:?}. This might indicate the tar file is corrupted or contains unsupported entry types.",
-                entry_path,
-                target_path,
-                e,
-                bytes.len(),
-                is_gzipped,
-                datadir
-            )
-        })?;
-
-        // Sync the file to ensure it's written to disk
-        out_file
-            .sync_all()
-            .map_err(|e| eyre::eyre!("Failed to sync file {:?}: {}", target_path, e))?;
+        Archive::new(file).unpack(Path::new(datadir))?;
     }
-
-    // Clean up temporary file
     fs::remove_file(&temp_file)?;
 
-    info!("Snapshot extracted successfully to {}", datadir);
+    info!("Snapshot extracted successfully to {datadir}");
     Ok(())
 }
 

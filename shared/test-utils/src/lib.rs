@@ -5,6 +5,6 @@ pub mod chain_info;
 pub mod docker;
 pub mod nitro_chain;
 pub mod port_manager;
-pub mod snapshot;
+pub mod tar;
 pub mod transaction;
 pub mod utils;

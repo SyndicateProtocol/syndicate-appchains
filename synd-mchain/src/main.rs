@@ -1,5 +1,7 @@
 //! The `MockChain` is used for appchain block derivation.
 
+use std::fs;
+
 #[tokio::main]
 #[cfg(feature = "rocksdb")]
 async fn main() -> eyre::Result<()> {
@@ -22,7 +24,7 @@ async fn main() -> eyre::Result<()> {
         server::start_mchain,
     };
     use tokio::signal::unix::{signal, SignalKind};
-    use tracing::info;
+    use tracing::{info, warn};
 
     // Initialize logging
     setup_global_logging()?;
@@ -31,7 +33,12 @@ async fn main() -> eyre::Result<()> {
 
     // Load snapshot if URL is provided
     if let Some(ref snapshot_url) = cfg.snapshot_url {
-        load_snapshot(snapshot_url, &cfg.datadir).await?;
+        // Check if datadir exists and is not empty
+        if fs::metadata(&cfg.datadir).is_ok() && fs::read_dir(&cfg.datadir).is_ok() {
+            warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
+        } else {
+            load_snapshot(snapshot_url, &cfg.datadir).await?;
+        }
     }
 
     info!("loading rocksdb db {}", cfg.datadir);
