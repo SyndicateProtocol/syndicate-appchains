@@ -191,6 +191,17 @@ contract ArbChainConfig is Initializable {
     }
 
     /**
+     * @dev A method for retrieving the address of this ArbChainConfig contract.
+     * This function siganture is used by mchain and translator to get necessary config.
+     * This has been added here in addition to ArbConfigManager so users can pass the config address directly,
+     * instead of passing the ArbConfigManager address.
+     * @return The address of this ArbChainConfig contract
+     */
+    function getArbChainConfigAddress(uint256) public view returns (address) {
+        return address(this);
+    }
+
+    /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
