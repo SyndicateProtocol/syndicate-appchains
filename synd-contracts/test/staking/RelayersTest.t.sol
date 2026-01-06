@@ -101,34 +101,34 @@ contract RelayersTest is Test {
         assertEq(address(refunder).balance, 0);
     }
 
-    function test_relayHelper() public {
+    function test_relayHelperContractBalance() public {
         vm.prank(admin);
         vm.expectRevert(); // InsufficientBalance
-        relayHelper.relay(address(l2Relayer), 1);
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
 
         dummyToken.mint(address(relayHelper), 1 ether);
 
         vm.prank(makeAddr("anyone"));
         vm.expectRevert(); // AccessControl: account ... is missing role ...
-        relayHelper.relay(address(l2Relayer), 1);
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
 
         vm.prank(admin);
-        relayHelper.relay(address(l2Relayer), 1);
+        relayHelper.relayContractBalance(address(l2Relayer), 1);
     }
 
-    function test_relayHelperAmount() public {
+    function test_relayHelperSenderAllowance() public {
         address anyone = makeAddr("anyone");
         dummyToken.mint(anyone, 1 ether);
 
         vm.prank(anyone);
         vm.expectRevert();
-        relayHelper.relayAmount(1 ether, address(l2Relayer), 1);
+        relayHelper.relaySenderAllowance(address(l2Relayer), 1);
 
         vm.prank(anyone);
         dummyToken.approve(address(relayHelper), 1 ether);
 
         vm.prank(anyone);
-        relayHelper.relayAmount(1 ether, address(l2Relayer), 1);
+        relayHelper.relaySenderAllowance(address(l2Relayer), 1);
     }
 
     function test_relayHelperWithdraw() public {

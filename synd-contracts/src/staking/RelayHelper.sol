@@ -40,7 +40,7 @@ contract RelayHelper is AccessControl {
      * @dev This function calls the relay function on the L1Relayer contract
      * @dev Only callable by admin
      */
-    function relay(address destination, uint256 epochIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function relayContractBalance(address destination, uint256 epochIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 amount = IERC20(l1Token).balanceOf(address(this));
         if (amount == 0) revert InsufficientBalance();
 
@@ -50,15 +50,15 @@ contract RelayHelper is AccessControl {
 
     /**
      * @notice Relays a specific amount of tokens to L2 and sends a message to execute operations
-     * @param amount The amount of tokens to relay
      * @param destination The destination contract address on L2
      * @param epochIndex The epoch index for the operation
      * @dev This function transfers tokens from the caller to the contract and then calls the relay function on the L1Relayer contract
      */
-    function relayAmount(uint256 amount, address destination, uint256 epochIndex) external {
-        if (amount == 0) revert InsufficientBalance();
+    function relaySenderAllowance(address destination, uint256 epochIndex) external {
+        uint256 allowance = IERC20(l1Token).allowance(msg.sender, address(this));
+        if (allowance == 0) revert InsufficientBalance();
 
-        IERC20(l1Token).transferFrom(msg.sender, address(l1Relayer), amount);
+        IERC20(l1Token).transferFrom(msg.sender, address(l1Relayer), allowance);
         L1Relayer(l1Relayer).relay(destination, epochIndex);
     }
 
