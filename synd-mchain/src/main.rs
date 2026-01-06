@@ -33,11 +33,18 @@ async fn main() -> eyre::Result<()> {
 
     // Load snapshot if URL is provided
     if let Some(ref snapshot_url) = cfg.snapshot_url {
-        // Check if datadir exists and is not empty
-        if fs::metadata(&cfg.datadir).is_ok() && fs::read_dir(&cfg.datadir).is_ok() {
-            warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
-        } else {
+        // Check if datadir exists and has files
+        let is_empty =
+            fs::read_dir(&cfg.datadir).map(|mut entries| entries.next().is_none()).unwrap_or(true);
+        if is_empty {
             load_snapshot(snapshot_url, &cfg.datadir).await?;
+        }
+    } else {
+        warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
+        // Print contents of datadir
+        let entries = fs::read_dir(&cfg.datadir)?;
+        for entry in entries {
+            info!("{}", entry?.path().display());
         }
     }
 
