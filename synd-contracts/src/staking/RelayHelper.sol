@@ -25,7 +25,7 @@ contract RelayHelper is AccessControl {
      * @param _defaultAdmin The address of the default admin
      * @param _l1Relayer The address of the L1Relayer contract
      * @param _l1Token The address of the L1 token
-     * @dev Sets the deployer as admin and configures the L1Relayer contract
+     * @dev Sets the deployer as admin and configures the L1Relayer and L1Token contracts
      */
     constructor(address _defaultAdmin, address _l1Relayer, address _l1Token) {
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
@@ -34,10 +34,10 @@ contract RelayHelper is AccessControl {
     }
 
     /**
-     * @notice Relays tokens to L2 and sends a message to execute operations
+     * @notice Sends the contract balance to L1Relayer and executes relay operation
      * @param destination The destination contract address on L2
      * @param epochIndex The epoch index for the operation
-     * @dev This function calls the relay function on the L1Relayer contract
+     * @dev This function sends the contract balance to the L1Relayer and executes the relay operation
      * @dev Only callable by admin
      */
     function relayContractBalance(address destination, uint256 epochIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -49,10 +49,10 @@ contract RelayHelper is AccessControl {
     }
 
     /**
-     * @notice Relays a specific amount of tokens to L2 and sends a message to execute operations
+     * @notice Sends the allowance of the caller to L1Relayer and executes relay operation
      * @param destination The destination contract address on L2
      * @param epochIndex The epoch index for the operation
-     * @dev This function transfers tokens from the caller to the contract and then calls the relay function on the L1Relayer contract
+     * @dev This function transfers tokens from the caller to the L1Relayer and then executes the relay operation
      */
     function relaySenderAllowance(address destination, uint256 epochIndex) external {
         uint256 allowance = IERC20(l1Token).allowance(msg.sender, address(this));
@@ -65,7 +65,8 @@ contract RelayHelper is AccessControl {
     /**
      * @notice Withdraws tokens from the contract to the caller
      * @param amount The amount of tokens to withdraw
-     * @dev This function transfers tokens from the contract to the caller
+     * @param to The address to withdraw tokens to
+     * @dev This function transfers tokens from the contract to the specified address
      */
     function withdraw(uint256 amount, address to) external onlyRole(DEFAULT_ADMIN_ROLE) {
         IERC20(l1Token).transfer(to, amount);
