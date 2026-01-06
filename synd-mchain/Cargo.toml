@@ -34,7 +34,6 @@ tracing             = { workspace = true }
 
 [dev-dependencies]
 ctor       = { workspace = true }
-rocksdb    = { version = "0.23.0" }
 test-utils = { workspace = true }
 
 [lints]
