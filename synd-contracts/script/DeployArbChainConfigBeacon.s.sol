@@ -17,7 +17,7 @@ import {ArbChainConfig} from "src/config/ArbChainConfig.sol";
  */
 contract DeployArbChainConfigBeacon is Script {
     function run() public {
-        uint256 privateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(privateKey);
         address beaconOwner = vm.envAddress("BEACON_OWNER");
 
@@ -43,6 +43,5 @@ contract DeployArbChainConfigBeacon is Script {
         console2.log("Beacon:", address(beacon));
         console2.log("Beacon Owner:", beaconOwner);
         console2.log("");
-        console2.log("Add the beacon address to supportedSettlementChains in the CLI.");
     }
 }

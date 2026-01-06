@@ -81,29 +81,29 @@ export const supportedSettlementChains: SupportedSettlementChains = {
     rollupCreator: "0x234ea0E2aB220f1c7e15B5e62Ec53e01e526e241",
     tokenBridgeCreator: "0x0369039c392E82AA8e4dB19B1149C486aB0c4698",
     teeKeyManager: "0x0831F5F32E424554E5742713B1AB3d5b9740eE19",
-    arbChainConfigBeacon: "0x0000000000000000000000000000000000000000" // TODO: deploy and update
+    arbChainConfigBeacon: "0x685706F61c24aD2C02da8238C8337636aF3c3309"
   },
   [sepolia.id]: {
     chain: sepolia,
     rollupCreator: "0x06d499101874a6260990AfcB5b41866Cc8BE6e08",
     tokenBridgeCreator: "0x8A4484fdE0D2f8675617897Ff1984fe5419DDD5E",
     teeKeyManager: "0xf02F6BC7b04930D3A4f71F105bBf84988568f187",
-    arbChainConfigBeacon: "0x0000000000000000000000000000000000000000" // TODO: deploy and update
+    arbChainConfigBeacon: "0xCDec7cF9137957e3909D21024a3a889BA534a4F9"
   },
   [base.id]: {
     chain: base,
     rollupCreator: "0x73F8C5FE5B64D25f17DEa75fAc50F39Eacb0a793",
     tokenBridgeCreator: "0x882bCF9413885EFDAD307FD9fa369CC670304740",
     teeKeyManager: "0x9CF9FF139C09Df70BD94b31ff935DFD648e0fa54",
-    arbChainConfigBeacon: "0x0000000000000000000000000000000000000000" // TODO: deploy and update
+    arbChainConfigBeacon: "0x73F2FDAC7B562A896F9f9324C0283e691C886EEb"
   }
   // @note TODO: to support mainnet as the settlement chain we need to deploy the TeeKeyManager to mainnet
   // [mainnet.id]: {
   // chain: mainnet,
   // rollupCreatorAddress: "0x1AEdB6C4F5332a08251545066c686AD251c90bA2",
   // tokenBridgeCreatorAddress: "0x5f8aeF00194334B3033E2Ed97c48eCAeDcEFDCaE",
-  // arbConfigManagerAddress: "0xec2ba05a9cFFcb86e3225F7A046bA9124419397C",
   // teeKeyManagerAddress: "0x0000000000000000000000000000000000000000",
+  // arbChainConfigBeacon: "0x3ce5a3ce695389F623c1B24db9bb31a3061D2D77"
   // },
 }
 
