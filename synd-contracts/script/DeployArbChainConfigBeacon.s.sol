@@ -6,15 +6,6 @@ import {console2} from "forge-std/console2.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {ArbChainConfig} from "src/config/ArbChainConfig.sol";
 
-/**
- * @title DeployArbChainConfigBeacon
- * @dev Deploys the ArbChainConfig implementation and UpgradeableBeacon.
- *      The beacon address can then be used by the CLI to deploy BeaconProxy contracts
- *      for each appchain.
- *
- * Usage:
- *   DEPLOYER_PRIVATE_KEY=<key> BEACON_OWNER=<address> forge script script/DeployArbChainConfigBeacon.s.sol --rpc-url <rpc> --broadcast
- */
 contract DeployArbChainConfigBeacon is Script {
     function run() public {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
