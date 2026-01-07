@@ -41,7 +41,7 @@ export async function createArbChainConfig({
     abi: arbChainConfigABI,
     functionName: "initialize",
     args: [
-      // _owner
+      // owner
       ownerSettlementWalletClient.account.address,
       // chainId
       BigInt(chainId),
@@ -70,7 +70,6 @@ export async function createArbChainConfig({
   })
 
   // Deploy the BeaconProxy with initialization data
-  // The proxy constructor will delegatecall initialize() to the implementation
   const deployHash = await deployerSettlementWalletClient.deployContract({
     abi: BeaconProxyABI,
     bytecode: BeaconProxyBytecode,
