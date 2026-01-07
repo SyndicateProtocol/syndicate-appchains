@@ -116,7 +116,6 @@ async fn e2e_snapshot_restore() -> Result<()> {
                 "Restored mchain should have the same block number as the snapshot. Got {restored_block_number}, expected {mchain_block_before_snapshot }"
             );
 
-
             let current_block_number = restore_mchain_provider.get_block_number().await;
             assert!(
                 current_block_number >= mchain_block_before_snapshot,
