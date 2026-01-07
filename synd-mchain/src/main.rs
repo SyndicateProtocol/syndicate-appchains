@@ -1,25 +1,4 @@
-//! The `MockChain` is used for appchain block derivation.
-
-use std::fs;
-use tracing::info;
-
-fn datadir_is_empty(datadir: &std::path::Path) -> bool {
-    fs::read_dir(datadir)
-        .map(|entries| {
-            let files: Vec<_> =
-                entries.filter_map(|e| e.ok()).filter(|e| e.file_name() != "lost+found").collect();
-
-            if !files.is_empty() {
-                info!("datadir {} is not empty, found {} files", datadir.display(), files.len());
-                for file in &files {
-                    info!("  {}", file.path().display());
-                }
-            }
-
-            files.is_empty()
-        })
-        .unwrap_or(true) // If directory doesn't exist, treat as empty
-}
+//! The `synd-mchain` is used for appchain block derivation.
 
 #[tokio::main]
 #[cfg(feature = "rocksdb")]
@@ -39,9 +18,10 @@ async fn main() -> eyre::Result<()> {
     };
     use std::path::Path;
     use synd_mchain::{
-        config::{load_snapshot, with_onchain_config, MchainConfig},
+        config::{with_onchain_config, MchainConfig},
         metrics::MchainMetrics,
         server::start_mchain,
+        snapshot::{datadir_is_empty, load_snapshot},
     };
     use tokio::signal::unix::{signal, SignalKind};
     use tracing::{info, warn};

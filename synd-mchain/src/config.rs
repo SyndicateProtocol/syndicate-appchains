@@ -10,11 +10,7 @@ use contract_bindings::synd::{
     arb_chain_config::ArbChainConfig, arb_config_manager::ArbConfigManager,
 };
 use eyre::Result;
-use flate2::read::GzDecoder;
-use futures_util::StreamExt;
 use shared::parse::{parse_address, parse_hash};
-use std::{env::temp_dir, fs, io::Write, path::Path, process, time};
-use tar::Archive;
 use tracing::{info, warn};
 
 /// CLI args for the `synd-mchain` executable
@@ -277,46 +273,6 @@ fn override_with_onchain_config(mut config: MchainConfig, onchain: &ChainConfig)
     }
 
     config
-}
-
-/// Downloads a snapshot from a URL, decompresses it, and extracts it to the datadir
-#[allow(clippy::cognitive_complexity)]
-pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
-    info!("Downloading snapshot from {snapshot_url}");
-
-    let client = reqwest::Client::builder().timeout(time::Duration::from_secs(3600)).build()?;
-    let response = client.get(snapshot_url).send().await?;
-
-    if !response.status().is_success() {
-        return Err(eyre::eyre!("Failed to download snapshot: HTTP {}", response.status()));
-    }
-
-    // Stream to temp file to avoid keeping large files in RAM
-    let temp_file = temp_dir().join(format!("snapshot_{}.tar", process::id()));
-    let mut file = fs::File::create(&temp_file)?;
-    let mut stream = response.bytes_stream();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk?;
-        file.write_all(&chunk)?;
-    }
-    drop(file);
-
-    info!("Downloaded snapshot, extracting to {datadir}");
-    fs::create_dir_all(Path::new(datadir))?;
-
-    let is_gzipped = snapshot_url.ends_with(".gz") || snapshot_url.ends_with(".tgz");
-    let file = fs::File::open(&temp_file)?;
-
-    if is_gzipped {
-        Archive::new(GzDecoder::new(file)).unpack(Path::new(datadir))?;
-    } else {
-        Archive::new(file).unpack(Path::new(datadir))?;
-    }
-    fs::remove_file(&temp_file)?;
-
-    info!("Snapshot extracted successfully to {datadir}");
-    Ok(())
 }
 
 #[cfg(test)]
