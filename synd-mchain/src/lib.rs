@@ -3,10 +3,10 @@
 //!
 //! Note that the `synd-mchain` is not a real blockchain and is backed by
 //! a `rocksdb` database instead.
+pub mod archive_downloader;
 pub mod client;
 pub mod config;
 pub mod db;
 pub mod methods;
 pub mod metrics;
 pub mod server;
-pub mod snapshot;

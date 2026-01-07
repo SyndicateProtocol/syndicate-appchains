@@ -18,10 +18,10 @@ async fn main() -> eyre::Result<()> {
     };
     use std::path::Path;
     use synd_mchain::{
+        archive_downloader::{datadir_is_empty, download_and_extract},
         config::{with_onchain_config, MchainConfig},
         metrics::MchainMetrics,
         server::start_mchain,
-        snapshot::{datadir_is_empty, load_snapshot},
     };
     use tokio::signal::unix::{signal, SignalKind};
     use tracing::{info, warn};
@@ -34,7 +34,7 @@ async fn main() -> eyre::Result<()> {
     // Load snapshot if URL is provided
     if let Some(ref snapshot_url) = cfg.snapshot_url {
         if datadir_is_empty(Path::new(&cfg.datadir)) {
-            load_snapshot(snapshot_url, &cfg.datadir).await?;
+            download_and_extract(snapshot_url, &cfg.datadir).await?;
         } else {
             warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
         }

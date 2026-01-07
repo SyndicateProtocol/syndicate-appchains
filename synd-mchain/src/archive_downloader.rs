@@ -30,7 +30,7 @@ pub fn datadir_is_empty(datadir: &Path) -> bool {
 
 /// Downloads a snapshot from a URL, decompresses it, and extracts it to the datadir
 #[allow(clippy::cognitive_complexity)]
-pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
+pub async fn download_and_extract(snapshot_url: &str, datadir: &str) -> Result<()> {
     info!("Downloading snapshot from {snapshot_url}");
 
     let client = reqwest::Client::builder().timeout(time::Duration::from_secs(3600)).build()?;
@@ -41,8 +41,8 @@ pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
     }
 
     // Stream to temp file to avoid keeping large files in RAM
-    let datadir_path = Path::new(datadir);
-    let temp_file = datadir_path.join(format!("snapshot_{}.tar", process::id()));
+    fs::create_dir_all(datadir)?;
+    let temp_file = Path::new(datadir).join(format!("snapshot_{}.tar", process::id()));
     let mut file = fs::File::create(&temp_file)?;
     let mut stream = response.bytes_stream();
 
@@ -57,9 +57,9 @@ pub async fn load_snapshot(snapshot_url: &str, datadir: &str) -> Result<()> {
     let file = fs::File::open(&temp_file)?;
 
     if is_gzipped {
-        Archive::new(GzDecoder::new(file)).unpack(datadir_path)?;
+        Archive::new(GzDecoder::new(file)).unpack(datadir)?;
     } else {
-        Archive::new(file).unpack(datadir_path)?;
+        Archive::new(file).unpack(datadir)?;
     }
     fs::remove_file(&temp_file)?;
 
@@ -72,13 +72,12 @@ mod tests {
     use super::*;
     use crate::db::{ArbitrumDB, Block, State};
     use rocksdb::DB;
-    use std::{env::temp_dir, fs, path::PathBuf, time::Duration};
+    use std::{env::temp_dir, fs, path::PathBuf};
     use test_utils::{
         port_manager::PortManager,
         tar::{create_tar, create_tar_gz, start_file_server},
         utils::test_path,
     };
-    use tokio::time::sleep;
 
     struct SnapshotTestSetup {
         source_db_dir: PathBuf,
@@ -159,7 +158,6 @@ mod tests {
 
         // Start HTTP server
         let server_handle = start_file_server(&setup.snapshot_file, setup.port).await?;
-        sleep(Duration::from_millis(200)).await;
 
         // Verify download matches original
         let snapshot_url = format!("http://127.0.0.1:{}/snapshot.tar.gz", setup.port);
@@ -169,7 +167,7 @@ mod tests {
         assert_eq!(downloaded_bytes.as_ref(), original_bytes.as_slice());
 
         // Load snapshot and verify
-        load_snapshot(&snapshot_url, &setup.restore_db_dir.to_string_lossy()).await?;
+        download_and_extract(&snapshot_url, &setup.restore_db_dir.to_string_lossy()).await?;
         server_handle.abort();
 
         let restored_db = DB::open_default(&setup.restore_db_dir)?;
@@ -189,18 +187,15 @@ mod tests {
     async fn test_snapshot_load_uncompressed_tar() -> Result<()> {
         let setup = setup_snapshot_test("snapshot_test_tar", "tar").await?;
 
-        sleep(Duration::from_secs(2)).await;
-
         // Create uncompressed tar
         create_tar(&setup.source_db_dir, &setup.snapshot_file)?;
 
         // Start HTTP server
         let server_handle = start_file_server(&setup.snapshot_file, setup.port).await?;
-        sleep(Duration::from_millis(100)).await;
 
         // Load snapshot and verify
         let snapshot_url = format!("http://127.0.0.1:{}/snapshot.tar", setup.port);
-        load_snapshot(&snapshot_url, &setup.restore_db_dir.to_string_lossy()).await?;
+        download_and_extract(&snapshot_url, &setup.restore_db_dir.to_string_lossy()).await?;
         server_handle.abort();
 
         let restored_db = DB::open_default(&setup.restore_db_dir)?;
