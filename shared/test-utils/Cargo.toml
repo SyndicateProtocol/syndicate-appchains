@@ -22,5 +22,5 @@ shared            = { workspace = true }
 synd-mchain       = { workspace = true }
 tar               = { workspace = true }
 tokio             = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
-tower-http        = { version = "0.6.2", features = ["fs"] }
+tower-http        = { workspace = true, features = ["fs"] }
 tracing           = { workspace = true }
