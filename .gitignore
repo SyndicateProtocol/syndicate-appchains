@@ -79,6 +79,7 @@ synd-contracts/.claude/settings.local.json
 # contract bindings generated artifact
 synd-contracts/soljson-latest.js
 
+
 ./bin
 
 *.db

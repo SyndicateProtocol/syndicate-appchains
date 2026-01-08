@@ -6,7 +6,9 @@
 -include .env
 
 # deploy SyndicateFactory to Base Sepolia
-deploy-syndicate-factory :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateFactory --rpc-url exo --account deployer --sender ${DEV_PUB_ADDRESS} --skip-simulation --legacy --broadcast -vv
+deploy-syndicate-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:DeploySyndicateFactoryDeterministic --rpc-url base_sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
+
+preview-syndicate-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:PreviewSyndicateFactoryAddresses --rpc-url base_sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
 
 # deploy DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule to Syndicate Exo
 deploy-syndicate-sequencing-chain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencingChain.s.sol:DeploySyndicateSequencingChainPlusSetupWithAlwaysAllowModule --rpc-url exo --account deployer --sender ${DEV_PUB_ADDRESS} --skip-simulation --legacy --broadcast -vv
@@ -87,5 +89,121 @@ airdrop-dry-run :; DRY_RUN=true AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRE
 # Execute airdrop with bash script
 airdrop-execute :; AIRDROP_CONTRACT=${AIRDROP_CONTRACT} TOKEN_ADDRESS=${TOKEN_ADDRESS} RPC_URL=${RPC_URL} ACCOUNT=${ACCOUNT} DEV_PUB_ADDRESS=${DEV_PUB_ADDRESS} ./script/airdrop/airdrop.sh
 
+## Storage Layout Validation Commands
+
+# Simple storage layout validation for upgradeable contracts
+storage-layout-check :; @echo "Validating storage layouts for upgradeable contracts..." && \
+	contracts=(SyndicateFactory SyndicateSequencingChain GasArchive ArbChainConfig) && \
+	mkdir -p .storage-layouts && \
+	for contract in "$${contracts[@]}"; do \
+    	forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.temp.json"; \
+	done && \
+	for contract in "$${contracts[@]}"; do \
+		if [ -f ".storage-layouts/$${contract}.json" ]; then \
+			echo "Comparing $${contract}..."; \
+			if ! cmp -s ".storage-layouts/$${contract}.json" ".storage-layouts/$${contract}.temp.json"; then \
+				echo "❌ STORAGE LAYOUT CHANGED: $${contract}"; \
+				echo "Baseline:"; \
+				cat ".storage-layouts/$${contract}.json"; \
+				echo "Current:"; \
+				cat ".storage-layouts/$${contract}.temp.json"; \
+				echo "This change could corrupt storage during upgrades!"; \
+				exit 1; \
+			else \
+				echo "✅ $${contract}: Storage layout unchanged"; \
+			fi; \
+		else \
+			echo "ℹ️  $${contract}: No contract found, skipping..."; \
+		fi; \
+	done && \
+	rm -f .storage-layouts/*.temp.json && \
+	echo "✅ All storage layouts are safe for upgrades"
+
+# Clean storage layout artifacts
+storage-layout-clean :; rm -rf .storage-layouts out/build-info
+
+# Update storage layout
+storage-layout-update :; @echo "Updating storage layout..." && \
+	$(MAKE) storage-layout-clean && \
+	mkdir -p .storage-layouts && \
+	contracts=(SyndicateFactory SyndicateSequencingChain GasArchive ArbChainConfig) && \
+	for contract in "$${contracts[@]}"; do \
+		forge inspect --json "$${contract}" storageLayout > ".storage-layouts/$${contract}.json"; \
+	done && \
+	echo "✅ Storage layouts updated"
+
+## 🚀 Deployment & Upgrade Commands
+## See docs/upgrade/README.md for detailed guide
+
+# Deploy SyndicateFactory (deterministic deployment)
+# Also auto-deploys: GasAggregator, SyndicateSequencingChain implementation
+deploy-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:DeploySyndicateFactoryDeterministic \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+# Preview SyndicateFactory deployment addresses (same across all chains)
+preview-factory :; forge script script/DeploySyndicateFactoryDeterministic.s.sol:PreviewSyndicateFactoryAddresses \
+	--rpc-url ${RPC_URL} \
+	-vv
+
+# Deploy ArbConfigManager (optional - only for Arbitrum settlement)
+# Required env: OWNER_ADDRESS
+deploy-arb-config :; forge script script/DeployArbConfigManager.s.sol:DeployArbConfigManager \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+## 🔗 Create Sequencing Chains
+
+# Create a new sequencing chain via factory
+# Required env: FACTORY_ADDRESS, NONCE, ADMIN_ADDRESS
+# Optional env: PERMISSION_MODULE (deploys AlwaysAllowedModule if not set)
+# Example: NONCE=1 make create-sequencing-chain
+# Note: Chain ID is computed from nonce by the factory
+create-sequencing-chain :; forge script script/upgrade/CreateSequencingChain.s.sol \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+## ⚠️  Upgrade Commands - ALWAYS run 'make storage-layout-check' first!
+
+# Upgrade SyndicateFactory to new implementation
+# Required env: FACTORY_ADDRESS
+upgrade-factory :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
+	forge script script/upgrade/UpgradeContracts.s.sol:UpgradeSyndicateFactory \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+# Upgrade SyndicateSequencingChain to new implementation
+# Sets new default in factory
+# Required env: CHAIN_ADDRESS, FACTORY_ADDRESS
+upgrade-sequencing-chain :; @echo "⚠️  Run 'make storage-layout-check' first!" && \
+	forge script script/upgrade/UpgradeSequencingChain.s.sol \
+	--rpc-url ${RPC_URL} \
+	--account ${ACCOUNT} \
+	--sender ${DEV_PUB_ADDRESS} \
+	--broadcast \
+	-vv
+
+## Fork Testing Commands
+
+# Run upgrade integration tests against risa_devnet fork
+test-upgrade-fork :; forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vv
+
+# Run upgrade integration tests against risa_devnet fork (verbose)
+test-upgrade-fork-verbose :; forge test --match-contract UpgradeFlowIntegrationTest --fork-url risa_devnet -vvvv
+
 # Deploy emissions contracts
 deploy-emissions :; forge script script/DeployStakingContracts.s.sol:DeployStakingContracts --private-key ${PRIVATE_KEY} --rpc-url eth --broadcast -vvv
+
+test-forwarder :; forge script script/TestSyndForwarder.s.sol:TestSyndForwarder --rpc-url sepolia --keystore ${ETH_KEYSTORE} --froms ${ETH_FROM} --broadcast -vvv

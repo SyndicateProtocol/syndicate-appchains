@@ -1,0 +1,59 @@
+name: Storage Layout Validation
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+  push:
+    branches: [main]
+    paths:
+      - 'synd-contracts/src/**/*.sol'
+      - 'synd-contracts/foundry.toml'
+      - 'synd-contracts/remappings.txt'
+
+env:
+  FOUNDRY_PROFILE: default
+  FOUNDRY_DISABLE_NIGHTLY_WARNING: true
+
+jobs:
+  storage-layout-validation:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: synd-contracts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install Foundry dependencies
+        run: forge install
+
+      - name: Validate UUPS storage layouts
+        run: |
+          echo "🔍 Validating UUPS upgradeable contracts use namespaced storage..."
+          echo ""
+
+          # Build contracts
+          forge build
+
+          # Run storage validation script
+          chmod +x scripts/check-uups-storage.sh
+          ./scripts/check-uups-storage.sh
+

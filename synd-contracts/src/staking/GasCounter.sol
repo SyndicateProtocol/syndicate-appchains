@@ -3,6 +3,14 @@ pragma solidity 0.8.28;
 
 import {EpochTracker} from "./EpochTracker.sol";
 
+/// @custom:storage-location erc7201:syndicate.storage.GasCounter
+struct GasCounterStorage {
+    /// @notice Whether gas tracking is enabled
+    bool gasTrackingEnabled;
+    /// @notice Mapping of epoch to gas data
+    mapping(uint256 => uint256) tokensUsedPerEpoch;
+}
+
 /**
  * @title GasCounter
  * @notice Tracks gas consumption over 30-day epochs for reward calculation
@@ -11,16 +19,34 @@ import {EpochTracker} from "./EpochTracker.sol";
  */
 abstract contract GasCounter is EpochTracker {
     /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
+                            STATE VARIABLE VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Whether gas tracking is disabled
-    /// @dev When true, gas tracking is bypassed for all functions using trackGasUsage modifier
-    bool public gasTrackingDisabled;
+    // cast index-erc7201 syndicate.storage.GasCounter
+    bytes32 public constant GAS_COUNTER_STORAGE_LOCATION =
+        0x119494e47c2426a6072fc6072ec5c5d5ae865a3372fd102c643c18e978b14800;
 
-    /// @notice Mapping from epoch index to total tokens used in gas fees for that epoch
-    /// @dev Accumulates all gas costs (gasUsed * gasPrice) for each epoch
-    mapping(uint256 epochIndex => uint256 tokensUsed) public tokensUsedPerEpoch;
+    function _getGasCounterStorage() internal pure returns (GasCounterStorage storage $) {
+        assembly {
+            $.slot := GAS_COUNTER_STORAGE_LOCATION
+        }
+    }
+
+    function gasTrackingEnabled() public view returns (bool) {
+        GasCounterStorage storage $ = _getGasCounterStorage();
+        return $.gasTrackingEnabled;
+    }
+
+    function tokensUsedPerEpoch(uint256 epoch) public view returns (uint256) {
+        GasCounterStorage storage $ = _getGasCounterStorage();
+        return $.tokensUsedPerEpoch[epoch];
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error GasTrackingAlreadyEnabled();
+    error GasTrackingAlreadyDisabled();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -30,7 +56,7 @@ abstract contract GasCounter is EpochTracker {
     /// @dev Automatically measures gas consumption and converts to token cost
     ///      Gas tracking can be disabled by setting gasTrackingDisabled to true
     modifier trackGasUsage() {
-        if (gasTrackingDisabled) {
+        if (!gasTrackingEnabled()) {
             _;
             return;
         }
@@ -63,23 +89,39 @@ abstract contract GasCounter is EpochTracker {
             gasPrice = 1;
         }
 
-        // Add gas cost to current epoch total
-        // Using unchecked for gas efficiency since gasUsed * gasPrice cannot realistically overflow
-        unchecked {
-            tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
-        }
+        // Add gas and cost to current epoch
+        _getGasCounterStorage().tokensUsedPerEpoch[currentEpoch] += gasUsed * gasPrice;
     }
 
     /*//////////////////////////////////////////////////////////////
                            VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Get the total tokens used in gas fees for a given epoch
-    /// @dev Returns the accumulated gas costs for the specified epoch
-    /// @param epochIndex The epoch index to query
-    /// @return The total tokens used in gas fees for the specified epoch
-    /// @custom:example If epoch 1 had 1000 gas units at 20 gwei, returns 20000 wei
-    function getTokensForEpoch(uint256 epochIndex) external view returns (uint256) {
-        return tokensUsedPerEpoch[epochIndex];
+    /// @notice get the gas usage for a given epoch
+    /// @param epoch The epoch to query
+    function getTokensForEpoch(uint256 epoch) external view returns (uint256) {
+        return tokensUsedPerEpoch(epoch);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Disable gas tracking if needed
+    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
+    function _disableGasTracking() internal {
+        if (gasTrackingEnabled() == false) {
+            revert GasTrackingAlreadyDisabled();
+        }
+        _getGasCounterStorage().gasTrackingEnabled = false;
+    }
+
+    /// @notice Enable gas tracking
+    /// @dev This is an internal function that should be exposed by inheriting contracts with proper access control
+    function _enableGasTracking() internal {
+        if (gasTrackingEnabled() == true) {
+            revert GasTrackingAlreadyEnabled();
+        }
+        _getGasCounterStorage().gasTrackingEnabled = true;
     }
 }

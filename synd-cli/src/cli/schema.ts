@@ -43,7 +43,7 @@ const privateKeySchema = (privateKeyName: string) =>
     .regex(/^0x[a-fA-F0-9]{64}$/, `Invalid ${privateKeyName} private key`)
     .transform((val) => val as Hex)
 
-const chainIdSchema = z.coerce
+export const chainIdSchema = z.coerce
   .number()
   .int()
   .positive("Chain ID must be a positive integer")
@@ -296,6 +296,7 @@ export const appchainDeployAssertionPosterOptionsSchema = z
 export const appchainCreateSequencingChainOptionsSchema = z
   .object({
     sequencingRpc: z.url("Invalid sequencing chain RPC URL"),
+    ethereumRpc: z.url("Invalid ethereum chain RPC URL"),
     ownerPrivateKey: privateKeySchema("owner"),
     deployerPrivateKey: privateKeySchema("deployer"),
     id: chainIdSchema

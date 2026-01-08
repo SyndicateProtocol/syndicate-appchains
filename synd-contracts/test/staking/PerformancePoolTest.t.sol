@@ -7,8 +7,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {SyndStaking} from "src/staking/SyndStaking.sol";
 import {PerformancePool} from "src/staking/PerformancePool.sol";
 import {RewardPoolBase} from "src/staking/RewardPoolBase.sol";
-import {UD60x18, ud, convert} from "@prb/math/src/UD60x18.sol";
-import {IGasDataProvider} from "src/staking/interfaces/IGasDataProvider.sol";
+import {ud} from "@prb/math/src/UD60x18.sol";
 import {MockGasProvider} from "./MockGasProvider.t.sol";
 import {GasArchive} from "src/staking/GasArchive.sol";
 

@@ -65,9 +65,17 @@ repos:
         language: system
         types: [cargo]
         pass_filenames: false
+      - id: storage-layout-update
+        name: Update storage layout baseline
+        entry: synd-contracts/scripts/storage-checks/update-baseline.sh
+        language: script
+        files: 'synd-contracts/src/.*\.sol$'
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
       - id: synd-cli-biome-check
         name: synd-cli check
-        entry: bash -c 'cd synd-cli && npx biome check --write --files-ignore-unknown=true --no-errors-on-unmatched'
+        entry: bash -c 'cd synd-cli && bun run check-write'
         language: system
         types: [text]
         files: "^synd-cli/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?|css|svelte|vue|astro|graphql|gql)$"

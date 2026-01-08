@@ -1,12 +1,12 @@
-import { parseEventLogs, toBytes, toHex } from "viem"
-
 import {
   allowlistSequencingModuleABI,
   allowlistSequencingModuleBytecode
 } from "@/abi/synd/AllowlistSequencingModule"
-import { requireAndModuleABI } from "@/abi/synd/RequireAndModule"
-import { requireAndModuleFactoryABI } from "@/abi/synd/RequireAndModuleFactory"
-import { syndicateFactoryABI } from "@/abi/synd/SyndicateFactory"
+import {
+  requireAndModuleABI,
+  requireAndModuleBytecode
+} from "@/abi/synd/RequireAndModule"
+import { syndForwarderABI } from "@/abi/synd/SyndForwarder"
 import { syndicateSequencingChainABI } from "@/abi/synd/SyndicateSequencingChain"
 import type {
   CreateRequireAndModule,
@@ -14,22 +14,29 @@ import type {
   DeployAndSetupAllowlistSequencingModule,
   DeploySequencingChain,
   RegisterAllowlistSequencingModuleOnRequireAllModule,
-  TransferAllContractsOwnershipParams
+  TransferPermissionModuleOwnership
 } from "@/types"
 import { supportedSequencingChains } from "@/utils/constants"
+import {
+  getSequencingChainAddress,
+  wrapArb,
+  wrapDeploy
+} from "@/utils/forwarderHelper"
 import { getChainExplorerUrl } from "@/utils/helpers"
 import { print } from "@/utils/print"
+import { encodeFunctionData, pad, toBytes, toHex } from "viem"
 
 export async function deploySequencingChain({
   sequencerAccount,
   chainId,
   sequencingPublicClient,
   deployerSequencingWalletClient,
-  ownerSequencingWalletClient
+  ownerSequencingWalletClient,
+  deployerEthereumWalletClient,
+  ethereumPublicClient
 }: DeploySequencingChain) {
   // 1. Create RequireAndModule
   const requireAndModule = await createRequireAndModule({
-    chainId,
     sequencingPublicClient,
     deployerSequencingWalletClient
   })
@@ -42,16 +49,7 @@ export async function deploySequencingChain({
       deployerSequencingWalletClient
     })
 
-  // 3. Create SyndicateSequencingChain
-  const { sequencingContract, deployedAtBlock } =
-    await createSyndicateSequencingChain({
-      requireAndModule,
-      sequencingPublicClient,
-      deployerSequencingWalletClient,
-      chainId
-    })
-
-  // 4. Register AllowlistSequencingModule on RequireAllModule
+  // 3. Register AllowlistSequencingModule on RequireAllModule
   await registerAllowlistSequencingModuleOnRequireAllModule({
     requireAndModule,
     allowlistSequencingModule,
@@ -59,9 +57,8 @@ export async function deploySequencingChain({
     sequencingPublicClient
   })
 
-  // 5. Transfer ownership of all contracts to owner account
-  await transferAllContractsOwnership({
-    sequencingContract,
+  // 4. Transfer ownership permission modules
+  await transferPermissonModuleOwnership({
     allowlistSequencingModule,
     requireAndModule,
     deployerSequencingWalletClient,
@@ -69,105 +66,103 @@ export async function deploySequencingChain({
     ownerSequencingWalletClient
   })
 
+  // 5. Create SyndicateSequencingChain
+  const sequencingContract = await createSyndicateSequencingChain({
+    requireAndModule,
+    ethereumPublicClient,
+    deployerEthereumWalletClient,
+    chainId,
+    sequencingChainId: sequencingPublicClient.chain.id,
+    owner: ownerSequencingWalletClient.account.address
+  })
+
   return {
     sequencingContract,
     allowlistSequencingModule,
-    requireAndModule,
-    deployedAtBlock
+    requireAndModule
   }
 }
 
 async function createRequireAndModule({
-  chainId,
   sequencingPublicClient,
   deployerSequencingWalletClient
 }: CreateRequireAndModule) {
-  const requireAndFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id].requireAndFactory
-
-  const { request: requireAndModuleRequest } =
-    await sequencingPublicClient.simulateContract({
-      account: deployerSequencingWalletClient.account,
-      address: requireAndFactoryAddress,
-      abi: requireAndModuleFactoryABI,
-      functionName: "createRequireAndModule",
-      args: [
-        deployerSequencingWalletClient.account.address,
-        toHex(toBytes(chainId, { size: 32 }))
-      ]
-    })
-  const requireAndModuleHash =
-    await deployerSequencingWalletClient.writeContract(requireAndModuleRequest)
-  const requireAndModuleTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: requireAndModuleHash
-    })
-  const requireAndFactoryLogs = parseEventLogs({
-    abi: requireAndModuleFactoryABI,
-    logs: requireAndModuleTx.logs
+  const hash = await deployerSequencingWalletClient.deployContract({
+    abi: requireAndModuleABI,
+    bytecode: requireAndModuleBytecode,
+    args: [deployerSequencingWalletClient.account.address]
   })
-  const requireAndModule = requireAndFactoryLogs.find(
-    (l) => l.eventName === "RequireAndModuleCreated"
-  )?.args.module
-  if (!requireAndModule) {
+  const requireAndModuleReceipt =
+    await sequencingPublicClient.waitForTransactionReceipt({
+      hash
+    })
+  const requireAndModuleAddress = requireAndModuleReceipt.contractAddress
+  if (!requireAndModuleAddress) {
     throw new Error("RequireAndModule deployment failed")
   }
   print(
-    `🔍  RequireAndModule deployed to ${requireAndModule}\n${getChainExplorerUrl(
+    `🔍  RequireAndModule deployed to ${requireAndModuleAddress}\n${getChainExplorerUrl(
       sequencingPublicClient.chain
-    )}/tx/${requireAndModuleHash}`
+    )}/tx/${hash}`
   )
-  return requireAndModule
+  return requireAndModuleAddress
 }
 
-async function createSyndicateSequencingChain({
+export async function createSyndicateSequencingChain({
+  chainId,
   requireAndModule,
-  sequencingPublicClient,
-  deployerSequencingWalletClient,
-  chainId
+  ethereumPublicClient,
+  deployerEthereumWalletClient,
+  sequencingChainId,
+  owner
 }: CreateSyndicateSequencingChain) {
-  const syndicateFactoryAddress =
-    supportedSequencingChains[sequencingPublicClient.chain.id].syndicateFactory
-  const { request: syndicateSequencingChainRequest } =
-    await sequencingPublicClient.simulateContract({
-      account: deployerSequencingWalletClient.account,
-      address: syndicateFactoryAddress,
-      abi: syndicateFactoryABI,
-      functionName: "createSyndicateSequencingChain",
-      args: [
-        BigInt(chainId),
-        deployerSequencingWalletClient.account.address,
-        requireAndModule,
-        toHex(toBytes(chainId, { size: 32 }))
-      ]
-    })
-  const syndicateSequencingChainHash =
-    await deployerSequencingWalletClient.writeContract(
-      syndicateSequencingChainRequest
-    )
-  const syndicateSequencingChainTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: syndicateSequencingChainHash
-    })
-  const syndicateFactoryLogs = parseEventLogs({
-    abi: syndicateFactoryABI,
-    logs: syndicateSequencingChainTx.logs
+  const {
+    sequencingChainImplementation,
+    forwarderAddress,
+    forwarderParentAddress,
+    inbox
+  } = supportedSequencingChains[sequencingChainId]
+  const initData = encodeFunctionData({
+    abi: syndicateSequencingChainABI,
+    functionName: "initialize",
+    args: [owner, requireAndModule, BigInt(chainId)]
   })
-  const sequencingContract = syndicateFactoryLogs.find(
-    (l) => l.eventName === "SyndicateSequencingChainCreated"
-  )?.args.sequencingChainAddress
-  if (!sequencingContract) {
-    throw new Error("SyndicateSequencingChain deployment failed")
-  }
-  print(
-    `🔍  SyndicateSequencingChain deployed to ${sequencingContract}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${syndicateSequencingChainHash}`
+  const deploymentCall = wrapDeploy(
+    toHex(pad(toBytes(chainId))),
+    sequencingChainImplementation,
+    initData
   )
-  return {
-    sequencingContract,
-    deployedAtBlock: syndicateSequencingChainTx.blockNumber
+  const bridgeCall = wrapArb(forwarderAddress, deploymentCall)
+  const txHash = await deployerEthereumWalletClient.writeContract({
+    address: forwarderParentAddress,
+    abi: syndForwarderABI,
+    functionName: "call",
+    args: [inbox, bridgeCall]
+  })
+
+  print(
+    `🔍  Sequencing chain deployment initiated on ${
+      ethereumPublicClient.chain.name
+    } \n${getChainExplorerUrl(ethereumPublicClient.chain)}/tx/${txHash}`
+  )
+
+  const receipt = await ethereumPublicClient.waitForTransactionReceipt({
+    hash: txHash
+  })
+  if (!receipt.status) {
+    throw new Error("Sequencing chain deployment failed")
   }
+
+  const sequencingChainAddress = getSequencingChainAddress(
+    sequencingChainId,
+    sequencingChainId
+  )
+
+  print(
+    `🔍  L1 transaction successful! Sequencing chain contract will be deployed to ${sequencingChainAddress} pending the success of the L2 transaction`
+  )
+
+  return sequencingChainAddress
 }
 
 async function deployAndSetupAllowlistSequencingModule({
@@ -243,32 +238,13 @@ async function registerAllowlistSequencingModuleOnRequireAllModule({
   )
 }
 
-async function transferAllContractsOwnership({
-  sequencingContract,
+async function transferPermissonModuleOwnership({
   allowlistSequencingModule,
   requireAndModule,
   deployerSequencingWalletClient,
   sequencingPublicClient,
   ownerSequencingWalletClient
-}: TransferAllContractsOwnershipParams) {
-  const transferOwnershipTxHash =
-    await deployerSequencingWalletClient.writeContract({
-      address: sequencingContract,
-      abi: syndicateSequencingChainABI,
-      functionName: "transferOwnership",
-      args: [ownerSequencingWalletClient.account.address],
-      account: deployerSequencingWalletClient.account
-    })
-  const transferOwnershipTx =
-    await sequencingPublicClient.waitForTransactionReceipt({
-      hash: transferOwnershipTxHash
-    })
-  print(
-    `🔍  SyndicateSequencingChain ownership transferred to owner ${ownerSequencingWalletClient.account.address}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${transferOwnershipTx.transactionHash}`
-  )
-
+}: TransferPermissionModuleOwnership) {
   // AllowlistSequencingModule
   const transferAllowlistSequencingModuleOwnershipTxHash =
     await deployerSequencingWalletClient.writeContract({
@@ -283,9 +259,11 @@ async function transferAllContractsOwnership({
       hash: transferAllowlistSequencingModuleOwnershipTxHash
     })
   print(
-    `🔍  AllowlistSequencingModule ownership transferred to owner ${ownerSequencingWalletClient.account.address}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${transferAllowlistSequencingModuleOwnershipTx.transactionHash}`
+    `🔍  AllowlistSequencingModule ownership transferred to owner ${
+      ownerSequencingWalletClient.account.address
+    }\n${getChainExplorerUrl(sequencingPublicClient.chain)}/tx/${
+      transferAllowlistSequencingModuleOwnershipTx.transactionHash
+    }`
   )
 
   // RequireAllModule
@@ -302,8 +280,10 @@ async function transferAllContractsOwnership({
       hash: transferRequireAllModuleOwnershipTxHash
     })
   print(
-    `🔍  RequireAllModule ownership transferred to owner ${ownerSequencingWalletClient.account.address}\n${getChainExplorerUrl(
-      sequencingPublicClient.chain
-    )}/tx/${transferRequireAllModuleOwnershipTx.transactionHash}`
+    `🔍  RequireAllModule ownership transferred to owner ${
+      ownerSequencingWalletClient.account.address
+    }\n${getChainExplorerUrl(sequencingPublicClient.chain)}/tx/${
+      transferRequireAllModuleOwnershipTx.transactionHash
+    }`
   )
 }

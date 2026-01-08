@@ -93,9 +93,12 @@ export type SupportedSequencingChains = Record<
   number,
   {
     bridge: Hex
-    requireAndFactory: Hex
-    syndicateFactory: Hex
+    inbox: Hex
     chain: Chain
+    // Implementation address of the SyndicateSequencingChain contract on the Sequencing Chain
+    sequencingChainImplementation: Hex
+    forwarderAddress: Hex
+    forwarderParentAddress: Hex
   }
 >
 
@@ -121,7 +124,8 @@ export interface Foundation {
   ownerSequencingWalletClient: PrivateKeyWalletAccount
   settlementPublicClient: PublicClientWithChain
   sequencingPublicClient: PublicClientWithChain
-  ethereumChainRpcUrl: string
+  ethereumPublicClient: PublicClientWithChain
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
   deployerSequencingWalletClient: WalletClient<
     Transport,
     Chain,
@@ -171,19 +175,22 @@ export interface DeploySequencingChain {
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
   ownerSequencingWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
 }
 
 export interface CreateRequireAndModule {
-  chainId: number
   sequencingPublicClient: PublicClientWithChain
   deployerSequencingWalletClient: PrivateKeyWalletAccount
 }
 
 export interface CreateSyndicateSequencingChain {
   requireAndModule: Hex
-  sequencingPublicClient: PublicClientWithChain
-  deployerSequencingWalletClient: PrivateKeyWalletAccount
+  deployerEthereumWalletClient: PrivateKeyWalletAccount
+  ethereumPublicClient: PublicClientWithChain
   chainId: number
+  sequencingChainId: number
+  owner: Hex
 }
 
 export interface DeployAndSetupAllowlistSequencingModule {
@@ -199,8 +206,7 @@ export interface RegisterAllowlistSequencingModuleOnRequireAllModule {
   sequencingPublicClient: PublicClientWithChain
 }
 
-export interface TransferAllContractsOwnershipParams {
-  sequencingContract: Hex
+export interface TransferPermissionModuleOwnership {
   allowlistSequencingModule: Hex
   requireAndModule: Hex
   deployerSequencingWalletClient: PrivateKeyWalletAccount

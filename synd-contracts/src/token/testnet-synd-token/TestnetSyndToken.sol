@@ -23,7 +23,6 @@ contract TestnetSyndToken is ERC20, AccessControl, ERC20Permit, ERC20Votes {
     constructor(address defaultAdmin, address minter)
         ERC20("Testnet Syndicate", "TestnetSYND")
         ERC20Permit("Testnet Syndicate")
-        ERC20Votes()
     {
         if (defaultAdmin == address(0)) revert ZeroAddress();
         if (minter == address(0)) revert ZeroAddress();

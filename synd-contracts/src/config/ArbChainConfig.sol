@@ -8,6 +8,7 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
  * @dev Configuration contract for settlement chain parameters
  */
 contract ArbChainConfig is Initializable {
+    uint256 public constant VERSION = 1_000_000; // 1.0.0
     // Events
     //#olympix-ignore-missing-events-assertion
     event DefaultSequencingChainWsRpcUrlUpdated(string newWsRpcUrl);

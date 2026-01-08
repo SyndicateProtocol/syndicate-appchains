@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
-import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
 import {
     SyndicateSequencingChain,
     L2MessageType_SignedTx,
@@ -11,6 +10,9 @@ import {
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {GasMeter} from "src/staking/GasMeter.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -46,18 +48,27 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
-    SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
-    address public admin;
 
-    function deployFromFactory(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
+    address public admin;
+    address public gasMeter;
+
+    function deployChain(RequireAndModule _permissionModule) public returns (SyndicateSequencingChain) {
         uint256 appchainId = 10042001;
         vm.startPrank(admin);
-        factory = new SyndicateFactory(admin);
-        (address chainAddress,) = factory.createSyndicateSequencingChain(
-            appchainId, admin, _permissionModule, keccak256(abi.encodePacked("test-salt"))
+
+        address gasMeterImpl = address(new GasMeter());
+        gasMeter = address(new ERC1967Proxy(gasMeterImpl, abi.encodeCall(GasMeter.initialize, ())));
+
+        address sequencingChainImpl = address(new SyndicateSequencingChain(gasMeter));
+        address chainAddress = address(
+            new ERC1967Proxy(
+                sequencingChainImpl,
+                abi.encodeCall(SyndicateSequencingChain.initialize, (admin, address(_permissionModule), appchainId))
+            )
         );
+
         vm.stopPrank();
         return SyndicateSequencingChain(chainAddress);
     }
@@ -69,7 +80,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
         admin = address(0x1);
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
-        chain = deployFromFactory(permissionModule);
+        chain = deployChain(permissionModule);
     }
 }
 
@@ -126,7 +137,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessTransaction() public {
+    function testProcessTransaction_blah() public {
         bytes memory data = abi.encode("raw transaction");
 
         vm.startPrank(admin);
@@ -163,8 +174,48 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testConstructorWithZeroAppChainId() public {
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+
         vm.expectRevert("App chain ID cannot be 0");
-        new SyndicateSequencingChain(0);
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 0);
+    }
+
+    function testUpgradeBadguy() public {
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        address badguy = makeAddr("badguy");
+        vm.prank(badguy);
+        vm.expectRevert();
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeOwner() public {
+        address chainImpl = address(new SyndicateSequencingChain(gasMeter));
+        address chainProxy = address(new ERC1967Proxy(chainImpl, bytes("")));
+        SyndicateSequencingChain(chainProxy).initialize(admin, address(permissionModule), 1);
+
+        vm.prank(admin);
+        UUPSUpgradeable(chainProxy).upgradeToAndCall(chainImpl, bytes(""));
+    }
+
+    function testUpgradeAuthorizationOnlyOwner() public {
+        SyndicateSequencingChain newImpl = new SyndicateSequencingChain(gasMeter);
+
+        // Deploy chain
+        RequireAndModule testPermissionModule = new RequireAndModule(admin);
+
+        address chainAddr = address(deployChain(testPermissionModule));
+        vm.stopPrank();
+
+        address nonOwner = makeAddr("nonOwner");
+
+        // Non-owner should not be able to perform upgrade
+        vm.prank(nonOwner);
+        vm.expectRevert(); // Ownable revert from _authorizeUpgrade
+        SyndicateSequencingChain(chainAddr).upgradeToAndCall(address(newImpl), "");
     }
 
     function testProcessTransactionsBulkAllAllowed() public {
@@ -238,7 +289,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
     }
 
     function testProcessTransactionsBulkOnlyEmitsValidTransactionsAsEvents() public {
-        chain = deployFromFactory(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
+        chain = deployChain(RequireAndModule(address(new MockIsAllowedWithInvalidData())));
 
         bytes[] memory txns = new bytes[](3);
         txns[0] = abi.encodePacked("valid");
@@ -302,72 +353,6 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.expectRevert(SyndicateSequencingChain.NoTxData.selector);
         chain.processTransactionsBulk(emptyArray);
     }
-
-    function testEmissionsReceiver() public {
-        // Test defaults to owner
-        assertEq(chain.getEmissionsReceiver(), admin);
-
-        // Test only owner can set it
-        address newReceiver = address(0x999);
-        address nonOwner = address(0x123);
-        vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
-        chain.setEmissionsReceiver(newReceiver);
-
-        // Test owner can set it and it returns correct value with proper event
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
-        chain.setEmissionsReceiver(newReceiver);
-        assertEq(chain.getEmissionsReceiver(), newReceiver);
-
-        // falls back to owner if emissionsReceiver is set to address(0)
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(newReceiver, admin);
-        chain.setEmissionsReceiver(address(0));
-        assertEq(chain.getEmissionsReceiver(), admin);
-    }
-
-    function testTransferOwnershipEmitsEmissionsReceiverUpdated() public {
-        // Test that transferOwnership emits EmissionsReceiverUpdated when emissionsReceiver is not set
-        address newOwner = address(0x888);
-
-        vm.prank(admin);
-        vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(admin, newOwner);
-        chain.transferOwnership(newOwner);
-
-        // Verify the emissions receiver changed
-        assertEq(chain.getEmissionsReceiver(), newOwner);
-        assertEq(chain.owner(), newOwner);
-
-        // Test that transferOwnership does NOT emit EmissionsReceiverUpdated when emissionsReceiver is explicitly set
-        address explicitReceiver = address(0x777);
-        vm.prank(newOwner);
-        chain.setEmissionsReceiver(explicitReceiver);
-
-        address anotherNewOwner = address(0x666);
-        vm.prank(newOwner);
-        // Should NOT emit EmissionsReceiverUpdated
-        vm.recordLogs();
-        chain.transferOwnership(anotherNewOwner);
-
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // Should only have OwnershipTransferred event, not EmissionsReceiverUpdated
-        bool foundEmissionsEvent = false;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("EmissionsReceiverUpdated(address,address)")) {
-                foundEmissionsEvent = true;
-                break;
-            }
-        }
-        assertFalse(foundEmissionsEvent, "Should not emit EmissionsReceiverUpdated when explicit receiver is set");
-
-        // Verify emissions receiver stayed the same
-        assertEq(chain.getEmissionsReceiver(), explicitReceiver);
-        assertEq(chain.owner(), anotherNewOwner);
-    }
 }
 
 contract SyndicateSequencingChainViewRequireAllTest is SyndicateSequencingChainTestSetUp {
@@ -416,5 +401,11 @@ contract SyndicateSequencingChainViewRequireAnyTest is SyndicateSequencingChainT
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));
+    }
+
+    // ================== VERSION TRACKING TESTS ==================
+
+    function testInitialVersionInSyndicateSequencingChain() public view {
+        assertEq(chain.VERSION(), 1_000_000, "Initial version should be 1.0.0");
     }
 }

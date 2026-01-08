@@ -30,7 +30,8 @@ export async function foundation({
   ownerSequencingWalletClient,
   settlementPublicClient,
   sequencingPublicClient,
-  ethereumChainRpcUrl,
+  ethereumPublicClient,
+  deployerEthereumWalletClient,
   deployerSequencingWalletClient,
   ownerPrivateKey,
   coreContractsCreatedAtHash,
@@ -171,24 +172,24 @@ export async function foundation({
 
   print("🔍  Deploying Syndicate sequencing chain...")
   // Sequencing Chain
-  const {
-    sequencingContract,
-    allowlistSequencingModule,
-    requireAndModule,
-    deployedAtBlock
-  } = await deploySequencingChain({
-    sequencerAccount,
-    chainId,
-    sequencingPublicClient,
-    deployerSequencingWalletClient,
-    ownerSequencingWalletClient
-  })
+  const sequencingStartBlock = (
+    await getBlockNumber(sequencingPublicClient)
+  ).toString()
+  const { sequencingContract, allowlistSequencingModule, requireAndModule } =
+    await deploySequencingChain({
+      sequencerAccount,
+      chainId,
+      sequencingPublicClient,
+      deployerSequencingWalletClient,
+      ownerSequencingWalletClient,
+      deployerEthereumWalletClient,
+      ethereumPublicClient
+    })
   await upsertToSyndObject(chainName, environment, "sequencing", {
     sequencingContract,
     allowlistSequencingModule,
     requireAndModule,
     settlementBlockBeforeDeployment,
-    deployedAtBlock,
     sequencer: sequencerAccount.address
   })
 
@@ -199,7 +200,7 @@ export async function foundation({
     coreContracts,
     settlementStartBlock: settlementBlockBeforeDeployment,
     sequencingContract,
-    sequencingStartBlock: deployedAtBlock,
+    sequencingStartBlock,
     ownerSettlementWalletClient,
     settlementPublicClient,
     sequencingPublicClient,
@@ -246,7 +247,7 @@ export async function foundation({
       {
         "settlement-rpc-url": settlementPublicClient.transport.url,
         "sequencing-chain-rpc-url": sequencingPublicClient.transport.url,
-        "ethereum-rpc-url": ethereumChainRpcUrl,
+        "ethereum-rpc-url": ethereumPublicClient.transport.url,
         "sequencing-chain-contract-address": sequencingContract,
         "sequencer-private-key": sequencerPrivateKey,
         "assertion-poster-contract-address": "0xREPLACEMELATER",

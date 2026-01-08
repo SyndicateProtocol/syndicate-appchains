@@ -4,13 +4,6 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {GasAggregator, GasAggregatorUtils} from "../../src/staking/GasAggregator.sol";
-import {EpochTracker} from "../../src/staking/EpochTracker.sol";
-import {SyndicateFactory} from "../../src/factory/SyndicateFactory.sol";
-import {SyndicateSequencingChain} from "../../src/SyndicateSequencingChain.sol";
-import {AlwaysAllowedModule} from "../../src/sequencing-modules/AlwaysAllowedModule.sol";
-import {RequireAndModule} from "../../src/requirement-modules/RequireAndModule.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {Comparators} from "@openzeppelin/contracts/utils/Comparators.sol";
 
@@ -24,12 +17,20 @@ contract MockGasCounter {
 
 contract MockAppchainFactory {}
 
+contract MockGasMeter {
+    function gasUsed(uint256 epoch, address chainContract) external view returns (uint256) {
+        return 100 ether;
+    }
+}
+
 contract GasAggregatorTest is Test {
     GasAggregator public gasAggregator;
     MockAppchainFactory public mockFactory;
     MockGasCounter public mockGasCounter1;
     MockGasCounter public mockGasCounter2;
     MockGasCounter public mockGasCounter3;
+
+    MockGasMeter public mockGasMeter;
 
     address public admin = address(0x1);
     address public user = address(0x2);
@@ -45,9 +46,11 @@ contract GasAggregatorTest is Test {
         mockGasCounter2 = new MockGasCounter();
         mockGasCounter3 = new MockGasCounter();
 
+        mockGasMeter = new MockGasMeter();
+
         // Deploy GasAggregator contract
         vm.prank(admin);
-        gasAggregator = new GasAggregator(1, 0, 2);
+        gasAggregator = new GasAggregator(address(mockGasMeter), 1, 0, 2);
         assertEq(gasAggregator.currentEpoch(), 1);
 
         vm.warp(gasAggregator.getEpochStart(1));
@@ -72,7 +75,7 @@ contract GasAggregatorTest is Test {
             }
 
             vm.prank(admin);
-            gasAggregator.addLegacyChain(chainId, mockContract);
+            gasAggregator.adminAddChain(chainId, mockContract, true);
         }
     }
 

@@ -22,6 +22,14 @@ use shared::{
 use tracing::{debug, info};
 use url::Url;
 
+// Legacy interface for Sequencing Chain
+sol! {
+    #[sol(rpc)]
+    contract ILegacySequencingChain {
+        function getTokensForEpoch(uint256 epoch) external view returns (uint256);
+    }
+}
+
 /// Arguments for updating base and ethereum block hashes
 #[derive(Args, Debug)]
 pub struct UpdateBaseAndEthereumBlockHashesArgs {
@@ -358,7 +366,32 @@ async fn get_aggregated_chain_data<P: Provider + Clone>(
     let logs = filter.query().await.unwrap_or_else(|e| panic!("failed to get logs: {e}"));
     assert_eq!(logs.len(), 1);
 
-    (logs[0].0.chainIds.clone(), logs[0].0.tokens.clone())
+    let appchains = gas_aggregator
+        .getTrackedChainIds()
+        .call()
+        .await
+        .unwrap_or_else(|e| panic!("failed to get tracked chain IDs: {e}"));
+    let mut tokens = vec![];
+
+    for chain_id in appchains.iter().copied() {
+        // Prefer any explicit override set in the aggregator; otherwise use factory computation
+        let appchain_addr =
+            gas_aggregator.appchainContract(chain_id).call().await.unwrap_or_else(|e| {
+                panic!("failed to get appchain contract override for {chain_id}: {e}")
+            });
+
+        // TODO: Handle legacy and new sequencing chain implementations
+        let appchain =
+            ILegacySequencingChain::new(appchain_addr, gas_aggregator.provider().clone());
+        tokens.push(
+            appchain
+                .getTokensForEpoch(epoch)
+                .call()
+                .await
+                .unwrap_or_else(|e| panic!("failed to get tokens for epoch {epoch}: {e}")),
+        );
+    }
+    (appchains, tokens)
 }
 
 /// Arguments for running both `update_base_and_ethereum_block_hashes` and `submit_gas_proofs`

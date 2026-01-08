@@ -10,9 +10,10 @@ create-contract-bindings-rust:
 		--select 'GasAggregator|GasArchive|BlockHashRelayer|EmissionsCalculator|EmissionsScheduler|Refunder' \
 		--select 'ArbConfigManager|SyndicateSequencingChain|Rollup|IInbox|AssertionPoster' \
 		--select 'TeeKeyManager|TeeModule|AttestationDocVerifier' \
-		--select 'IBridge|IOutbox|IRollupCore|IUpgradeExecutor' \
+		--select 'IBridge|IOutbox|IRollupCore|IRollup|IUpgradeExecutor' \
 		--select 'ArbSys|NodeInterface|ArbGasInfo|ArbOwner' \
-		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig'
+		--select 'IInboxBase|ISequencerInbox|IDelayedMessageProvider|ArbChainConfig' \
+		--select 'ERC1967Proxy|GasMeter|AlwaysAllowedModule'
 	cp -r ../synd-contracts/out/bindings/* contract-bindings/src/synd
 
 .PHONY: create-withdrawal-contract-bindings-go

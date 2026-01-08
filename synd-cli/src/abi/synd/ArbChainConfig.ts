@@ -227,6 +227,19 @@ export const arbChainConfigABI = [
   },
   {
     type: "function",
+    name: "VERSION",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
     name: "initialize",
     inputs: [
       {

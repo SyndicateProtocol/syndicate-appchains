@@ -1,12 +1,14 @@
 use crate::e2e::e2e_tests::Storage;
 use alloy::{
     eips::BlockNumberOrTag,
-    primitives::{utils::parse_ether, Address, U160, U256},
+    primitives::{utils::parse_ether, Address, Bytes, U160, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::anvil::MineOptions,
 };
 use contract_bindings::synd::{
     arb_owner::ArbOwner,
+    erc1967_proxy::ERC1967Proxy,
+    gas_meter::GasMeter,
     i_bridge::IBridge,
     i_inbox::IInbox,
     i_sequencer_inbox::ISequencerInbox,
@@ -48,11 +50,28 @@ async fn start_base_chain(chain_id: u64) -> Result<ChainInfo> {
     Ok(chain_info)
 }
 
-async fn deploy_sequencing_contract<P: Provider>(
+async fn deploy_sequencing_contract<P: Provider + Clone>(
     provider: P,
     appchain_chain_id: U256,
 ) -> Result<SyndicateSequencingChainInstance<P>> {
-    let contract_instance = SyndicateSequencingChain::deploy(provider, appchain_chain_id).await?;
+    let gas_meter_impl = GasMeter::deploy(provider.clone()).await?;
+    let gas_meter =
+        ERC1967Proxy::deploy(provider.clone(), *gas_meter_impl.address(), Bytes::new()).await?;
+
+    let seq_chain_impl =
+        SyndicateSequencingChain::deploy(provider.clone(), *gas_meter.address()).await?;
+    let seq_chain =
+        ERC1967Proxy::deploy(provider.clone(), *seq_chain_impl.address(), Bytes::new()).await?;
+
+    let contract_instance = SyndicateSequencingChain::new(*seq_chain.address(), provider);
+
+    assert!(contract_instance
+        .initialize(test_account1().address, U160::from(1).into(), appchain_chain_id)
+        .send()
+        .await?
+        .get_receipt()
+        .await?
+        .status());
     assert!(contract_instance
         .updateRequirementModule(U160::from(1).into())
         .send()

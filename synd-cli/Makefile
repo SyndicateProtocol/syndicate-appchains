@@ -27,16 +27,11 @@ generate-contract-abis:
 	
 	@echo "Generating RequireAndModule..."
 	@cd ../synd-contracts && \
-	  echo "export const requireAndModuleABI = $$(forge inspect src/requirement-modules/RequireAndModule.sol:RequireAndModule abi --json) as const" > ../synd-cli/src/abi/synd/RequireAndModule.ts
-	
-	@echo "Generating RequireAndModuleFactory..."
-	@cd ../synd-contracts && \
-	  echo "export const requireAndModuleFactoryABI = $$(forge inspect src/factory/PermissionModuleFactories.sol:RequireAndModuleFactory abi --json) as const" > ../synd-cli/src/abi/synd/RequireAndModuleFactory.ts
-	
-	@echo "Generating SyndicateFactory..."
-	@cd ../synd-contracts && \
-	  echo "export const syndicateFactoryABI = $$(forge inspect src/factory/SyndicateFactory.sol:SyndicateFactory abi --json) as const" > ../synd-cli/src/abi/synd/SyndicateFactory.ts
-	
+	  echo "export const requireAndModuleABI = $$(forge inspect src/requirement-modules/RequireAndModule.sol:RequireAndModule abi --json) as const" > ../synd-cli/src/abi/synd/RequireAndModule.ts && \
+	  echo "" >> ../synd-cli/src/abi/synd/RequireAndModule.ts && \
+	  echo "export const requireAndModuleBytecode =" >> ../synd-cli/src/abi/synd/RequireAndModule.ts && \
+	  echo "  \"$$(forge inspect src/requirement-modules/RequireAndModule.sol:RequireAndModule bytecode)\"" >> ../synd-cli/src/abi/synd/RequireAndModule.ts
+
 	@echo "Generating SyndicateSequencingChain..."
 	@cd ../synd-contracts && \
 	  echo "export const syndicateSequencingChainABI = $$(forge inspect src/SyndicateSequencingChain.sol:SyndicateSequencingChain abi --json) as const" > ../synd-cli/src/abi/synd/SyndicateSequencingChain.ts
@@ -51,7 +46,11 @@ generate-contract-abis:
 	  echo "" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "export const teeModuleBytecode =" >> ../synd-cli/src/abi/synd/TeeModule.ts && \
 	  echo "  \"$$(forge inspect src/withdrawal/TeeModule.sol:TeeModule bytecode)\"" >> ../synd-cli/src/abi/synd/TeeModule.ts
-	
+
+	@echo "Generating SyndForwarder..."
+	@cd ../synd-contracts && \
+	  echo "export const syndForwarderABI = $$(forge inspect src/deployment/SyndForwarder.sol:SyndForwarder abi --json) as const" > ../synd-cli/src/abi/synd/SyndForwarder.ts
+
 	@echo "Formatting generated ABI files..."
 	@bunx @biomejs/biome format --write src/abi/synd/
 	

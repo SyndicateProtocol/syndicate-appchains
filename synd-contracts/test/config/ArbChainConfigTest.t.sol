@@ -480,4 +480,54 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
         vm.expectRevert(); // OpenZeppelin's Ownable error
         manager.upgradeImplementation(address(0x1234));
     }
+
+    // ================== VERSION TRACKING TESTS ==================
+
+    function testInitialVersionInArbChainConfig() public {
+        ArbConfigManager manager = _createArbConfigManager();
+
+        vm.startPrank(owner);
+        address configAddress = manager.createArbChainConfig(
+            owner,
+            CHAIN_ID + 1000,
+            SEQUENCING_CHAIN_ID,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            appchainOwner,
+            DEFAULT_WS_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
+        );
+        vm.stopPrank();
+
+        ArbChainConfig config = ArbChainConfig(configAddress);
+        assertEq(config.VERSION(), 1000000, "Initial version should be 1.0.0");
+    }
+
+    function testVersionInManagerCreatedConfig() public {
+        ArbConfigManager manager = _createArbConfigManager();
+
+        vm.startPrank(owner);
+        address configAddress = manager.createArbChainConfig(
+            owner,
+            CHAIN_ID + 5000,
+            SEQUENCING_CHAIN_ID,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            appchainOwner,
+            DEFAULT_WS_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
+        );
+        vm.stopPrank();
+
+        ArbChainConfig config = ArbChainConfig(configAddress);
+        assertEq(config.VERSION(), 1000000, "Manager-created config should have initial version");
+    }
 }

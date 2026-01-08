@@ -1,4 +1,4 @@
-import { defineChain } from "viem"
+import { type Address, defineChain } from "viem"
 import { base, baseSepolia, mainnet, sepolia } from "viem/chains"
 import type {
   SupportedEthereumChains,
@@ -58,18 +58,35 @@ export const syndicate = defineChain({
   isTestnet: false
 })
 
+const deploymentAddresses: Record<
+  number,
+  { forwarderAddress: Address; forwarderParentAddress: Address }
+> = {
+  // @note TODO: add mainnet deployment addresses post-audit
+  [mainnet.id]: {
+    forwarderAddress: "0x0000000000000000000000000000000000000000",
+    forwarderParentAddress: "0x0000000000000000000000000000000000000000"
+  },
+  [sepolia.id]: {
+    forwarderAddress: "0x7Cdc5Ac9aD558D5AEd15657cD077dC6A6e7347Fd",
+    forwarderParentAddress: "0xfA6694Fbd39d4cF760748C1b3f75b0d5d71Fa3e1"
+  }
+}
+
 export const supportedSequencingChains: SupportedSequencingChains = {
   [risa.id]: {
     bridge: "0x1043E08195914c32ec3a4a075d9Eb2B0DC2fB1aA",
-    requireAndFactory: "0x60e6Ac9FF8ff09175329EfB3daDa27abDA812aA4",
-    syndicateFactory: "0x2e44cd104A6b67037b5e6DB662C0E917d1828D9E",
-    chain: risa
+    inbox: "0xEf3f505A2f05e042FDF240E8a01D11ff0E2BAdf1",
+    sequencingChainImplementation: "0xEd582132C33DE5B5A661De3D2dCe5FB8F2d8F33D",
+    chain: risa,
+    ...deploymentAddresses[sepolia.id]
   },
   [syndicate.id]: {
     bridge: "0x3C8cF0ae6E89AC0796f29B3a58e7dEa1cD072277",
-    requireAndFactory: "0x3eEb8b1500cbaCbc4A3718D39414C8D191AC906B",
-    syndicateFactory: "0x0620625c3662CbD6a8ca8Eef196ee3b10A8Bd157",
-    chain: syndicate
+    inbox: "0x5EA55Fd41D42Eb307D281bdE78E4e7572A35ea13",
+    sequencingChainImplementation: "0x0000000000000000000000000000000000000000",
+    chain: syndicate,
+    ...deploymentAddresses[mainnet.id]
   }
 }
 
