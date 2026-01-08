@@ -84,6 +84,11 @@ contract BasicTests is ArbChainConfigTestBase {
         // Verify that owner is set correctly
         assertEq(chainConfig.owner(), owner);
     }
+
+    function testGetArbChainConfigAddress() public view {
+        address retrievedAddress = chainConfig.getArbChainConfigAddress(CHAIN_ID);
+        assertEq(retrievedAddress, address(chainConfig));
+    }
 }
 
 contract InvalidParameterTests is ArbChainConfigTestBase {

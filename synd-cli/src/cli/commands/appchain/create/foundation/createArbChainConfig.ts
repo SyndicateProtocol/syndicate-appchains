@@ -1,9 +1,13 @@
-import { arbConfigManagerABI } from "@/abi/synd/ArbConfigManager"
+import {
+  BeaconProxyABI,
+  BeaconProxyBytecode
+} from "@/abi/openzeppelin/BeaconProxy"
+import { arbChainConfigABI } from "@/abi/synd/ArbChainConfig"
 import type { CreateArbChainConfig } from "@/types"
 import { supportedSettlementChains } from "@/utils/constants"
 import { getChainExplorerUrl } from "@/utils/helpers"
 import { print } from "@/utils/print"
-import { parseEventLogs } from "viem"
+import { encodeFunctionData } from "viem"
 
 export async function createArbChainConfig({
   coreContracts,
@@ -17,15 +21,25 @@ export async function createArbChainConfig({
   chainId,
   deployerSettlementWalletClient
 }: CreateArbChainConfig) {
-  print("🔍 Creating ArbChainConfig...")
+  print("🔍 Deploying and initializing ArbChainConfig BeaconProxy...")
 
-  const arbConfigManagerAddress =
-    supportedSettlementChains[settlementPublicClient.chain.id].arbConfigManager
-  const { request } = await settlementPublicClient.simulateContract({
-    account: deployerSettlementWalletClient.account,
-    address: arbConfigManagerAddress,
-    abi: arbConfigManagerABI,
-    functionName: "createArbChainConfig",
+  const beaconAddress =
+    supportedSettlementChains[settlementPublicClient.chain.id]
+      .arbChainConfigBeacon
+  if (
+    beaconAddress === "0x0000000000000000000000000000000000000000" ||
+    !beaconAddress
+  ) {
+    throw new Error(
+      `ArbChainConfig beacon not deployed on ${settlementPublicClient.chain.name}. Could not get beacon address, it needs to be deployed for this chain first.`
+    )
+  }
+
+  // Encode the initialize call to pass to BeaconProxy constructor
+  // This ensures deploy + initialize happens atomically (no front-running)
+  const initializeData = encodeFunctionData({
+    abi: arbChainConfigABI,
+    functionName: "initialize",
     args: [
       // owner
       ownerSettlementWalletClient.account.address,
@@ -47,31 +61,32 @@ export async function createArbChainConfig({
       BigInt(sequencingStartBlock),
       // initialAppchainOwner
       ownerSettlementWalletClient.account.address,
-      // sequencingChainUrl
+      // sequencingChainWsRpcUrl
       // @note we are leaving blank for now as we require node operators to get their own private RPC URL
       "",
       // appchainBlockExplorerUrl
       appchainExplorer
     ]
   })
-  const txHash = await deployerSettlementWalletClient.writeContract(request)
-  const tx = await settlementPublicClient.waitForTransactionReceipt({
-    hash: txHash
+
+  // Deploy the BeaconProxy with initialization data
+  const deployHash = await deployerSettlementWalletClient.deployContract({
+    abi: BeaconProxyABI,
+    bytecode: BeaconProxyBytecode,
+    args: [beaconAddress, initializeData]
   })
-  const creationLogs = parseEventLogs({
-    abi: arbConfigManagerABI,
-    logs: tx.logs
+  const deployReceipt = await settlementPublicClient.waitForTransactionReceipt({
+    hash: deployHash
   })
-  const arbChainConfigAddress = creationLogs.find(
-    (l) => l.eventName === "ArbChainConfigCreated"
-  )?.args.configAddress
+  const arbChainConfigAddress = deployReceipt.contractAddress
   if (!arbChainConfigAddress) {
-    throw new Error("ArbChainConfig deployment failed")
+    throw new Error("ArbChainConfig BeaconProxy deployment failed")
   }
   print(
-    `🔍 ArbChainConfig deployed to ${arbChainConfigAddress}\n${getChainExplorerUrl(
+    `🔍 ArbChainConfig deployed and initialized at ${arbChainConfigAddress}\n${getChainExplorerUrl(
       settlementPublicClient.chain
-    )}/tx/${tx.transactionHash}`
+    )}/tx/${deployHash}`
   )
+
   return arbChainConfigAddress
 }

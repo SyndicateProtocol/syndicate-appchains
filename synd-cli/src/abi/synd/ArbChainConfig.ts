@@ -227,6 +227,25 @@ export const arbChainConfigABI = [
   },
   {
     type: "function",
+    name: "getArbChainConfigAddress",
+    inputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address"
+      }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
     name: "initialize",
     inputs: [
       {

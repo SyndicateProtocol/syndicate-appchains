@@ -83,8 +83,8 @@ export type SupportedSettlementChains = Record<
   {
     rollupCreator: Hex
     tokenBridgeCreator: Hex
-    arbConfigManager: Hex
     teeKeyManager: Hex
+    arbChainConfigBeacon: Hex
     chain: Chain
   }
 >

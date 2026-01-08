@@ -1,8 +1,5 @@
 import type { Foundation } from "@/types"
-import {
-  supportedSequencingChains,
-  supportedSettlementChains
-} from "@/utils/constants"
+import { supportedSequencingChains } from "@/utils/constants"
 import { upsertToEoaSecrets, upsertToSyndObject, writeToFile } from "@/utils/fs"
 import { fundAccount } from "@/utils/fundAccount"
 import { generateBridgeConfig } from "@/utils/generateBridgeConfig"
@@ -209,10 +206,7 @@ export async function foundation({
   })
 
   await upsertToSyndObject(chainName, environment, "config", {
-    arbChainConfig: arbChainConfigAddress,
-    arbConfigManager:
-      supportedSettlementChains[settlementPublicClient.chain.id]
-        .arbConfigManager
+    arbChainConfig: arbChainConfigAddress
   })
   print("✅  Arb Chain Config deployed")
   print("---------------------------------------------------------")
@@ -253,9 +247,7 @@ export async function foundation({
         "tee-module-address": "0xREPLACEMELATER",
         "proposer-private-key":
           "REPLACEMELATER - private key with no 0x prefix",
-        "config-manager-address":
-          supportedSettlementChains[settlementPublicClient.chain.id]
-            .arbConfigManager,
+        "config-manager-address": arbChainConfigAddress,
         "appchain-bridge-address": bridgeConfig.coreContracts.bridge,
         "sequencing-bridge-address":
           supportedSequencingChains[sequencingPublicClient.chain.id].bridge,
