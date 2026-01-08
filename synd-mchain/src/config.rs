@@ -73,6 +73,10 @@ pub struct MchainConfig {
         value_parser = parse_address
     )]
     pub config_manager_address: Option<Address>,
+
+    /// URL to a tar file snapshot to restore the database from on startup
+    #[arg(long, env = "SNAPSHOT_URL")]
+    pub snapshot_url: Option<String>,
 }
 
 impl MchainConfig {
@@ -143,13 +147,13 @@ pub async fn with_onchain_config(config: MchainConfig) -> MchainConfig {
     let provider = ProviderBuilder::new()
         .connect(url.as_str())
         .await
-        .unwrap_or_else(|error| panic!("error connecting to RPC URL: {}", error));
+        .unwrap_or_else(|error| panic!("error connecting to RPC URL: {error}"));
 
     let onchain = get_config(address, U256::from(config.appchain_chain_id), provider)
         .await
-        .unwrap_or_else(|error| panic!("error obtaining onchain config: {}", error));
+        .unwrap_or_else(|error| panic!("error obtaining onchain config: {error}"));
 
-    info!("got onchain config: {:?}", onchain);
+    info!("got onchain config: {onchain:?}");
 
     override_with_onchain_config(config, &onchain)
 }
@@ -291,6 +295,7 @@ mod test {
             migrated_delayed_msgs_count: None,
             config_manager_rpc_url: None,
             config_manager_address: None,
+            snapshot_url: None,
         }
     }
 

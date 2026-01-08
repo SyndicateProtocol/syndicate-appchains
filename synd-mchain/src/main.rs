@@ -1,4 +1,4 @@
-//! The `MockChain` is used for appchain block derivation.
+//! The `synd-mchain` is used for appchain block derivation.
 
 #[tokio::main]
 #[cfg(feature = "rocksdb")]
@@ -16,18 +16,29 @@ async fn main() -> eyre::Result<()> {
         service_start_utils::{start_http_server_with_metrics_only, MetricsState},
         tracing::setup_global_logging,
     };
+    use std::path::Path;
     use synd_mchain::{
+        archive_downloader::{datadir_is_empty, download_and_extract},
         config::{with_onchain_config, MchainConfig},
         metrics::MchainMetrics,
         server::start_mchain,
     };
     use tokio::signal::unix::{signal, SignalKind};
-    use tracing::info;
+    use tracing::{info, warn};
 
     // Initialize logging
     setup_global_logging()?;
 
     let cfg = with_onchain_config(MchainConfig::parse()).await;
+
+    // Load snapshot if URL is provided
+    if let Some(ref snapshot_url) = cfg.snapshot_url {
+        if datadir_is_empty(Path::new(&cfg.datadir)) {
+            download_and_extract(snapshot_url, &cfg.datadir).await?;
+        } else {
+            warn!("datadir {} is not empty, skipping snapshot load", cfg.datadir);
+        }
+    }
 
     info!("loading rocksdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir.clone())?;
