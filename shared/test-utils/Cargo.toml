@@ -10,6 +10,7 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true, features = ["node-bindings", "providers", "rpc-types-anvil"] }
+axum              = { workspace = true }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
 flate2            = { workspace = true }
@@ -21,4 +22,5 @@ shared            = { workspace = true }
 synd-mchain       = { workspace = true }
 tar               = { workspace = true }
 tokio             = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
+tower-http        = { version = "0.6.2", features = ["fs"] }
 tracing           = { workspace = true }
