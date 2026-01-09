@@ -4,24 +4,50 @@ A TypeScript-based CLI tool for creating and managing Syndicate Appchains. It ha
 
 ## Installation
 
+### Pre-built Binaries (Recommended)
+
+Install the latest version:
+
+```bash
+curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=synd-cli-v1.0.0 bash
+```
+
+Custom install directory:
+
+```bash
+curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_INSTALL_DIR=/usr/local/bin bash
+```
+
+After installation, add `~/.synd/bin` to your PATH (the installer will provide instructions).
+
+### From Source
+
 ```bash
 bun install
 ```
 
 ## Quick Start
 
+> **Note:** If running from source, replace `synd-cli` with `bun run synd-cli` in all commands below.
+
 1. **Generate example config files:**
    ```bash
-   bun run synd-cli appchain create foundation init
-   bun run synd-cli appchain create features init
+   synd-cli appchain create foundation init
+   synd-cli appchain create features init
    ```
 
 2. **Edit the generated config files** in `options/` with your values
 
 3. **Deploy contracts:**
    ```bash
-   bun run synd-cli appchain create foundation --config options/foundation.json
-   bun run synd-cli appchain create features --config options/features.json
+   synd-cli appchain create foundation --config options/foundation.json
+   synd-cli appchain create features --config options/features.json
    ```
 
 4. **Save the private keys** displayed during deployment (sequencer, proposer, etc.)
@@ -36,10 +62,10 @@ Most commands support an `init` subcommand that generates an example config file
 
 ```bash
 # Generate example config
-bun run synd-cli appchain create foundation init
+synd-cli appchain create foundation init
 
 # Use the config file
-bun run synd-cli appchain create foundation --config options/foundation.json
+synd-cli appchain create foundation --config options/foundation.json
 ```
 
 Config files use kebab-case keys matching CLI flag names. CLI flags can override config file values.
@@ -49,7 +75,7 @@ Config files use kebab-case keys matching CLI flag names. CLI flags can override
 All options can also be passed as CLI flags. Run any command with `--help` to see available options:
 
 ```bash
-bun run synd-cli appchain create foundation --help
+synd-cli appchain create foundation --help
 ```
 
 ## Creating a New Appchain
@@ -76,7 +102,7 @@ Deploys additional contracts that depend on the Appchain node:
 
 ## Available Commands
 
-Run `bun run synd-cli` to see all available commands. Main command categories:
+Run `synd-cli` to see all available commands. Main command categories:
 
 - `appchain create` - Deploy various contract sets (foundation, features, sequencing, withdrawals, etc.)
 - `appchain handoff` - Transfer contract ownership
