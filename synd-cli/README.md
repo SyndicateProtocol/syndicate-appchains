@@ -9,19 +9,19 @@ A TypeScript-based CLI tool for creating and managing Syndicate Appchains. It ha
 Install the latest version:
 
 ```bash
-curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | bash
+curl -L https://cli.syndicate.io | bash
 ```
 
 Install a specific version:
 
 ```bash
-curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=synd-cli-v1.0.0 bash
+curl -L https://cli.syndicate.io | SYND_VERSION=synd-cli-v1.0.0 bash
 ```
 
 Custom install directory:
 
 ```bash
-curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_INSTALL_DIR=/usr/local/bin bash
+curl -L https://cli.syndicate.io | SYND_INSTALL_DIR=/usr/local/bin bash
 ```
 
 After installation, add `~/.synd/bin` to your PATH (the installer will provide instructions).
