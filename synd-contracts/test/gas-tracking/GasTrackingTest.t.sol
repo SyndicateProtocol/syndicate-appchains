@@ -337,7 +337,6 @@ contract GasAggregatorTest is Test {
         // Move to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION);
 
-
         vm.prank(admin);
         gasAggregator.pause();
         assertEq(gasAggregator.paused(), true);
