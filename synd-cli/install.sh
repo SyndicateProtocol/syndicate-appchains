@@ -51,12 +51,12 @@ detect_platform() {
 
 get_latest_version() {
     local latest
-    # Find the latest synd-cli release (tags starting with "synd-cli-")
+    # Find the latest stable synd-cli release (X.Y.Z without pre-release suffix)
     # The "|| true" prevents pipefail from exiting the script when no version is found
     latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | \
         grep '"tag_name"' | \
         sed -E 's/.*"([^"]+)".*/\1/' | \
-        grep '^synd-cli-' | \
+        grep -E '^synd-cli-v[0-9]+\.[0-9]+\.[0-9]+$' | \
         head -n 1 || true)
 
     if [[ -z "$latest" ]]; then

@@ -115,6 +115,7 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           name: "synd-cli ${{ env.TAG_NAME }}"
           body: "Release of synd-cli ${{ env.TAG_NAME }}"
+          prerelease: ${{ contains(inputs.version, '-') }}
           files: |
             synd-cli-linux-x64-${{ env.TAG_NAME }}
             synd-cli-linux-arm64-${{ env.TAG_NAME }}
