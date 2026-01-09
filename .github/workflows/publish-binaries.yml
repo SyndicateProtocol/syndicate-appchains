@@ -16,6 +16,8 @@ permissions:
 jobs:
   build:
     name: Build artifacts
+    # Skip synd-cli releases - those are handled by publish-synd-cli.yml
+    if: ${{ !startsWith(github.event.release.tag_name, 'synd-cli-') || github.event_name == 'workflow_dispatch' }}
     runs-on: shared-medium-01
     outputs:
       eif-hash: ${{ steps.artifact-hashes.outputs.eif-hash }}
