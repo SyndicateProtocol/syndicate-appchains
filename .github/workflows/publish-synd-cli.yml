@@ -3,8 +3,8 @@ name: Publish synd-cli Binaries
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "synd-cli version tag (e.g., synd-cli-v1.0.0)"
+      version:
+        description: "Version (e.g., 1.0.0)"
         required: true
         type: string
 
@@ -16,10 +16,10 @@ jobs:
     name: Build synd-cli executables
     runs-on: ubuntu-latest
     steps:
-      - name: Validate tag format
+      - name: Validate version format
         run: |
-          if [[ ! "${{ inputs.tag_name }}" =~ ^synd-cli-v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
-            echo "Error: tag_name must start with 'synd-cli-v' followed by semver (e.g., synd-cli-v1.0.0)"
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "Error: version must be valid semver (e.g., 1.0.0, 1.0.0-beta.1)"
             exit 1
           fi
 
@@ -94,7 +94,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      TAG_NAME: ${{ inputs.tag_name }}
+      TAG_NAME: synd-cli-v${{ inputs.version }}
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
