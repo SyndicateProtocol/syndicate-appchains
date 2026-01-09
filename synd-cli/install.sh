@@ -73,7 +73,7 @@ download_binary() {
 
     tmp_file=$(mktemp)
 
-    info "Downloading synd-cli ${version} for ${platform}..."
+    info "Downloading synd-cli ${version} for ${platform}..." >&2
 
     if ! curl -fsSL "$url" -o "$tmp_file"; then
         rm -f "$tmp_file"
