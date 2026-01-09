@@ -25,7 +25,7 @@ warn() {
 }
 
 error() {
-    printf "${RED}error${NC}: %s\n" "$1"
+    printf "${RED}error${NC}: %s\n" "$1" >&2
     exit 1
 }
 
@@ -52,11 +52,12 @@ detect_platform() {
 get_latest_version() {
     local latest
     # Find the latest synd-cli release (tags starting with "synd-cli-")
+    # The "|| true" prevents pipefail from exiting the script when no version is found
     latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | \
         grep '"tag_name"' | \
         sed -E 's/.*"([^"]+)".*/\1/' | \
         grep '^synd-cli-' | \
-        head -n 1)
+        head -n 1 || true)
 
     if [[ -z "$latest" ]]; then
         error "Failed to fetch latest synd-cli version. Please check your internet connection or specify a version with SYND_VERSION=synd-cli-vX.Y.Z"

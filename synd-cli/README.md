@@ -108,7 +108,7 @@ Run `synd-cli` to see all available commands. Main command categories:
 - `appchain handoff` - Transfer contract ownership
 - `appchain arb-owner` - Manage Arbitrum owner operations
 - `appchain check-token-bridge` - Verify token bridge setup
-- `appchain e2e` - Run end-to-end tests
+- `appchain e2e` - Run end-to-end tests for an appchain
 - `alias` - Calculate L1->L2 aliased addresses
 
 Each command supports:
