@@ -4,7 +4,7 @@ set -euo pipefail
 # Syndicate CLI Installer
 # Usage:
 #   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | bash
-#   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=synd-cli-v1.0.0 bash
+#   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=1.0.0 bash
 
 REPO="SyndicateProtocol/syndicate-appchains"
 INSTALL_DIR="${SYND_INSTALL_DIR:-$HOME/.synd/bin}"
@@ -60,7 +60,7 @@ get_latest_version() {
         head -n 1 || true)
 
     if [[ -z "$latest" ]]; then
-        error "Failed to fetch latest synd-cli version. Please check your internet connection or specify a version with SYND_VERSION=synd-cli-vX.Y.Z"
+        error "Failed to fetch latest synd-cli version. Please check your internet connection or specify a version with SYND_VERSION=X.Y.Z"
     fi
 
     echo "$latest"
@@ -191,6 +191,9 @@ main() {
     if [[ -z "$version" ]]; then
         info "Fetching latest version..."
         version=$(get_latest_version)
+    else
+        # User provided version - add the synd-cli-v prefix
+        version="synd-cli-v${version}"
     fi
     info "Version: ${version}"
 
