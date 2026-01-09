@@ -87,10 +87,10 @@ jobs:
 
       - name: Rename artifacts with version
         run: |
-          mv synd-cli/synd-cli-linux-x64 synd-cli-linux-x64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-linux-arm64 synd-cli-linux-arm64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+          mv synd-cli-linux-x64 synd-cli-linux-x64-${{ env.TAG_NAME }}
+          mv synd-cli-linux-arm64 synd-cli-linux-arm64-${{ env.TAG_NAME }}
+          mv synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
+          mv synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
 
       - name: Create release and attach binaries
         uses: softprops/action-gh-release@v1
