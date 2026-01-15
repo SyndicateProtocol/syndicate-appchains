@@ -4,7 +4,7 @@ set -euo pipefail
 # Syndicate CLI Installer
 # Usage:
 #   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | bash
-#   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=synd-cli-v1.0.0 bash
+#   curl -L https://raw.githubusercontent.com/SyndicateProtocol/syndicate-appchains/main/synd-cli/install.sh | SYND_VERSION=1.0.0 bash
 
 REPO="SyndicateProtocol/syndicate-appchains"
 INSTALL_DIR="${SYND_INSTALL_DIR:-$HOME/.synd/bin}"
@@ -25,7 +25,7 @@ warn() {
 }
 
 error() {
-    printf "${RED}error${NC}: %s\n" "$1"
+    printf "${RED}error${NC}: %s\n" "$1" >&2
     exit 1
 }
 
@@ -51,15 +51,16 @@ detect_platform() {
 
 get_latest_version() {
     local latest
-    # Find the latest synd-cli release (tags starting with "synd-cli-")
+    # Find the latest stable synd-cli release (X.Y.Z without pre-release suffix)
+    # The "|| true" prevents pipefail from exiting the script when no version is found
     latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | \
         grep '"tag_name"' | \
         sed -E 's/.*"([^"]+)".*/\1/' | \
-        grep '^synd-cli-' | \
-        head -n 1)
+        grep -E '^synd-cli-v[0-9]+\.[0-9]+\.[0-9]+$' | \
+        head -n 1 || true)
 
     if [[ -z "$latest" ]]; then
-        error "Failed to fetch latest synd-cli version. Please check your internet connection or specify a version with SYND_VERSION=synd-cli-vX.Y.Z"
+        error "Failed to fetch latest synd-cli version. Please check your internet connection or specify a version with SYND_VERSION=X.Y.Z"
     fi
 
     echo "$latest"
@@ -73,7 +74,7 @@ download_binary() {
 
     tmp_file=$(mktemp)
 
-    info "Downloading synd-cli ${version} for ${platform}..."
+    info "Downloading synd-cli ${version} for ${platform}..." >&2
 
     if ! curl -fsSL "$url" -o "$tmp_file"; then
         rm -f "$tmp_file"
@@ -119,20 +120,60 @@ setup_path_instructions() {
     # Check if already in PATH
     if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
         info "synd-cli is ready to use!"
-    else
-        echo ""
-        warn "Add synd-cli to your PATH by running:"
-        echo ""
-        if [[ "$shell_name" == "fish" ]]; then
-            printf "  fish_add_path %s\n" "$INSTALL_DIR"
-        else
-            printf "  echo 'export PATH=\"%s:\$PATH\"' >> %s\n" "$INSTALL_DIR" "$rc_file"
-        fi
-        echo ""
-        printf "Then restart your shell or run:\n"
-        printf "  source %s\n" "$rc_file"
-        echo ""
+        return
     fi
+
+    echo ""
+    printf "${YELLOW}synd-cli is not in your PATH.${NC}\n"
+    echo ""
+    printf "Would you like to add it automatically? [Y/n] "
+
+    # Read user input (handle piped input by reading from /dev/tty)
+    local response
+    if [[ -t 0 ]]; then
+        read -r response
+    else
+        read -r response < /dev/tty
+    fi
+
+    case "$response" in
+        [Yy]|"")
+            # Add to PATH
+            if [[ "$shell_name" == "fish" ]]; then
+                echo "fish_add_path $INSTALL_DIR" >> "$rc_file"
+            else
+                echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$rc_file"
+            fi
+            info "Added synd-cli to PATH in ${rc_file}"
+            echo ""
+            warn "Restart your terminal or run: source ${rc_file}"
+            echo ""
+            ;;
+        [Nn])
+            echo ""
+            printf "${YELLOW}========================================${NC}\n"
+            warn "ACTION REQUIRED: Add synd-cli to your PATH"
+            printf "${YELLOW}========================================${NC}\n"
+            echo ""
+            printf "Run this command to add synd-cli to your PATH:\n"
+            echo ""
+            if [[ "$shell_name" == "fish" ]]; then
+                printf "  ${GREEN}fish_add_path %s${NC}\n" "$INSTALL_DIR"
+            else
+                printf "  ${GREEN}echo 'export PATH=\"%s:\$PATH\"' >> %s${NC}\n" "$INSTALL_DIR" "$rc_file"
+            fi
+            echo ""
+            printf "Then restart your terminal or run:\n"
+            echo ""
+            printf "  ${GREEN}source %s${NC}\n" "$rc_file"
+            echo ""
+            printf "${YELLOW}========================================${NC}\n"
+            echo ""
+            ;;
+        *)
+            warn "Invalid response. Please manually add ${INSTALL_DIR} to your PATH."
+            ;;
+    esac
 }
 
 main() {
@@ -150,6 +191,9 @@ main() {
     if [[ -z "$version" ]]; then
         info "Fetching latest version..."
         version=$(get_latest_version)
+    else
+        # User provided version - add the synd-cli-v prefix
+        version="synd-cli-v${version}"
     fi
     info "Version: ${version}"
 

@@ -3,8 +3,8 @@ name: Publish synd-cli Binaries
 on:
   workflow_dispatch:
     inputs:
-      tag_name:
-        description: "synd-cli version tag (e.g., synd-cli-v1.0.0)"
+      version:
+        description: "Version (e.g., 1.0.0)"
         required: true
         type: string
 
@@ -16,6 +16,13 @@ jobs:
     name: Build synd-cli executables
     runs-on: ubuntu-latest
     steps:
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "Error: version must be valid semver (e.g., 1.0.0, 1.0.0-beta.1)"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Setup Bun
@@ -60,6 +67,14 @@ jobs:
             ./src/cli/index.ts \
             --outfile synd-cli-darwin-arm64
 
+      - name: Build Windows x64
+        run: |
+          cd synd-cli
+          bun build --compile --minify --sourcemap --bytecode \
+            --target=bun-windows-x64 \
+            ./src/cli/index.ts \
+            --outfile synd-cli-windows-x64.exe
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -69,6 +84,7 @@ jobs:
             synd-cli/synd-cli-linux-arm64
             synd-cli/synd-cli-darwin-x64
             synd-cli/synd-cli-darwin-arm64
+            synd-cli/synd-cli-windows-x64.exe
           retention-days: 1
 
   publish-release:
@@ -78,7 +94,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      TAG_NAME: ${{ inputs.tag_name }}
+      TAG_NAME: synd-cli-v${{ inputs.version }}
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -87,10 +103,11 @@ jobs:
 
       - name: Rename artifacts with version
         run: |
-          mv synd-cli/synd-cli-linux-x64 synd-cli-linux-x64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-linux-arm64 synd-cli-linux-arm64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
-          mv synd-cli/synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+          mv synd-cli-linux-x64 synd-cli-linux-x64-${{ env.TAG_NAME }}
+          mv synd-cli-linux-arm64 synd-cli-linux-arm64-${{ env.TAG_NAME }}
+          mv synd-cli-darwin-x64 synd-cli-darwin-x64-${{ env.TAG_NAME }}
+          mv synd-cli-darwin-arm64 synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+          mv synd-cli-windows-x64.exe synd-cli-windows-x64-${{ env.TAG_NAME }}.exe
 
       - name: Create release and attach binaries
         uses: softprops/action-gh-release@v1
@@ -98,11 +115,13 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           name: "synd-cli ${{ env.TAG_NAME }}"
           body: "Release of synd-cli ${{ env.TAG_NAME }}"
+          prerelease: ${{ contains(inputs.version, '-') }}
           files: |
             synd-cli-linux-x64-${{ env.TAG_NAME }}
             synd-cli-linux-arm64-${{ env.TAG_NAME }}
             synd-cli-darwin-x64-${{ env.TAG_NAME }}
             synd-cli-darwin-arm64-${{ env.TAG_NAME }}
+            synd-cli-windows-x64-${{ env.TAG_NAME }}.exe
 
   notify-failure:
     name: Notify on failure
