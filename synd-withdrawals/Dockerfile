@@ -30,8 +30,8 @@ COPY --from=bootstrap out bootstrap
 RUN linuxkit build --format kernel+initrd --no-sbom --name init-ramdisk ./eif/init-ramdisk.yaml
 RUN linuxkit build --format kernel+initrd --no-sbom --name user-ramdisk ./eif/user-ramdisk.yaml
 
-# rust:1.80.1
-FROM rust@sha256:29fe4376919e25b7587a1063d7b521d9db735fc137d3cf30ae41eb326d209471 AS eif
+# https://hub.docker.com/layers/library/rust/trixie/images/sha256-155f835173fcc2677a4132b0817d3e4684aeee38806654a4cacb53d6f0e88a83
+FROM rust@sha256:bed2d7f8140d73c26f16c298c91ae8487a09f40d3840c0d8d139537e1b51e148  AS eif
 
 RUN mkdir /build
 WORKDIR /build

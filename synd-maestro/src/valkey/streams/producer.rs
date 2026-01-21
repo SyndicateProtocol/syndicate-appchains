@@ -9,7 +9,7 @@ use shared::tracing::{current_traceparent, SpanKind};
 use std::{self, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, task::JoinHandle, time::MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 /// Base key for Valkey transaction streams
 /// Format: `synd-maestro:transactions:{chain_id}`
@@ -213,7 +213,7 @@ impl StreamProducer {
             error!(%stream_key, %max_id, %e, failed_ids = ids.join(", "), "Finalization checker: Failed to delete finalized transaction entries");
             return Err(e);
         }
-        trace!(%stream_key, %max_id, count = ids.len(), "Finalization checker: Deleted entries");
+        warn!(%stream_key, %max_id, count = ids.len(), "Finalization checker: Deleted entries");
         Ok(entries)
     }
 
