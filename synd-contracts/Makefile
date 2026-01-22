@@ -29,12 +29,6 @@ grant-minter-role :; forge script script/TestnetSyndScript.s.sol:GrantMinterRole
 # mint TestnetSynd to addresses
 mint-synd-to-addresses :; forge script script/TestnetSyndScript.s.sol:MintSYNDToAddresses --rpc-url sepolia --account deployer --sender ${DEV_PUB_ADDRESS} --broadcast -vv
 
-# deploy AgentApplication to Syndicate Exo
-deploy-agent-application :; forge create --rpc-url exo --account deployer src/use-cases/dream/AgentApplication.sol:AgentApplication --legacy --broadcast --verify --verifier blockscout --verifier-url 'https://syndicate-exo.explorer.alchemy.com/api/' -vvv --constructor-args ${ADMIN_ADDR}
-
-# verify AgentApplication contract
-verify-agent-application :; forge verify-contract --rpc-url exo --verifier blockscout --verifier-url 'https://syndicate-exo.explorer.alchemy.com/api/' ${CONTRACT_ADDRESS} src/use-cases/dream/AgentApplication.sol:AgentApplication
-
 ## Tx Limit Test
 # run tx limit test against OP Mainnet or Base Sepolia
 # and save output to file

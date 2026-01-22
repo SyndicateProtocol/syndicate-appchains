@@ -11,6 +11,10 @@ version.workspace    = true
 rust-version = "1.85"
 
 
+[[bin]]
+name = "synd-tee-attestation-zk-proofs-sp1-program"
+test = false
+
 [dependencies]
 alloy                                    = { workspace = true, features = ["sol-types"] }
 sp1-zkvm                                 = { workspace = true }
