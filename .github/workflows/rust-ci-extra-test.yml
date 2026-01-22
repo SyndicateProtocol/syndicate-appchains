@@ -27,8 +27,6 @@ env:
   # Use a shared cache key for all jobs in the same PR/run. Note the usage of `../Cargo.lock` in invocations
   # below to check for any changed deps
   CACHE_KEY: "ci-${{ github.head_ref || github.ref_name }}"
-  # Rust version for consistency across jobs
-  RUST_VERSION: "1.88.0"
   # GitHub Container Registry
   GITHUB_REGISTRY: ghcr.io
 
@@ -77,10 +75,7 @@ jobs:
 
       - name: Install Rust toolchain
         if: steps.diff.outputs.run_tests == 'true'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: "cargo, rustc, clippy, llvm-tools, rustc-dev"
+        run: rustup show
 
       - name: Cache dependencies
         if: steps.diff.outputs.run_tests == 'true'
