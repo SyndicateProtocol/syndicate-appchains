@@ -190,10 +190,10 @@ bytes32 public syndicateProxyBytecodeHash;
 
 #### Key Functions:
 
-##### `addChain(uint256 chainId, uint256 addChainFee)`
+##### `addChain(uint256 chainId) external payable`
 - Registers an appchain for gas tracking
-- Requires fee payment in SYND tokens
-- Only called by authorized appchain contracts
+- Permissionless: anyone can call by paying the required fee (owner pays no fee)
+- Chain must exist at deterministic CREATE2 address (verified via factory + bytecode hash)
 
 ##### `aggregateTokensUsed(uint256 epochIndex, uint256[] calldata chainIds, uint256[] calldata tokensUsed)`
 - Aggregates gas usage for completed epochs
@@ -634,8 +634,8 @@ deposit(epochIndex) with 1001 ETH:
 - **Anyone**: Can submit proofs and epoch data (permissionless validation)
 
 #### GasAggregator:
-- **Owner**: Can pause, set factory, manage parameters
-- **Appchains**: Can add themselves (with fee payment)
+- **Owner**: Can pause, set factory, manage parameters, add/remove chains without fee
+- **Anyone**: Can register chains by paying the `addChainFee` (chain must exist at deterministic address)
 - **Anyone**: Can aggregate completed epoch data
 
 #### Reward Pools:

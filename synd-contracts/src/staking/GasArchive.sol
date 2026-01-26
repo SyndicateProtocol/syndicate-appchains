@@ -291,18 +291,18 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
     /// @dev Verifies the proof data of the sequencing chain's proof against the confirmed seq chain block hash
     /// @param seqChainID The sequencing chain ID
     /// @param sendRoot The send root stored in the the Arbitrum Outbox contract that the eth proof was generated for, unused if seqChainID == settlementChainID
-    /// @param ethBlockHeader RLP-encoded Ethereum block header, unused if seqChainID == settlementChainID
-    /// @param ethAccountProof Merkle proof of the bridge contract account, unused if seqChainID == settlementChainID
-    /// @param ethStorageProof Merkle proof of the storage slot containing the block hash, unused if seqChainID == settlementChainID
+    /// @param seqParentBlockHeader RLP-encoded block header of the parent chain of the sequencing chain, unused if seqChainID == settlementChainID
+    /// @param seqParentAccountProof Merkle proof of the bridge contract account, unused if seqChainID == settlementChainID
+    /// @param seqParentStorageProof Merkle proof of the storage slot containing the block hash, unused if seqChainID == settlementChainID
     /// @param seqBlockHeader RLP-encoded sequencing chain block header
     /// @param seqAccountProof Merkle proof of the GasAggregator account
     /// @param seqStorageProof Merkle proof of the epoch data storage slot
     function confirmEpochDataHash(
         uint256 seqChainID,
         bytes32 sendRoot,
-        bytes calldata ethBlockHeader,
-        bytes[] calldata ethAccountProof,
-        bytes[] calldata ethStorageProof,
+        bytes calldata seqParentBlockHeader,
+        bytes[] calldata seqParentAccountProof,
+        bytes[] calldata seqParentStorageProof,
         bytes calldata seqBlockHeader,
         bytes[] calldata seqAccountProof,
         bytes[] calldata seqStorageProof
@@ -315,15 +315,15 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
         }
 
         if ($.seqChainSettlesToBase[seqChainID]) {
-            require($.setBlockHashes[keccak256(ethBlockHeader)], InvalidSetBlockHeader());
+            require($.setBlockHashes[keccak256(seqParentBlockHeader)], InvalidSetBlockHeader());
         } else {
-            require($.ethBlockHashes[keccak256(ethBlockHeader)], InvalidEthBlockHeader());
+            require($.ethBlockHashes[keccak256(seqParentBlockHeader)], InvalidEthBlockHeader());
         }
 
         bytes32 verifiedSeqChainBlockHash = _getSlotValueFromProof({
-            blockHeader: ethBlockHeader,
-            accountProof: ethAccountProof,
-            storageProof: ethStorageProof,
+            blockHeader: seqParentBlockHeader,
+            accountProof: seqParentAccountProof,
+            storageProof: seqParentStorageProof,
             account: $.seqChainOutbox[seqChainID],
             storageSlot: keccak256(abi.encode(sendRoot, SEND_ROOT_STORAGE_SLOT))
         });
@@ -427,7 +427,7 @@ contract GasArchive is Initializable, OwnableUpgradeable, IGasDataProvider, UUPS
                 stack: _RLPItemsFromProofBytes(accountProof)
             }).toRlpItem();
 
-        // If the account does not exist, return the hash of an empty trie.
+        // If the account does not exist in the proof, revert with AccountDoesNotExistInProof error.
         require(accountRlp.len > 0, AccountDoesNotExistInProof());
 
         RLPReader.RLPItem memory slotContents = MerklePatriciaProofVerifier.extractProofValue({

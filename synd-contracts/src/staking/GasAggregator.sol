@@ -146,6 +146,11 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
     /// @param maxAppchainsToQuery The new maximum number of appchains to query
     event UpdateMaxAppchainsToQuery(uint256 indexed epoch, uint256 maxAppchainsToQuery);
 
+    /// @notice Emitted when the factory address and bytecode is set
+    /// @param factoryAddress The address of the factory contract
+    /// @param bytecodeHash The bytecode hash of the proxy that the factory deploys
+    event FactorySet(address indexed factoryAddress, bytes32 bytecodeHash);
+
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -384,6 +389,7 @@ contract GasAggregator is Ownable(msg.sender), Pausable, EpochTracker {
         require(bytecodeHash != 0, InvalidDataHash());
         factory = newFactory;
         syndicateProxyBytecodeHash = bytecodeHash;
+        emit FactorySet(newFactory, bytecodeHash);
     }
 
     /**
