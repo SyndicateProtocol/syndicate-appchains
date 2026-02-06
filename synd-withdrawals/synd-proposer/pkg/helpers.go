@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"maps"
 	"math/big"
 	"strings"
 
@@ -179,17 +178,9 @@ func loadBatchPreimageData(
 	for _, dapReader := range dapReaders {
 		if dapReader.IsValidHeaderByte(ctx, batch.Data[40]) {
 			// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-			_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, batch.BlockHash, batch.Data, nil, true)
+			_, _, err := dapReader.RecoverPayloadFromBatch(ctx, 0, batch.BlockHash, batch.Data, preimages, true)
 			if err != nil {
 				return errors.Wrap(err, "failed to recover payload from batch - "+hex.EncodeToString(batch.Data))
-			}
-
-			for ty, images := range preimagesRecorded {
-				if preimages[ty] == nil {
-					preimages[ty] = images
-				} else {
-					maps.Copy(preimages[ty], images)
-				}
 			}
 
 			return nil
