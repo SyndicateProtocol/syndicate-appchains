@@ -28,6 +28,7 @@ import (
 	"github.com/offchainlabs/nitro/daprovider"
 	"github.com/offchainlabs/nitro/eigenda"
 	"github.com/offchainlabs/nitro/solgen/go/bridgegen"
+	"github.com/offchainlabs/nitro/util/headerreader"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -86,15 +87,6 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create settlement provider", err)
 		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
 	}
-	eigenClient, err := eigenda.NewEigenDA(&eigenda.EigenDAConfig{
-		Enable: true,
-		Rpc:    cfg.EigenRPCUrl,
-	})
-	if err != nil {
-		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create Eigen provider", err)
-		log.Fatal().Stack().Err(wrappedErr).Msg(msg)
-	}
-
 	settlementAuth, err := bind.NewKeyedTransactorWithChainID(cfg.PrivateKey, big.NewInt(int64(cfg.SettlementChainID)))
 	if err != nil {
 		msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create settlement transactor", err)
@@ -114,7 +106,7 @@ func NewProposer(ctx context.Context, cfg *config.Config, metrics *metrics.Metri
 		EnclaveClient:    enclaveClient,
 		SettlementClient: settlementClient,
 		SettlementAuth:   *settlementAuth,
-		DapReaders:       []daprovider.Reader{eigenda.NewReaderForEigenDA(eigenClient)},
+		DapReaders:       buildDapReaders(ctx, cfg, ethereumClient),
 		TeeModule:        teeModule,
 		Metrics:          metrics,
 
@@ -644,4 +636,42 @@ func (p *Proposer) makeTransactOptsCopy(ctx context.Context) *bind.TransactOpts 
 	copy.Context = ctx       // ensure context is set fresh
 	copy.Nonce = nil         // ensure fresh nonce lookup
 	return &copy
+}
+
+// buildDapReaders constructs the list of DA provider readers based on configuration
+func buildDapReaders(ctx context.Context, cfg *config.Config, ethereumClient *ethclient.Client) []daprovider.Reader {
+	var readers []daprovider.Reader
+
+	if cfg.EigenRPCUrl != "" {
+		eigenClient, err := eigenda.NewEigenDA(&eigenda.EigenDAConfig{
+			Enable: true,
+			Rpc:    cfg.EigenRPCUrl,
+		})
+		if err != nil {
+			msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create Eigen provider", err)
+			log.Fatal().Stack().Err(wrappedErr).Msg(msg)
+		}
+		readers = append(readers, eigenda.NewReaderForEigenDA(eigenClient))
+	}
+
+	if cfg.BeaconRPCURL != "" {
+		blobClient, err := headerreader.NewBlobClient(headerreader.BlobClientConfig{
+			BeaconUrl: cfg.BeaconRPCURL,
+		}, ethereumClient)
+		if err != nil {
+			msg, wrappedErr := logger.WrapErrorWithMsg("Failed to create blob client", err)
+			log.Fatal().Stack().Err(wrappedErr).Msg(msg)
+		}
+		if err = blobClient.Initialize(ctx); err != nil {
+			msg, wrappedErr := logger.WrapErrorWithMsg("Failed to initialize blob client", err)
+			log.Fatal().Stack().Err(wrappedErr).Msg(msg)
+		}
+		readers = append(readers, daprovider.NewReaderForBlobReader(blobClient))
+	}
+
+	if len(readers) == 0 {
+		log.Warn().Msg("No DA provider has been configured (eigen-rpc-url or beacon-rpc-url)")
+	}
+
+	return readers
 }
