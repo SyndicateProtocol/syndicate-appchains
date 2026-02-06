@@ -24,6 +24,7 @@ type Config struct {
 	AppchainRPCURL   string `json:"AppchainRPCURL"`
 	EnclaveRPCURL    string `json:"EnclaveRPCURL"`
 	EigenRPCUrl      string `json:"EigenRPCUrl"`
+	BeaconRPCURL     string `json:"BeaconRPCURL"`
 
 	PrivateKey             *ecdsa.PrivateKey `json:"-"`
 	PollingInterval        time.Duration     `json:"PollingInterval"`
@@ -52,7 +53,8 @@ var Keys = map[string]struct {
 	"settlement-chain-id":         {"Settlement Chain ID", "", true},
 	"sequencing-rpc-url":          {"Sequencing RPC URL", "", true},
 	"appchain-rpc-url":            {"Appchain RPC URL", "", true},
-	"eigen-rpc-url":               {"EigenDA RPC URL", "", true},
+	"eigen-rpc-url":               {"EigenDA RPC URL", "", false},
+	"beacon-rpc-url":              {"Beacon Chain RPC URL for blob fetching", "", false},
 	"enclave-rpc-url":             {"Enclave RPC URL", "", true},
 	"tee-module-contract-address": {"TEE Module Contract Address", "", true},
 	"appchain-bridge-address":     {"Appchain Bridge Address", "", true},
@@ -121,6 +123,7 @@ func LoadConfig() (*Config, error) {
 		AppchainRPCURL:           viper.GetString("appchain-rpc-url"),
 		EnclaveRPCURL:            viper.GetString("enclave-rpc-url"),
 		EigenRPCUrl:              viper.GetString("eigen-rpc-url"),
+		BeaconRPCURL:             viper.GetString("beacon-rpc-url"),
 		TeeModuleContractAddress: common.HexToAddress(viper.GetString("tee-module-contract-address")),
 		AppchainBridgeAddress:    common.HexToAddress(viper.GetString("appchain-bridge-address")),
 		PrivateKey:               privateKey,
