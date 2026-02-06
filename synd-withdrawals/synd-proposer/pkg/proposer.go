@@ -378,6 +378,7 @@ func (p *Proposer) Prove(
 
 	// get batches
 	log.Debug().Msg("Getting batches...")
+	var batchesWithHashes []BatchWithBlockHash
 	var batches [][]byte
 	if valData.BatchEndIndex >= valData.BatchStartIndex {
 		ibridge, err := bridgegen.NewIBridgeCaller(p.Config.EnclaveConfig.SequencingBridgeAddress, p.EthereumClient)
@@ -390,23 +391,25 @@ func (p *Proposer) Prove(
 			return nil, errors.Wrap(err, "failed to get sequencer inbox")
 		}
 
-		batches, err = getBatches(ctx, p.EthereumClient, seqInbox, valData.BatchStartIndex, valData.BatchEndIndex,
+		batchesWithHashes, err = getBatches(ctx, p.EthereumClient, seqInbox, valData.BatchStartIndex, valData.BatchEndIndex,
 			valData.BatchStartBlockNum, valData.BatchEndBlockNum)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get batches")
 		}
-		if len(batches) == 0 {
+		if len(batchesWithHashes) == 0 {
 			return nil, errors.New("found 0 batches")
 		}
 
 		// Record batch metrics
-		p.Metrics.ProveBatchCount.Set(float64(len(batches)))
+		p.Metrics.ProveBatchCount.Set(float64(len(batchesWithHashes)))
 
-		// update preimages
-		for _, batch := range batches {
+		// update preimages and extract batch data for the enclave
+		batches = make([][]byte, len(batchesWithHashes))
+		for i, batch := range batchesWithHashes {
 			if err := loadBatchPreimageData(ctx, batch, p.DapReaders, preimages); err != nil {
 				return nil, errors.Wrap(err, "failed to get batch preimage data")
 			}
+			batches[i] = batch.Data
 		}
 	}
 

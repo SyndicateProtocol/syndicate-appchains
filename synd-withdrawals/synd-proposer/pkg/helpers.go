@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"maps"
 	"math/big"
 	"strings"
 
@@ -40,6 +39,13 @@ type ValidationData struct {
 	DelayedMessages    [][]byte
 	StartDelayedAcc    common.Hash
 	PreimageData       [][]byte
+}
+
+// BatchWithBlockHash contains batch data along with the L1 block hash where it was posted.
+// The block hash is needed to fetch blob data from the beacon chain.
+type BatchWithBlockHash struct {
+	Data      []byte
+	BlockHash common.Hash
 }
 
 var (
@@ -128,7 +134,7 @@ func getBatches(
 	end uint64,
 	startBlock uint64,
 	endBlock uint64,
-) ([][]byte, error) {
+) ([]BatchWithBlockHash, error) {
 	inbox, err := arbnode.NewSequencerInbox(c, sequencerInbox, 0)
 	if err != nil {
 		return nil, err
@@ -138,7 +144,7 @@ func getBatches(
 	if err != nil {
 		return nil, err
 	}
-	var data [][]byte
+	var data []BatchWithBlockHash
 	for _, batch := range batches {
 		if batch.SequenceNumber >= start && batch.SequenceNumber <= end {
 			// TODO (SEQ-1064): can this be sped up? probably not since the tx receipt needs to be fetched in general
@@ -146,7 +152,10 @@ func getBatches(
 			if err != nil {
 				return nil, err
 			}
-			data = append(data, raw)
+			data = append(data, BatchWithBlockHash{
+				Data:      raw,
+				BlockHash: batch.BlockHash,
+			})
 		}
 	}
 
@@ -155,43 +164,35 @@ func getBatches(
 
 func loadBatchPreimageData(
 	ctx context.Context,
-	batch []byte,
+	batch BatchWithBlockHash,
 	dapReaders []daprovider.Reader,
 	preimages map[arbutil.PreimageType]map[common.Hash][]byte,
 ) error {
 	// byte 40 is a flag byte that determines if the batch uses alt-DA
-	if len(batch) <= 40 || batch[40] == 0 {
+	if len(batch.Data) <= 40 || batch.Data[40] == 0 {
 		return nil
 	}
-	if !daprovider.IsKnownHeaderByte(batch[40]) {
-		return fmt.Errorf("unknown header byte 0x%02x", batch[40])
+	if !daprovider.IsKnownHeaderByte(batch.Data[40]) {
+		return fmt.Errorf("unknown header byte 0x%02x", batch.Data[40])
 	}
 	for _, dapReader := range dapReaders {
-		if dapReader.IsValidHeaderByte(ctx, batch[40]) {
+		if dapReader.IsValidHeaderByte(ctx, batch.Data[40]) {
 			// TODO (SEQ-1064): try to speed this up - can disable validation as well if it is slow.
-			_, preimagesRecorded, err := dapReader.RecoverPayloadFromBatch(ctx, 0, common.Hash{}, batch, nil, true)
+			_, _, err := dapReader.RecoverPayloadFromBatch(ctx, 0, batch.BlockHash, batch.Data, preimages, true)
 			if err != nil {
-				return errors.Wrap(err, "failed to recover payload from batch - "+hex.EncodeToString(batch))
-			}
-
-			for ty, images := range preimagesRecorded {
-				if preimages[ty] == nil {
-					preimages[ty] = images
-				} else {
-					maps.Copy(preimages[ty], images)
-				}
+				return errors.Wrap(err, "failed to recover payload from batch - "+hex.EncodeToString(batch.Data))
 			}
 
 			return nil
 		}
 	}
 	log.Error("DAS reader mismatch",
-		"headerByte", fmt.Sprintf("0x%02x", batch[40]),
+		"headerByte", fmt.Sprintf("0x%02x", batch.Data[40]),
 		"availableReaders", len(dapReaders),
-		"batchLength", len(batch))
+		"batchLength", len(batch.Data))
 
 	return fmt.Errorf("no DAS reader configured for header byte 0x%02x (have %d readers)",
-		batch[40], len(dapReaders))
+		batch.Data[40], len(dapReaders))
 }
 
 // if count is zero, get the latest delayed message accumulator
