@@ -670,7 +670,7 @@ func buildDapReaders(ctx context.Context, cfg *config.Config, ethereumClient *et
 	}
 
 	if len(readers) == 0 {
-		log.Fatal().Msg("At least one DA provider must be configured (eigen-rpc-url or beacon-rpc-url)")
+		log.Warn().Msg("No DA provider has been configured (eigen-rpc-url or beacon-rpc-url)")
 	}
 
 	return readers
