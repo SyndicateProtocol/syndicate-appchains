@@ -113,7 +113,7 @@ jobs:
             echo "Attempt $i to install SP1 toolchain..."
             {
               curl -L https://sp1up.succinct.xyz | bash &&
-              ~/.sp1/bin/sp1up &&
+              ~/.sp1/bin/sp1up --version 5.2.2 &&
               ~/.sp1/bin/cargo-prove prove --version
             } && break || {
               echo "Attempt $i failed. Retrying in 5 seconds..."
@@ -160,7 +160,7 @@ jobs:
       - name: Install SP1 toolchain
         run: |
           curl -L https://sp1.succinct.xyz | bash
-          $HOME/.sp1/bin/sp1up
+          $HOME/.sp1/bin/sp1up --version 5.2.2
           $HOME/.sp1/bin/cargo-prove prove --version
 
       - name: Build SP1 ELF program
