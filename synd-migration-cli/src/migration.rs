@@ -145,6 +145,8 @@ pub struct RollupState {
     pub safe_block_hash: Option<B256>,
     /// The batch count
     pub batch_count: u64,
+    /// The batch accumulator before applying the latest batch
+    pub batch_acc_before: B256,
     /// The batch accumulator
     pub batch_acc: B256,
     /// The parent chain block
@@ -153,8 +155,9 @@ pub struct RollupState {
     pub delayed_msgs_count: u64,
     /// The delayed messages accumulator
     pub delayed_msgs_acc: B256,
-    /// Arb message count
-    pub batch_message_count: u64,
+    /// Arb sub-messages count (what is stored in the bridge contract as
+    /// `sequencerReportedSubMessageCount`
+    pub batch_submessage_count: u64,
 }
 
 /// Migration command - it inspects a given Nitro database, extracts relevant information and sets
@@ -203,14 +206,16 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     debug!("chain config: {:#?}", chain_config);
 
     println!("\n---------------TRANSLATOR / MCHAIN config ---------------\n");
-    println!("MIGRATED_BATCH_ACC: {}", rollup_state.batch_acc);
-    println!("MIGRATED_BATCH_COUNT: {}", rollup_state.batch_count);
-    println!("MIGRATED_DELAYED_MSGS_ACC: {}", rollup_state.delayed_msgs_acc);
-    println!("MIGRATED_DELAYED_MSGS_COUNT: {}", rollup_state.delayed_msgs_count);
-    println!("MIGRATED_APPCHAIN_BLOCK_HASH: {:?}", rollup_state.last_block_hash);
-    println!("SETTLEMENT_START_BLOCK: {}", rollup_state.parent_chain_block);
-    println!("GENESIS_CONFIG: '{}'", std::str::from_utf8(&raw_genesis_from_db).unwrap());
-    println!("\n------------------------------\n\n");
+    println!("BATCH_ACC_BEFORE={}", rollup_state.batch_acc_before);
+    println!("BATCH_ACC={}", rollup_state.batch_acc);
+    println!("BATCH_COUNT={}", rollup_state.batch_count);
+    println!("DELAYED_MSGS_ACC={}", rollup_state.delayed_msgs_acc);
+    println!("DELAYED_MSGS_COUNT={}", rollup_state.delayed_msgs_count);
+    println!("ARB_SUB_MSGS_COUNT={}", rollup_state.batch_submessage_count);
+    println!("\n");
+    println!("SETTLEMENT_CHAIN_BLOCK={}", rollup_state.parent_chain_block);
+    println!("APPCHAIN_BLOCK_HASH={:?}", rollup_state.last_block_hash);
+    println!("GENESIS_CONFIG='{}'", std::str::from_utf8(&raw_genesis_from_db).unwrap());
 
     println!("\n--------------- NITRO configuration ---------------\n");
 
@@ -227,8 +232,6 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
 
     println!("\n------------------------------\n\n");
 
-    println!("last batch \"arb msg count\": {}", rollup_state.batch_message_count);
-
     println!(
         "last rollup block: {:?} - {:?}",
         rollup_state.last_block_number, rollup_state.last_block_hash
@@ -240,7 +243,7 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
 
     if rollup_state.safe_block_hash.is_some() &&
         rollup_state.safe_block_hash.unwrap() == rollup_state.last_block_hash &&
-        rollup_state.last_block_number == rollup_state.batch_message_count - 1
+        rollup_state.last_block_number == rollup_state.batch_submessage_count - 1
     {
         println!("✅✅✅✅✅ Rollup is in safe state to be migrated");
     } else {
@@ -342,6 +345,12 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
         .ok_or_else(|| eyre!("Failed to get batch data"))?;
     debug!("batch_data: {:#?}", batch_data);
 
+    let batch_before_data = arb_db
+        .get(make_numbered_key(b"s", batch_count - 2, &[]))?
+        .map(|bytes| BatchMetadata::decode(&mut &bytes[..]).unwrap())
+        .ok_or_else(|| eyre!("Failed to get batch data"))?;
+    debug!("batch_before_dat: {:#?}", batch_before_data);
+
     let delayed_msgs_count = batch_data.delayed_message_count;
 
     // RlpDelayedMessagePrefix is "e" and maps delayed messages sequence_num to
@@ -357,10 +366,11 @@ fn get_rollup_state(db: &DB, arb_db: &DB) -> Result<RollupState> {
         safe_block_number,
         safe_block_hash,
         batch_count,
+        batch_acc_before: batch_before_data.acc,
         batch_acc: batch_data.acc,
         parent_chain_block: batch_data.parent_chain_block,
         delayed_msgs_count,
         delayed_msgs_acc,
-        batch_message_count: batch_data.message_count,
+        batch_submessage_count: batch_data.message_count,
     })
 }
