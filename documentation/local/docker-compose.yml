@@ -1,109 +1,118 @@
 services:
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: valkey
+    command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - /mnt/synd-data/valkey:/data
+    restart: unless-stopped
+
+  maestro:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-maestro:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: maestro
+    env_file:
+      - .env
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+    depends_on:
+      - valkey
+    restart: unless-stopped
+
+  batch_sequencer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-batch-sequencer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: batch_sequencer
+    env_file:
+      - .env
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+      - CHAIN_ID=${APPCHAIN_CHAIN_ID}
+    depends_on:
+      - valkey
+      - maestro
+    restart: unless-stopped
+
+  settlement_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: settlement_ingestor
+    env_file:
+      - .env
+    command:
+      - "--db-file=/data/settlement.db"
+      - "--start-block=${SETTLEMENT_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SETTLEMENT_INGESTOR_WS_URLS}"
+    volumes:
+      - /mnt/synd-data/settlement:/data
+    restart: unless-stopped
+
+  sequencing_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: sequencing_ingestor
+    env_file:
+      - .env
+    command:
+      - "--db-file=/data/sequencing.db"
+      - "--start-block=${SEQUENCING_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SEQUENCING_INGESTOR_WS_URLS}"
+    volumes:
+      - /mnt/synd-data/sequencing:/data
+    restart: unless-stopped
+
   mchain:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:latest
-    platform: linux/amd64
-    build:
-      context: ../../
-      target: synd-mchain
-      dockerfile: Dockerfile
-    env_file: .env
-    environment:
-      APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
-      GENESIS_CONFIG: ${GENESIS_CONFIG}
-      DATADIR: /datadir
-      RUST_LOG: TRACE
-    ports:
-      - "8545"
-      - "8546"
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: mchain
+    env_file:
+      - .env
+    command:
+      - "--datadir=/data"
     volumes:
-      - ./data/mchain:/datadir
-    networks:
-      - appchains-network
-
-  seq-ingestor:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    platform: linux/amd64
-    build:
-      context: ../../
-      target: synd-chain-ingestor
-      dockerfile: Dockerfile
-    volumes:
-      - ./data/seq-ingestor:/chains
-    env_file: .env
-    environment:
-      DB_FILE: /chains/seq-ingestor.db
-      START_BLOCK: 246980
-      WS_URLS: ${SEQUENCING_WS_URLS}
-    ports:
-      - "8545"
-      - "8546"
-    networks:
-      - appchains-network
-
-  set-ingestor:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:latest
-    platform: linux/amd64
-    build:
-      context: ../../
-      target: synd-chain-ingestor
-      dockerfile: Dockerfile
-    volumes:
-      - ./data/set-ingestor:/chains
-    env_file: .env
-    environment:
-      DB_FILE: /chains/set-ingestor.db
-      START_BLOCK: 33025206
-      WS_URLS: ${SETTLEMENT_WS_URLS}
-    ports:
-      - "8545"
-      - "8546"
-    networks:
-      - appchains-network
-
-  healthcheck:
-    image: curlimages/curl:8.13.0
-    healthcheck:
-      test: curl -f http://mchain:8546/metrics && curl -f http://seq-ingestor:8546/metrics && curl -f http://set-ingestor:8546/metrics
-      start_period: 3600s
-    tty: true
-    entrypoint: /bin/sh
-    networks:
-      - appchains-network
+      - /mnt/synd-data/mchain:/data
+    restart: unless-stopped
 
   translator:
-    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:latest
-    platform: linux/amd64
-    build:
-      context: ../../
-      target: synd-translator
-      dockerfile: Dockerfile
-    env_file: .env
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: translator
+    env_file:
+      - .env
     environment:
-      APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
-      SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
-      ARBITRUM_BRIDGE_ADDRESS: ${ARBITRUM_BRIDGE_ADDRESS}
-      ARBITRUM_INBOX_ADDRESS: ${ARBITRUM_INBOX_ADDRESS}
-      SEQUENCING_WS_URL: "ws://seq-ingestor:8545"
-      SEQUENCING_START_BLOCK: ${SEQUENCING_START_BLOCK}
-      SETTLEMENT_WS_URL: "ws://set-ingestor:8545"
-      SETTLEMENT_START_BLOCK: ${SETTLEMENT_START_BLOCK}
-      MCHAIN_WS_URL: "ws://mchain:8545"
-      SETTLEMENT_DELAY: "60"
-      APPCHAIN_RPC_URL: "http://nitro:8547"
+      - SETTLEMENT_WS_URL=ws://settlement_ingestor:8545
+      - SEQUENCING_WS_URL=ws://sequencing_ingestor:8545
+      - MCHAIN_WS_URL=ws://mchain:8545
     depends_on:
-      healthcheck:
-        condition: service_healthy
-    networks:
-      - appchains-network
+      - settlement_ingestor
+      - sequencing_ingestor
+      - mchain
+    restart: unless-stopped
+
+  proposer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: proposer
+    env_file:
+      - .env
+    environment:
+      - APPCHAIN_RPC_URL=http://nitro:8547
+    restart: unless-stopped
 
   nitro:
-    image: ghcr.io/syndicateprotocol/nitro/nitro:eigenda-v3.7.6
+    image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.6.4}
+    container_name: nitro
+    init: true
+    restart: always
+    env_file:
+      - .env
     command:
+      - "--conf.env-prefix=NITRO"
+      - "--init.validate-checksum=false"
       - "--parent-chain.connection.url=ws://mchain:8545"
-      - "--http.api=arb,eth,net,web3,txpool,arbtrace,synd"
+      - "--parent-chain.id=511000"
+      - "--http.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
       - "--http.addr=0.0.0.0"
       - "--http.port=8547"
-      - "--ws.api=arb,eth,net,web3,txpool,arbtrace,synd"
+      - "--http.vhosts=*"
+      - "--http.corsdomain=*"
+      - "--ws.addr=0.0.0.0"
+      - "--ws.port=8548"
+      - "--ws.origins=*"
       - "--node.dangerous.disable-blob-reader=true"
       - "--node.inbox-reader.check-delay=100ms"
       - "--node.staker.enable=false"
@@ -111,29 +120,12 @@ services:
       - "--node.parent-chain-reader.old-header-timeout=2540400h"
       - "--execution.parent-chain-reader.old-header-timeout=2540400h"
       - "--execution.caching.archive=true"
-      - "--execution.forwarding-target=null"
+      - "--execution.forwarding-target=http://maestro:8080"
       - "--ensure-rollup-deployment=false"
-      - '--chain.info-json=[{"chain-id":888991,"parent-chain-id":511000,"parent-chain-is-arbitrum":false,"chain-name":"unite-testnet","chain-config":{"homesteadBlock":0,"daoForkBlock":null,"daoForkSupport":true,"eip150Block":0,"eip150Hash":"0x0000000000000000000000000000000000000000000000000000000000000000","eip155Block":0,"eip158Block":0,"byzantiumBlock":0,"constantinopleBlock":0,"petersburgBlock":0,"istanbulBlock":0,"muirGlacierBlock":0,"berlinBlock":0,"londonBlock":0,"clique":{"period":0,"epoch":0},"arbitrum":{"EnableArbOS":true,"AllowDebugPrecompiles":false,"DataAvailabilityCommittee":true,"InitialArbOSVersion":32,"GenesisBlockNum":0,"MaxCodeSize":24576,"MaxInitCodeSize":49152,"InitialChainOwner":"0x6dedc20540fd54348fa0d7b0af2378f5494ab240"},"chainId":888991},"rollup":{"bridge":"0x0000000000000000000000000000000000511000","inbox":"0x0000000000000000000000000000000000511000","sequencer-inbox":"0x0000000000000000000000000000000000511000","rollup":"0x0000000000000000000000000000000000511000","validator-utils":"0x0000000000000000000000000000000000511000","validator-wallet-creator":"0x0000000000000000000000000000000000511000","deployed-at":33385959}}]'
-      - "--init.url=${SNAPSHOT_URL}"
-      - "--init.validate-checksum=false"
-      - "--init.validate-genesis-assertion=false"
-      - "--metrics"
-      - "--log-level=trace"
-      - "--node.data-availability.enable=true"
-      - "--node.data-availability.rest-aggregator.urls=https://example.com"
-      - "--node.data-availability.rest-aggregator.enable=true"
-
-    depends_on:
-      healthcheck:
-        condition: service_healthy
-    volumes:
-      - ./data/nitro:/home/user/.arbitrum
     ports:
-      - "8547"
-      - "6070"
-    networks:
-      - appchains-network
-
-networks:
-  appchains-network:
-    driver: bridge
+      - "8545:8547"
+      - "8548:8548"
+    volumes:
+      - /mnt/nitro-data:/home/user/.arbitrum
+    depends_on:
+      - mchain
