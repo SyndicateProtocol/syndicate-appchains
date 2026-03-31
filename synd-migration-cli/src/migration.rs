@@ -212,9 +212,9 @@ pub async fn get_migration_data(nitro_db_path: &Path) -> Result<(RollupState, Ve
     println!("DELAYED_MSGS_ACC={}", rollup_state.delayed_msgs_acc);
     println!("DELAYED_MSGS_COUNT={}", rollup_state.delayed_msgs_count);
     println!("ARB_SUB_MSGS_COUNT={}", rollup_state.batch_submessage_count);
+    println!("BLOCK_HASH={:?}", rollup_state.last_block_hash);
     println!("\n");
     println!("SETTLEMENT_CHAIN_BLOCK={}", rollup_state.parent_chain_block);
-    println!("APPCHAIN_BLOCK_HASH={:?}", rollup_state.last_block_hash);
     println!("GENESIS_CONFIG='{}'", std::str::from_utf8(&raw_genesis_from_db).unwrap());
 
     println!("\n--------------- NITRO configuration ---------------\n");
