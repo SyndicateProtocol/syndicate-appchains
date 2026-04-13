@@ -5,7 +5,7 @@ services:
     container_name: valkey
     command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
     volumes:
-      - /mnt/synd-data/valkey:/data
+      - ${DATA_DIR:-./data}/valkey:/data
     restart: unless-stopped
 
   maestro:
@@ -27,6 +27,7 @@ services:
     environment:
       - VALKEY_URL=redis://valkey:6379
       - CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - SEQUENCING_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
     depends_on:
       - valkey
       - maestro
@@ -42,7 +43,7 @@ services:
       - "--start-block=${SETTLEMENT_INGESTOR_START_BLOCK:-0}"
       - "--ws-urls=${SETTLEMENT_INGESTOR_WS_URLS}"
     volumes:
-      - /mnt/synd-data/settlement:/data
+      - ${DATA_DIR:-./data}/settlement:/data
     restart: unless-stopped
 
   sequencing_ingestor:
@@ -55,7 +56,7 @@ services:
       - "--start-block=${SEQUENCING_INGESTOR_START_BLOCK:-0}"
       - "--ws-urls=${SEQUENCING_INGESTOR_WS_URLS}"
     volumes:
-      - /mnt/synd-data/sequencing:/data
+      - ${DATA_DIR:-./data}/sequencing:/data
     restart: unless-stopped
 
   mchain:
@@ -66,7 +67,7 @@ services:
     command:
       - "--datadir=/data"
     volumes:
-      - /mnt/synd-data/mchain:/data
+      - ${DATA_DIR:-./data}/mchain:/data
     restart: unless-stopped
 
   translator:
@@ -91,13 +92,15 @@ services:
       - .env
     environment:
       - APPCHAIN_RPC_URL=http://nitro:8547
+    depends_on:
+      - nitro
     restart: unless-stopped
 
   nitro:
     image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.6.4}
     container_name: nitro
     init: true
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     command:
@@ -105,6 +108,7 @@ services:
       - "--init.validate-checksum=false"
       - "--parent-chain.connection.url=ws://mchain:8545"
       - "--parent-chain.id=511000"
+      - "--chain.id=${APPCHAIN_CHAIN_ID}"
       - "--http.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
       - "--http.addr=0.0.0.0"
       - "--http.port=8547"
@@ -126,6 +130,6 @@ services:
       - "8545:8547"
       - "8548:8548"
     volumes:
-      - /mnt/nitro-data:/home/user/.arbitrum
+      - ${DATA_DIR:-./data}/nitro:/home/user/.arbitrum
     depends_on:
       - mchain
