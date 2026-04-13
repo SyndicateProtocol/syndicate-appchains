@@ -1,0 +1,131 @@
+services:
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: valkey
+    command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - /mnt/synd-data/valkey:/data
+    restart: unless-stopped
+
+  maestro:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-maestro:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: maestro
+    env_file:
+      - .env
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+    depends_on:
+      - valkey
+    restart: unless-stopped
+
+  batch_sequencer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-batch-sequencer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: batch_sequencer
+    env_file:
+      - .env
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+      - CHAIN_ID=${APPCHAIN_CHAIN_ID}
+    depends_on:
+      - valkey
+      - maestro
+    restart: unless-stopped
+
+  settlement_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: settlement_ingestor
+    env_file:
+      - .env
+    command:
+      - "--db-file=/data/settlement.db"
+      - "--start-block=${SETTLEMENT_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SETTLEMENT_INGESTOR_WS_URLS}"
+    volumes:
+      - /mnt/synd-data/settlement:/data
+    restart: unless-stopped
+
+  sequencing_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: sequencing_ingestor
+    env_file:
+      - .env
+    command:
+      - "--db-file=/data/sequencing.db"
+      - "--start-block=${SEQUENCING_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SEQUENCING_INGESTOR_WS_URLS}"
+    volumes:
+      - /mnt/synd-data/sequencing:/data
+    restart: unless-stopped
+
+  mchain:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: mchain
+    env_file:
+      - .env
+    command:
+      - "--datadir=/data"
+    volumes:
+      - /mnt/synd-data/mchain:/data
+    restart: unless-stopped
+
+  translator:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: translator
+    env_file:
+      - .env
+    environment:
+      - SETTLEMENT_WS_URL=ws://settlement_ingestor:8545
+      - SEQUENCING_WS_URL=ws://sequencing_ingestor:8545
+      - MCHAIN_WS_URL=ws://mchain:8545
+    depends_on:
+      - settlement_ingestor
+      - sequencing_ingestor
+      - mchain
+    restart: unless-stopped
+
+  proposer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: proposer
+    env_file:
+      - .env
+    environment:
+      - APPCHAIN_RPC_URL=http://nitro:8547
+    restart: unless-stopped
+
+  nitro:
+    image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.6.4}
+    container_name: nitro
+    init: true
+    restart: always
+    env_file:
+      - .env
+    command:
+      - "--conf.env-prefix=NITRO"
+      - "--init.validate-checksum=false"
+      - "--parent-chain.connection.url=ws://mchain:8545"
+      - "--parent-chain.id=511000"
+      - "--http.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8547"
+      - "--http.vhosts=*"
+      - "--http.corsdomain=*"
+      - "--ws.addr=0.0.0.0"
+      - "--ws.port=8548"
+      - "--ws.origins=*"
+      - "--node.dangerous.disable-blob-reader=true"
+      - "--node.inbox-reader.check-delay=100ms"
+      - "--node.staker.enable=false"
+      - "--node.parent-chain-reader.poll-interval=100ms"
+      - "--node.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.caching.archive=true"
+      - "--execution.forwarding-target=http://maestro:8080"
+      - "--ensure-rollup-deployment=false"
+    ports:
+      - "8545:8547"
+      - "8548:8548"
+    volumes:
+      - /mnt/nitro-data:/home/user/.arbitrum
+    depends_on:
+      - mchain
