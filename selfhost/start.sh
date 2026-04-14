@@ -46,12 +46,11 @@ download_snapshot() {
   echo "$label snapshot extracted to $dest"
 }
 
-download_snapshot "${MCHAIN_SNAPSHOT_URL:-}" "$DATA_DIR/mchain" "mchain"
 download_snapshot "${NITRO_SNAPSHOT_URL:-}"  "$DATA_DIR/nitro"  "nitro"
 
 # ── Start services ─────────────────────────────────────────────────────────────
 echo "Starting services ..."
-docker compose --env-file .env up -d
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose --env-file .env up -d
 
 echo ""
 echo "All services started."

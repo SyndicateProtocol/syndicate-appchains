@@ -1,7 +1,7 @@
 services:
 
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:9.0.3-alpine
     container_name: valkey
     command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
     volumes:
@@ -13,7 +13,7 @@ services:
     container_name: maestro
     environment:
       - VALKEY_URL=redis://valkey:6379
-      - CHAIN_RPC_URLS=${CHAIN_RPC_URLS:-}
+      - CHAIN_RPC_URLS={"${APPCHAIN_CHAIN_ID}":["http://nitro:8547"]}
       - SKIP_BALANCE_CHECK=true
       - RUST_LOG=${RUST_LOG:-info}
     depends_on:
@@ -69,13 +69,13 @@ services:
     environment:
       - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
       - GENESIS_CONFIG=${MCHAIN_GENESIS_CONFIG:-}
-      - SNAPSHOT_URL=${MCHAIN_SNAPSHOT_URL:-}
-      - SETTLEMENT_START_BLOCK=${SETTLEMENT_START_BLOCK:-0}
-      - MIGRATED_BEFORE_BATCH_ACC=${MIGRATED_BEFORE_BATCH_ACC:-}
-      - MIGRATED_BATCH_ACC=${MIGRATED_BATCH_ACC:-}
-      - MIGRATED_BATCH_COUNT=${MIGRATED_BATCH_COUNT:-0}
-      - MIGRATED_DELAYED_MSGS_ACC=${MIGRATED_DELAYED_MSGS_ACC:-}
-      - MIGRATED_DELAYED_MSGS_COUNT=${MIGRATED_DELAYED_MSGS_COUNT:-0}
+      - SNAPSHOT_URL
+      - SETTLEMENT_START_BLOCK
+      - MIGRATED_BEFORE_BATCH_ACC
+      - MIGRATED_BATCH_ACC
+      - MIGRATED_BATCH_COUNT
+      - MIGRATED_DELAYED_MSGS_ACC
+      - MIGRATED_DELAYED_MSGS_COUNT
       - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - ${DATA_DIR:-./data}/mchain:/data
@@ -87,12 +87,13 @@ services:
     environment:
       - SETTLEMENT_WS_URL=ws://settlement_ingestor:8545
       - SEQUENCING_WS_URL=ws://sequencing_ingestor:8545
-      - MCHAIN_WS_URL=ws://mchain:8545
       - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
       - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
       - ARBITRUM_BRIDGE_ADDRESS=${ARBITRUM_BRIDGE_ADDRESS}
       - ARBITRUM_INBOX_ADDRESS=${ARBITRUM_INBOX_ADDRESS}
-      - SETTLEMENT_START_BLOCK=${SETTLEMENT_START_BLOCK:-0}
+      - SETTLEMENT_START_BLOCK=${TRANSLATOR_SETTLEMENT_START_BLOCK:-}
+      - SEQUENCING_START_BLOCK=${TRANSLATOR_SEQUENCING_START_BLOCK:-}
+      - MCHAIN_WS_URL=ws://mchain:8545
       - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       - settlement_ingestor
@@ -105,7 +106,7 @@ services:
     container_name: proposer
     environment:
       - APPCHAIN_RPC_URL=http://nitro:8547
-      - PRIVATE_KEY=${PRIVATE_KEY}
+      - PRIVATE_KEY=${PROPOSER_PRIVATE_KEY}
       - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
       - SETTLEMENT_RPC_URL=${SETTLEMENT_RPC_URL}
       - SETTLEMENT_CHAIN_ID=${SETTLEMENT_CHAIN_ID}
@@ -116,6 +117,8 @@ services:
       - APPCHAIN_BRIDGE_ADDRESS=${APPCHAIN_BRIDGE_ADDRESS}
       - SEQUENCING_BRIDGE_ADDRESS=${SEQUENCING_BRIDGE_ADDRESS}
       - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - MTLS_ENABLED_ENCLAVE=false
+      - EIGEN_RPC_URL="noop.com"
     depends_on:
       - nitro
     restart: unless-stopped
