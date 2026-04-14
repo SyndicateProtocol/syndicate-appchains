@@ -11,10 +11,11 @@ services:
   maestro:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-maestro:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: maestro
-    env_file:
-      - .env
     environment:
       - VALKEY_URL=redis://valkey:6379
+      - CHAIN_RPC_URLS=${CHAIN_RPC_URLS:-}
+      - SKIP_BALANCE_CHECK=true
+      - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       - valkey
     restart: unless-stopped
@@ -22,12 +23,13 @@ services:
   batch_sequencer:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-batch-sequencer:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: batch_sequencer
-    env_file:
-      - .env
     environment:
       - VALKEY_URL=redis://valkey:6379
       - CHAIN_ID=${APPCHAIN_CHAIN_ID}
       - SEQUENCING_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - BATCHER_PRIVATE_KEY=${BATCHER_PRIVATE_KEY}
+      - SEQUENCING_RPC_URLS=${SEQUENCING_RPC_URLS}
+      - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       - valkey
       - maestro
@@ -36,12 +38,12 @@ services:
   settlement_ingestor:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: settlement_ingestor
-    env_file:
-      - .env
     command:
       - "--db-file=/data/settlement.db"
       - "--start-block=${SETTLEMENT_INGESTOR_START_BLOCK:-0}"
       - "--ws-urls=${SETTLEMENT_INGESTOR_WS_URLS}"
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - ${DATA_DIR:-./data}/settlement:/data
     restart: unless-stopped
@@ -49,12 +51,12 @@ services:
   sequencing_ingestor:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: sequencing_ingestor
-    env_file:
-      - .env
     command:
       - "--db-file=/data/sequencing.db"
       - "--start-block=${SEQUENCING_INGESTOR_START_BLOCK:-0}"
       - "--ws-urls=${SEQUENCING_INGESTOR_WS_URLS}"
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - ${DATA_DIR:-./data}/sequencing:/data
     restart: unless-stopped
@@ -62,10 +64,19 @@ services:
   mchain:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: mchain
-    env_file:
-      - .env
     command:
       - "--datadir=/data"
+    environment:
+      - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - GENESIS_CONFIG=${MCHAIN_GENESIS_CONFIG:-}
+      - SNAPSHOT_URL=${MCHAIN_SNAPSHOT_URL:-}
+      - SETTLEMENT_START_BLOCK=${SETTLEMENT_START_BLOCK:-0}
+      - MIGRATED_BEFORE_BATCH_ACC=${MIGRATED_BEFORE_BATCH_ACC:-}
+      - MIGRATED_BATCH_ACC=${MIGRATED_BATCH_ACC:-}
+      - MIGRATED_BATCH_COUNT=${MIGRATED_BATCH_COUNT:-0}
+      - MIGRATED_DELAYED_MSGS_ACC=${MIGRATED_DELAYED_MSGS_ACC:-}
+      - MIGRATED_DELAYED_MSGS_COUNT=${MIGRATED_DELAYED_MSGS_COUNT:-0}
+      - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - ${DATA_DIR:-./data}/mchain:/data
     restart: unless-stopped
@@ -73,12 +84,16 @@ services:
   translator:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: translator
-    env_file:
-      - .env
     environment:
       - SETTLEMENT_WS_URL=ws://settlement_ingestor:8545
       - SEQUENCING_WS_URL=ws://sequencing_ingestor:8545
       - MCHAIN_WS_URL=ws://mchain:8545
+      - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - ARBITRUM_BRIDGE_ADDRESS=${ARBITRUM_BRIDGE_ADDRESS}
+      - ARBITRUM_INBOX_ADDRESS=${ARBITRUM_INBOX_ADDRESS}
+      - SETTLEMENT_START_BLOCK=${SETTLEMENT_START_BLOCK:-0}
+      - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       - settlement_ingestor
       - sequencing_ingestor
@@ -88,10 +103,19 @@ services:
   proposer:
     image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:${SYND_APPCHAINS_VERSION:-v1.0.12}
     container_name: proposer
-    env_file:
-      - .env
     environment:
       - APPCHAIN_RPC_URL=http://nitro:8547
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
+      - SETTLEMENT_RPC_URL=${SETTLEMENT_RPC_URL}
+      - SETTLEMENT_CHAIN_ID=${SETTLEMENT_CHAIN_ID}
+      - SEQUENCING_RPC_URL=${SEQUENCING_RPC_URL}
+      - BEACON_RPC_URL=${BEACON_RPC_URL:-}
+      - ENCLAVE_RPC_URL=${ENCLAVE_RPC_URL}
+      - TEE_MODULE_CONTRACT_ADDRESS=${TEE_MODULE_CONTRACT_ADDRESS}
+      - APPCHAIN_BRIDGE_ADDRESS=${APPCHAIN_BRIDGE_ADDRESS}
+      - SEQUENCING_BRIDGE_ADDRESS=${SEQUENCING_BRIDGE_ADDRESS}
+      - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
     depends_on:
       - nitro
     restart: unless-stopped
@@ -101,8 +125,8 @@ services:
     container_name: nitro
     init: true
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      - NITRO_CHAIN_INFO__JSON=${NITRO_CHAIN_INFO__JSON}
     command:
       - "--conf.env-prefix=NITRO"
       - "--init.validate-checksum=false"

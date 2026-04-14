@@ -31,16 +31,19 @@ download_snapshot() {
   local url="$1"
   local dest="$2"
   local label="$3"
+  local marker="$dest/.snapshot_downloaded"
 
-  if [ -n "$url" ]; then
-    if [ -z "$(ls -A "$dest" 2>/dev/null)" ]; then
-      echo "Downloading $label snapshot from $url ..."
-      curl -L --progress-bar "$url" | tar -xf - -C "$dest"
-      echo "$label snapshot extracted to $dest"
-    else
-      echo "Skipping $label snapshot: $dest is not empty"
-    fi
+  [ -z "$url" ] && return 0
+
+  if [ -f "$marker" ]; then
+    echo "Skipping $label snapshot: already downloaded"
+    return 0
   fi
+
+  echo "Downloading $label snapshot from $url ..."
+  curl -L --progress-bar "$url" | tar -xf - -C "$dest"
+  touch "$marker"
+  echo "$label snapshot extracted to $dest"
 }
 
 download_snapshot "${MCHAIN_SNAPSHOT_URL:-}" "$DATA_DIR/mchain" "mchain"
