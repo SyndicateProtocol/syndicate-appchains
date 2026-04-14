@@ -154,7 +154,7 @@ services:
       - "--execution.caching.archive=true"
       - "--execution.forwarding-target=http://maestro:8080"
       - "--ensure-rollup-deployment=false"
-      - "--parent-chain-is-arbitrum=false"
+      - "--persistent.chain=/home/user/data/"
     ports:
       - "8545:8547"
       - "8548:8548"
