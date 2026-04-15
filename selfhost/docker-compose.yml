@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
 
   nitro:
-    image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.6.4}
+    image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.7.6}
     container_name: nitro
     init: true
     restart: unless-stopped
@@ -155,6 +155,8 @@ services:
       - "--execution.forwarding-target=http://maestro:8080"
       - "--ensure-rollup-deployment=false"
       - "--persistent.chain=/home/user/data/"
+      # uncomment to test the setup on arm64 MacOs machine
+      # - "--execution.stylus-target.amd64=x86_64-linux-unknown+sse4.2+lzcnt"
     ports:
       - "8545:8547"
       - "8548:8548"
