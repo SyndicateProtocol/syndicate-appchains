@@ -1,0 +1,167 @@
+services:
+
+  valkey:
+    image: valkey/valkey:9.0.3-alpine
+    container_name: valkey
+    command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - ${DATA_DIR:-./data}/valkey:/data
+    restart: unless-stopped
+
+  maestro:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-maestro:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: maestro
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+      - CHAIN_RPC_URLS={"${APPCHAIN_CHAIN_ID}":["http://nitro:8547"]}
+      - SKIP_BALANCE_CHECK=true
+      - RUST_LOG=${RUST_LOG:-info}
+    depends_on:
+      - valkey
+    restart: unless-stopped
+
+  batch_sequencer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-batch-sequencer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: batch_sequencer
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+      - CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - SEQUENCING_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - BATCHER_PRIVATE_KEY=${BATCHER_PRIVATE_KEY}
+      - SEQUENCING_RPC_URLS=${SEQUENCING_RPC_URLS}
+      - RUST_LOG=${RUST_LOG:-info}
+    depends_on:
+      - valkey
+      - maestro
+    restart: unless-stopped
+
+  settlement_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: settlement_ingestor
+    command:
+      - "--db-file=/data/settlement.db"
+      - "--start-block=${SETTLEMENT_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SETTLEMENT_INGESTOR_WS_URLS}"
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - ${DATA_DIR:-./data}/settlement:/data
+    restart: unless-stopped
+
+  sequencing_ingestor:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-chain-ingestor:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: sequencing_ingestor
+    command:
+      - "--db-file=/data/sequencing.db"
+      - "--start-block=${SEQUENCING_INGESTOR_START_BLOCK:-0}"
+      - "--ws-urls=${SEQUENCING_INGESTOR_WS_URLS}"
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - ${DATA_DIR:-./data}/sequencing:/data
+    restart: unless-stopped
+
+  mchain:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: mchain
+    command:
+      - "--datadir=/data"
+    environment:
+      - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - GENESIS_CONFIG
+      - SNAPSHOT_URL
+      - SETTLEMENT_START_BLOCK
+      - MIGRATED_BEFORE_BATCH_ACC
+      - MIGRATED_BATCH_ACC
+      - MIGRATED_BATCH_COUNT
+      - MIGRATED_DELAYED_MSGS_ACC
+      - MIGRATED_DELAYED_MSGS_COUNT
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - ${DATA_DIR:-./data}/mchain:/data
+    restart: unless-stopped
+
+  translator:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: translator
+    environment:
+      - SETTLEMENT_WS_URL=ws://settlement_ingestor:8545
+      - SEQUENCING_WS_URL=ws://sequencing_ingestor:8545
+      - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
+      - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - ARBITRUM_BRIDGE_ADDRESS=${ARBITRUM_BRIDGE_ADDRESS}
+      - ARBITRUM_INBOX_ADDRESS=${ARBITRUM_INBOX_ADDRESS}
+      - SETTLEMENT_START_BLOCK=${TRANSLATOR_SETTLEMENT_START_BLOCK:-}
+      - SEQUENCING_START_BLOCK=${TRANSLATOR_SEQUENCING_START_BLOCK:-}
+      - SETTLEMENT_DELAY=60
+      - MCHAIN_WS_URL=ws://mchain:8545
+      - RUST_LOG=${RUST_LOG:-info}
+    depends_on:
+      - settlement_ingestor
+      - sequencing_ingestor
+      - mchain
+    restart: unless-stopped
+
+  proposer:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-proposer:${SYND_APPCHAINS_VERSION:-v1.0.12}
+    container_name: proposer
+    environment:
+      - APPCHAIN_RPC_URL=http://nitro:8547
+      - PRIVATE_KEY=${PROPOSER_PRIVATE_KEY}
+      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
+      - SETTLEMENT_RPC_URL=${SETTLEMENT_RPC_URL}
+      - SETTLEMENT_CHAIN_ID=${SETTLEMENT_CHAIN_ID}
+      - SEQUENCING_RPC_URL=${SEQUENCING_RPC_URL}
+      - BEACON_RPC_URL=${BEACON_RPC_URL:-}
+      - ENCLAVE_RPC_URL=${ENCLAVE_RPC_URL}
+      - TEE_MODULE_CONTRACT_ADDRESS=${TEE_MODULE_CONTRACT_ADDRESS}
+      - APPCHAIN_BRIDGE_ADDRESS=${APPCHAIN_BRIDGE_ADDRESS}
+      - SEQUENCING_BRIDGE_ADDRESS=${SEQUENCING_BRIDGE_ADDRESS}
+      - SEQUENCING_CONTRACT_ADDRESS=${SEQUENCING_CONTRACT_ADDRESS}
+      - MTLS_ENABLED_ENCLAVE=false
+      - EIGEN_RPC_URL="noop.com"
+    depends_on:
+      - nitro
+    restart: unless-stopped
+
+  nitro:
+    image: ghcr.io/syndicateprotocol/nitro/nitro:${SYND_NITRO_VERSION:-eigenda-v3.7.6}
+    container_name: nitro
+    init: true
+    restart: unless-stopped
+    environment:
+      - NITRO_CHAIN_INFO__JSON=${NITRO_CHAIN_INFO__JSON}
+    command:
+      - "--conf.env-prefix=NITRO"
+      - "--init.validate-checksum=false"
+      - "--parent-chain.connection.url=ws://mchain:8545"
+      - "--parent-chain.id=511000"
+      - "--chain.id=${APPCHAIN_CHAIN_ID}"
+      - "--http.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
+      - "--ws.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8547"
+      - "--http.vhosts=*"
+      - "--http.corsdomain=*"
+      - "--ws.addr=0.0.0.0"
+      - "--ws.port=8548"
+      - "--ws.origins=*"
+      - "--node.dangerous.disable-blob-reader=true"
+      - "--node.inbox-reader.check-delay=100ms"
+      - "--node.staker.enable=false"
+      - "--node.parent-chain-reader.poll-interval=100ms"
+      - "--node.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.parent-chain-reader.old-header-timeout=2540400h"
+      - "--execution.caching.archive=true"
+      - "--execution.forwarding-target=http://maestro:8080"
+      - "--ensure-rollup-deployment=false"
+      - "--persistent.chain=/home/user/data/"
+      # uncomment to test the setup on arm64 MacOs machine
+      # - "--execution.stylus-target.amd64=x86_64-linux-unknown+sse4.2+lzcnt"
+    ports:
+      - "8545:8547"
+      - "8548:8548"
+    volumes:
+      - ${DATA_DIR:-./data}/nitro:/home/user/data
+    depends_on:
+      - mchain
