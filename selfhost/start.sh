@@ -24,7 +24,7 @@ mkdir -p \
   "$DATA_DIR/settlement" \
   "$DATA_DIR/sequencing" \
   "$DATA_DIR/mchain" \
-  "$DATA_DIR/nitro"
+  "$DATA_DIR/nitro/nitro"
 
 # ── Snapshots ─────────────────────────────────────────────────────────────────
 download_snapshot() {
@@ -46,7 +46,7 @@ download_snapshot() {
   echo "$label snapshot extracted to $dest"
 }
 
-download_snapshot "${NITRO_SNAPSHOT_URL:-}"  "$DATA_DIR/nitro"  "nitro"
+download_snapshot "${NITRO_SNAPSHOT_URL:-}"  "$DATA_DIR/nitro/nitro"  "nitro"
 
 # ── Forward optional env vars ──────────────────────────────────────────────────
 [ -n "${MCHAIN_GENESIS_CONFIG:-}" ] && export GENESIS_CONFIG="$MCHAIN_GENESIS_CONFIG"
@@ -54,7 +54,7 @@ download_snapshot "${NITRO_SNAPSHOT_URL:-}"  "$DATA_DIR/nitro"  "nitro"
 
 # ── Start services ─────────────────────────────────────────────────────────────
 echo "Starting services ..."
-DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose --env-file .env up -d
+docker compose --env-file .env up -d
 
 echo ""
 echo "All services started."
