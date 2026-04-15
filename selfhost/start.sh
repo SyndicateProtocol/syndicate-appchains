@@ -48,6 +48,10 @@ download_snapshot() {
 
 download_snapshot "${NITRO_SNAPSHOT_URL:-}"  "$DATA_DIR/nitro"  "nitro"
 
+# ── Forward optional env vars ──────────────────────────────────────────────────
+[ -n "${MCHAIN_GENESIS_CONFIG:-}" ] && export GENESIS_CONFIG="$MCHAIN_GENESIS_CONFIG"
+[ -n "${MCHAIN_SNAPSHOT_URL:-}" ]   && export SNAPSHOT_URL="$MCHAIN_SNAPSHOT_URL"
+
 # ── Start services ─────────────────────────────────────────────────────────────
 echo "Starting services ..."
 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose --env-file .env up -d

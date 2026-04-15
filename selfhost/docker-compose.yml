@@ -68,7 +68,7 @@ services:
       - "--datadir=/data"
     environment:
       - APPCHAIN_CHAIN_ID=${APPCHAIN_CHAIN_ID}
-      - GENESIS_CONFIG=${MCHAIN_GENESIS_CONFIG:-}
+      - GENESIS_CONFIG
       - SNAPSHOT_URL
       - SETTLEMENT_START_BLOCK
       - MIGRATED_BEFORE_BATCH_ACC
@@ -159,6 +159,6 @@ services:
       - "8545:8547"
       - "8548:8548"
     volumes:
-      - ${DATA_DIR:-./data}/nitro:/home/user/.arbitrum
+      - ${DATA_DIR:-./data}/nitro:/home/user/data
     depends_on:
       - mchain
