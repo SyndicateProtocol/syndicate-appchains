@@ -138,6 +138,7 @@ services:
       - "--parent-chain.id=511000"
       - "--chain.id=${APPCHAIN_CHAIN_ID}"
       - "--http.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
+      - "--ws.api=arb,eth,net,web3,txpool,arbtrace,debug,synd"
       - "--http.addr=0.0.0.0"
       - "--http.port=8547"
       - "--http.vhosts=*"

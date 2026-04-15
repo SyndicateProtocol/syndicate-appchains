@@ -19,31 +19,12 @@ cp .env.example .env
 
 ### 2. Fill in `.env`
 
-Open `.env` and supply your chain-specific values. The fields are grouped and commented. Required fields are:
+Open `.env` and supply your chain-specific values.
+All initial values for your specific appchain can be provided by the Syndicate team.
 
-| Field | Description |
-|-------|-------------|
-| `APPCHAIN_CHAIN_ID` | Your appchain's chain ID |
-| `SEQUENCING_INGESTOR_WS_URLS` | WebSocket RPC URL(s) for the sequencing chain |
-| `SEQUENCING_INGESTOR_START_BLOCK` | Block to start ingesting from on the sequencing chain |
-| `SETTLEMENT_INGESTOR_WS_URLS` | WebSocket RPC URL(s) for the settlement chain |
-| `SETTLEMENT_INGESTOR_START_BLOCK` | Block to start ingesting from on the settlement chain |
-| `SEQUENCING_CONTRACT_ADDRESS` | Address of the sequencing chain inbox contract |
-| `ARBITRUM_BRIDGE_ADDRESS` | Arbitrum bridge contract address on the sequencing chain |
-| `ARBITRUM_INBOX_ADDRESS` | Arbitrum inbox contract address on the sequencing chain |
-| `BATCHER_PRIVATE_KEY` | Private key for the wallet that submits transaction batches |
-| `SEQUENCING_RPC_URLS` | HTTP RPC URL(s) for the sequencing chain |
-| `CHAIN_RPC_URLS` | JSON map of chain ID → HTTP RPC URL used by maestro (e.g. `{"888991":"https://..."}`) |
-| `NITRO_CHAIN_INFO__JSON` | Chain info JSON blob for the Nitro node |
-| `GENESIS_CONFIG` | EVM genesis config JSON for the appchain |
-| `MCHAIN_SNAPSHOT_URL` | URL to a `.tar` or `.tar.gz` snapshot of the mchain data directory _(optional but recommended)_ |
-| `NITRO_SNAPSHOT_URL` | URL to a `.tar` or `.tar.gz` snapshot of the Nitro data directory _(optional but recommended)_ |
+NOTE: `BATCHER_PRIVATE_KEY` and `PROPOSER_PRIVATE_KEY` need to have funds on the sequencing / settlement chains respectively. Aditionally, the BATCHER must be authorized to sequence on the sequencing contract.
 
-At least one snapshot URL (`MCHAIN_SNAPSHOT_URL` or `NITRO_SNAPSHOT_URL`) is strongly recommended — syncing from genesis can take many hours. Both are skipped automatically if the target directory already contains data.
-
-Fields in the **Migration** and **Proposer** sections are only required if your appchain uses those features.
-
-> All values for your specific appchain can be provided by the Syndicate team.
+To change the location where data is persisted, set `DATA_DIR` in your `.env` before running `start.sh`.
 
 ### 3. Start
 
@@ -53,7 +34,7 @@ bash start.sh
 
 The script will:
 1. Create local data directories under `DATA_DIR` (default: `./data`)
-2. Download and extract the mchain snapshot (if `SNAPSHOT_URL` is set and the data directory is empty)
+2. Download and extract the nitro and/or mchain snapshot if specified
 3. Start all services with `docker compose`
 
 ## Verify
@@ -96,10 +77,18 @@ docker compose restart mchain
 ```
 ./data/
 ├── mchain/       # RocksDB state for the intermediate chain node
-├── nitro/        # Nitro node state (~/.arbitrum)
-├── settlement/   # filesystem cache for the settlement ingestor
+├── nitro/        # Nitro node state
 ├── sequencing/   # filesystem cache for the sequencing ingestor
+├── settlement/   # filesystem cache for the settlement ingestor
 └── valkey/       # Valkey (Redis-compatible) persistence
 ```
 
-To change the location, set `DATA_DIR` in your `.env` before running `start.sh`.
+## Summary
+
+At this point you should have a function synd-stack rollup deriving state from the parent chains.
+You can assert that the rollup node is synced by checking the `eth_blockNumber` rpc call result.
+You should also be able to send new transactions by calling `eth_sendRawTransaction` on the rollup node.
+
+# TEE Withdrawals
+
+
