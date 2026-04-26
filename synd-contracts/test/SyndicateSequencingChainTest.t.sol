@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {SyndicateSequencingChain, SequencingModuleChecker} from "src/SyndicateSequencingChain.sol";
+import {SyndicateSequencingChain} from "src/SyndicateSequencingChain.sol";
+import {SyndicateCombinedSequencingChain} from "src/SyndicateCombinedSequencingChain.sol";
+import {SyndicateSequencingChainBase, L2MessageType_SignedTx} from "src/SyndicateSequencingChainBase.sol";
+import {SequencingModuleChecker} from "src/SequencingModuleChecker.sol";
 import {SyndicateFactory} from "src/factory/SyndicateFactory.sol";
-import {
-    SyndicateSequencingChain,
-    L2MessageType_SignedTx,
-    SequencingModuleChecker
-} from "src/SyndicateSequencingChain.sol";
 import {RequireAndModule} from "src/requirement-modules/RequireAndModule.sol";
 import {RequireOrModule} from "src/requirement-modules/RequireOrModule.sol";
 import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
@@ -46,6 +44,7 @@ contract DirectMockModule is IPermissionModule {
 
 contract SyndicateSequencingChainTestSetUp is Test {
     SyndicateSequencingChain public chain;
+    SyndicateCombinedSequencingChain public combinedChain;
     SyndicateFactory public factory;
     RequireAndModule public permissionModule;
     RequireOrModule public permissionModuleAny;
@@ -62,6 +61,15 @@ contract SyndicateSequencingChainTestSetUp is Test {
         return SyndicateSequencingChain(chainAddress);
     }
 
+    function deployCombinedChain(RequireAndModule _permissionModule) public returns (SyndicateCombinedSequencingChain) {
+        uint256 appchainId = 10042002;
+        vm.startPrank(admin);
+        SyndicateCombinedSequencingChain newChain = new SyndicateCombinedSequencingChain(appchainId);
+        newChain.updateRequirementModule(address(_permissionModule));
+        vm.stopPrank();
+        return newChain;
+    }
+
     function setUp() public virtual {
         // Warp to START_TIMESTAMP to avoid underflow in epoch calculations
         vm.warp(1754089200); // START_TIMESTAMP from EpochTracker.sol
@@ -70,6 +78,7 @@ contract SyndicateSequencingChainTestSetUp is Test {
         permissionModule = new RequireAndModule(admin);
         permissionModuleAny = new RequireOrModule(admin);
         chain = deployFromFactory(permissionModule);
+        combinedChain = deployCombinedChain(permissionModule);
     }
 }
 
@@ -82,11 +91,15 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(
+        emit SyndicateSequencingChainBase.TransactionProcessed(
             address(this), abi.encodePacked(L2MessageType_SignedTx, validTxn)
         );
 
-        chain.processTransaction(validTxn);
+        combinedChain.processTransaction(validTxn);
+
+        // Verify accumulator was updated (only available on combinedChain)
+        bytes memory encodedTxn = abi.encodePacked(L2MessageType_SignedTx, validTxn);
+        assertEq(combinedChain.sequencingAccumulator(0), keccak256(abi.encodePacked(bytes32(0), encodedTxn)));
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -134,7 +147,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(
+        emit SyndicateSequencingChainBase.TransactionProcessed(
             address(this), abi.encodePacked(L2MessageType_SignedTx, data)
         );
 
@@ -154,12 +167,20 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         for (uint256 i = 0; i < validTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
 
-            emit SyndicateSequencingChain.TransactionProcessed(
+            emit SyndicateSequencingChainBase.TransactionProcessed(
                 address(this), abi.encodePacked(L2MessageType_SignedTx, validTxns[i])
             );
         }
 
-        chain.processTransactionsBulk(validTxns);
+        combinedChain.processTransactionsBulk(validTxns);
+
+        // Verify accumulator (only available on combinedChain)
+        bytes32 prevAcc = bytes32(0);
+        for (uint256 i = 0; i < 3; i++) {
+            bytes32 expected = keccak256(abi.encodePacked(prevAcc, L2MessageType_SignedTx, validTxns[i]));
+            assertEq(combinedChain.sequencingAccumulator(i), expected);
+            prevAcc = expected;
+        }
     }
 
     function testConstructorWithZeroAppChainId() public {
@@ -190,7 +211,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for all transactions
         for (uint256 i = 0; i < txns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(
+            emit SyndicateSequencingChainBase.TransactionProcessed(
                 address(this), abi.encodePacked(L2MessageType_SignedTx, txns[i])
             );
         }
@@ -229,7 +250,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Expect events for successful transactions
         for (uint256 i = 0; i < successTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
-            emit SyndicateSequencingChain.TransactionProcessed(
+            emit SyndicateSequencingChainBase.TransactionProcessed(
                 address(this), abi.encodePacked(L2MessageType_SignedTx, successTxns[i])
             );
         }
@@ -286,12 +307,12 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         directMock.setAllowed(abi.encodePacked(L2MessageType_SignedTx, disallowedData), false);
 
         // Test 1: Failure path of onlyWhenAllowed (processTransaction)
-        vm.expectRevert(SyndicateSequencingChain.TransactionOrSenderNotAllowed.selector);
+        vm.expectRevert(SyndicateSequencingChainBase.TransactionOrSenderNotAllowed.selector);
         chain.processTransaction(disallowedData);
 
         // Test 2: Success path of onlyWhenAllowed (processTransaction)
         vm.expectEmit(true, false, false, true);
-        emit SyndicateSequencingChain.TransactionProcessed(
+        emit SyndicateSequencingChainBase.TransactionProcessed(
             address(this), abi.encodePacked(L2MessageType_SignedTx, allowedData)
         );
         chain.processTransaction(allowedData);
@@ -299,7 +320,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
     function testProcessTransactionsBulkWithEmptyArray() public {
         bytes[] memory emptyArray = new bytes[](0);
-        vm.expectRevert(SyndicateSequencingChain.NoTxData.selector);
+        vm.expectRevert(SyndicateSequencingChainBase.NoTxData.selector);
         chain.processTransactionsBulk(emptyArray);
     }
 
@@ -317,14 +338,14 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
         // Test owner can set it and it returns correct value with proper event
         vm.prank(admin);
         vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(address(0), newReceiver);
+        emit SyndicateSequencingChainBase.EmissionsReceiverUpdated(address(0), newReceiver);
         chain.setEmissionsReceiver(newReceiver);
         assertEq(chain.getEmissionsReceiver(), newReceiver);
 
         // falls back to owner if emissionsReceiver is set to address(0)
         vm.prank(admin);
         vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(newReceiver, admin);
+        emit SyndicateSequencingChainBase.EmissionsReceiverUpdated(newReceiver, admin);
         chain.setEmissionsReceiver(address(0));
         assertEq(chain.getEmissionsReceiver(), admin);
     }
@@ -335,7 +356,7 @@ contract SyndicateSequencingChainTest is SyndicateSequencingChainTestSetUp {
 
         vm.prank(admin);
         vm.expectEmit(true, true, false, false);
-        emit SyndicateSequencingChain.EmissionsReceiverUpdated(admin, newOwner);
+        emit SyndicateSequencingChainBase.EmissionsReceiverUpdated(admin, newOwner);
         chain.transferOwnership(newOwner);
 
         // Verify the emissions receiver changed
